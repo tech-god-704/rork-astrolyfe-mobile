@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "name": "AstroLyfe",
+      "path": "expo",
+      "framework": "react-native"
+    }
+  ]
+}

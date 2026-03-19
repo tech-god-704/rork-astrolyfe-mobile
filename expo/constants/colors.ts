@@ -1,0 +1,26 @@
+const Colors = {
+  bg: '#0a0a1a',
+  bgCard: 'rgba(255,255,255,0.06)',
+  bgCardBorder: 'rgba(255,255,255,0.1)',
+  bgInput: 'rgba(255,255,255,0.08)',
+  bgInputBorder: 'rgba(255,255,255,0.12)',
+  purple: '#7C3AED',
+  purpleLight: '#818CF8',
+  purpleDim: 'rgba(124,58,237,0.2)',
+  purpleGlow: 'rgba(124,58,237,0.4)',
+  indigo: '#4F46E5',
+  accent: '#F472B6',
+  accentDim: 'rgba(244,114,182,0.15)',
+  gold: '#FBBF24',
+  teal: '#2DD4BF',
+  textPrimary: '#F1F5F9',
+  textSecondary: 'rgba(241,245,249,0.6)',
+  textMuted: 'rgba(241,245,249,0.35)',
+  danger: '#EF4444',
+  success: '#22C55E',
+  gradientStart: '#1a103d',
+  gradientMid: '#0f0a2a',
+  gradientEnd: '#0a0a1a',
+};
+
+export default Colors;
