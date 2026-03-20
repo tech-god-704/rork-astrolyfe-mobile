@@ -39,16 +39,12 @@ export default function HoroscopeScreen() {
   // Generate content INSTANTLY — no network, no async, no loading
   const signName = profile?.zodiac_sign || 'Aries';
   const localReading = useMemo(() => getHoroscope(signName, period), [signName, period]);
-  const categories = useMemo(() => categorizeHoroscope(localReading), [localReading]);
 
   // Use live API text if available, otherwise local
   const displayText = liveText || localReading.horoscope;
-  const displayReading = liveText
-    ? { ...localReading, horoscope: liveText }
-    : localReading;
   const displayCategories = useMemo(
-    () => categorizeHoroscope(displayReading),
-    [displayReading.horoscope]
+    () => categorizeHoroscope({ ...localReading, horoscope: displayText }),
+    [localReading, displayText]
   );
 
   // Try fetching live data in background (non-blocking)
@@ -60,7 +56,7 @@ export default function HoroscopeScreen() {
       if (!cancelled && result?.horoscope) {
         setLiveText(result.horoscope);
       }
-    });
+    }).catch(() => {});
 
     return () => { cancelled = true; };
   }, [signName, period]);

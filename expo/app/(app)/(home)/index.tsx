@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,8 +10,6 @@ import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getHoroscope, categorizeHoroscope, fetchLiveHoroscope } from '@/services/horoscope';
-
-const { width: SCREEN_W } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -37,7 +35,7 @@ export default function HomeScreen() {
     let cancelled = false;
     fetchLiveHoroscope(signName, 'daily').then((result) => {
       if (!cancelled && result?.horoscope) setLiveText(result.horoscope);
-    });
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, [signName]);
 
