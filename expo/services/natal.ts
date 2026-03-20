@@ -225,7 +225,8 @@ function calcAscendant(jd: number, lat: number, lon: number): number {
   const t = T(jd);
   const eps = (23.4393 - 0.0130 * t) * DEG;
   const D = jd - 2451545.0;
-  const gmst = norm360(280.46061837 + 360.98564736629 * D);
+  // Full GMST with T² correction for ±0.5° Ascendant accuracy
+  const gmst = norm360(280.46061837 + 360.98564736629 * D + 0.000387933 * t * t);
   const lst = norm360(gmst + lon) * DEG;
 
   const asc = Math.atan2(

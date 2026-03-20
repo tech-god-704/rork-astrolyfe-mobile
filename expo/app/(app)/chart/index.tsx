@@ -9,8 +9,9 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { calculateNatalChart, getInterpretation, type NatalPlanet } from '@/services/natal';
+import { calculateNatalChart, getInterpretation } from '@/services/natal';
 
+const DEG = Math.PI / 180;
 const CHART_SIZE = 320;
 const CENTER = CHART_SIZE / 2;
 const OUTER_R = 148;
@@ -36,21 +37,26 @@ export default function ChartScreen() {
 
   // Calculate natal chart locally — no API, no loading, instant
   const chart = useMemo(() => {
-    if (!profile?.birth_date) return null;
-    const parts = profile.birth_date.split('-');
-    if (parts.length !== 3) return null;
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const day = parseInt(parts[2], 10);
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    try {
+      if (!profile?.birth_date) return null;
+      const parts = profile.birth_date.split('-');
+      if (parts.length !== 3) return null;
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const day = parseInt(parts[2], 10);
+      if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
-    return calculateNatalChart({
-      year,
-      month,
-      day,
-      latitude: profile.birth_lat ?? undefined,
-      longitude: profile.birth_lon ?? undefined,
-    });
+      return calculateNatalChart({
+        year,
+        month,
+        day,
+        latitude: profile.birth_lat ?? undefined,
+        longitude: profile.birth_lon ?? undefined,
+      });
+    } catch {
+      return null;
+    }
   }, [profile?.birth_date, profile?.birth_lat, profile?.birth_lon]);
 
   const planets = chart?.planets ?? [];
