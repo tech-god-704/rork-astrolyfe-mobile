@@ -1,44 +1,68 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 
+type PeriodType = 'daily' | 'monthly';
+
+interface HoroscopeEntry {
+  category: string;
+  title: string;
+  icon: string;
+  content: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  love: Colors.accent,
+  career: Colors.purpleLight,
+  health: Colors.teal,
+  general: Colors.gold,
+  finance: Colors.success,
+  spiritual: '#A855F7',
+};
+
 export default function HoroscopeScreen() {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
+  const [period, setPeriod] = useState<PeriodType>('daily');
+
   const todayStr = new Date().toISOString().split('T')[0];
+  const monthStr = new Date().toISOString().slice(0, 7) + '-01';
+  const periodDate = period === 'daily' ? todayStr : monthStr;
 
   const horoscopeQuery = useQuery({
-    queryKey: ['horoscope', user?.email, todayStr],
+    queryKey: ['horoscopes', profile?.zodiac_sign, period, periodDate],
     queryFn: async () => {
-      if (!user?.email) return null;
-      console.log('[Horoscope] Fetching entries');
+      if (!profile?.zodiac_sign) return [];
       const { data, error } = await supabase
-        .from('horoscope_entries')
-        .select('*')
-        .eq('user_email', user.email)
-        .order('date', { ascending: false })
-        .limit(7);
-      if (error) { console.log('[Horoscope] Error:', error.message); return []; }
-      return data ?? [];
+        .from('horoscopes')
+        .select('category, title, icon, content')
+        .eq('zodiac_sign', profile.zodiac_sign)
+        .eq('period_type', period)
+        .eq('period_date', periodDate);
+      if (error) {
+        console.log('[Horoscope] Error:', error.message);
+        return [];
+      }
+      return (data ?? []) as HoroscopeEntry[];
     },
-    enabled: !!user?.email,
+    enabled: !!profile?.zodiac_sign,
   });
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       channel = supabase
-        .channel('horoscope-realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'horoscope_entries' }, () => {
-          console.log('[Horoscope] Realtime update received');
+        .channel('horoscopes-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'horoscopes' }, () => {
           void horoscopeQuery.refetch();
         })
         .subscribe();
@@ -46,21 +70,16 @@ export default function HoroscopeScreen() {
       console.log('[Horoscope] Realtime setup error:', e);
     }
     return () => {
-      if (channel) {
-        void supabase.removeChannel(channel);
-      }
+      if (channel) void supabase.removeChannel(channel);
     };
-  }, [horoscopeQuery]);
+  }, []);
+
+  const handlePeriodChange = useCallback((p: PeriodType) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setPeriod(p);
+  }, []);
 
   const entries = horoscopeQuery.data ?? [];
-  const todayEntry = entries.find((e: { date: string }) => e.date === todayStr);
-
-  const energyMeters = [
-    { label: 'Love', value: 0.7, color: Colors.accent },
-    { label: 'Career', value: 0.85, color: Colors.purpleLight },
-    { label: 'Health', value: 0.6, color: Colors.teal },
-    { label: 'Luck', value: 0.9, color: Colors.gold },
-  ];
 
   return (
     <View style={styles.container}>
@@ -72,48 +91,54 @@ export default function HoroscopeScreen() {
           refreshControl={<RefreshControl refreshing={horoscopeQuery.isRefetching} onRefresh={() => void horoscopeQuery.refetch()} tintColor={Colors.purple} />}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Daily Horoscope</Text>
+            <Text style={styles.title}>Horoscope</Text>
             {zodiac && <Text style={styles.signLabel}>{zodiac.symbol} {zodiac.name}</Text>}
           </View>
 
-          <GlassCard style={styles.todayCard}>
-            <View style={styles.todayHeader}>
-              <Sparkles size={20} color={Colors.gold} />
-              <Text style={styles.todayTitle}>Today's Reading</Text>
-              <Text style={styles.todayDate}>{todayStr}</Text>
-            </View>
-            {todayEntry ? (
-              <Text style={styles.todayContent}>{todayEntry.content}</Text>
-            ) : (
-              <Text style={styles.noContent}>
-                {horoscopeQuery.isLoading ? 'Loading...' : 'No horoscope available for today yet. Your astrologer is preparing your reading.'}
-              </Text>
-            )}
-          </GlassCard>
+          <View style={styles.periodTabs}>
+            <Pressable
+              style={[styles.periodTab, period === 'daily' && styles.periodTabActive]}
+              onPress={() => handlePeriodChange('daily')}
+            >
+              <Text style={[styles.periodTabText, period === 'daily' && styles.periodTabTextActive]}>Daily</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.periodTab, period === 'monthly' && styles.periodTabActive]}
+              onPress={() => handlePeriodChange('monthly')}
+            >
+              <Text style={[styles.periodTabText, period === 'monthly' && styles.periodTabTextActive]}>Monthly</Text>
+            </Pressable>
+          </View>
 
-          <Text style={styles.sectionTitle}>Energy Meters</Text>
-          <GlassCard style={styles.metersCard}>
-            {energyMeters.map((meter) => (
-              <View key={meter.label} style={styles.meterRow}>
-                <Text style={styles.meterLabel}>{meter.label}</Text>
-                <View style={styles.meterTrack}>
-                  <View style={[styles.meterFill, { width: `${meter.value * 100}%`, backgroundColor: meter.color }]} />
-                </View>
-                <Text style={[styles.meterValue, { color: meter.color }]}>{Math.round(meter.value * 100)}%</Text>
-              </View>
-            ))}
-          </GlassCard>
-
-          {entries.length > 1 && (
-            <>
-              <Text style={styles.sectionTitle}>Recent Readings</Text>
-              {entries.filter((e: { date: string }) => e.date !== todayStr).map((entry: { id: string; date: string; content: string }) => (
-                <GlassCard key={entry.id} style={styles.pastCard}>
-                  <Text style={styles.pastDate}>{entry.date}</Text>
-                  <Text style={styles.pastContent} numberOfLines={3}>{entry.content}</Text>
+          {horoscopeQuery.isLoading ? (
+            <GlassCard style={styles.loadingCard}>
+              <Text style={styles.loadingText}>Loading your {period} reading...</Text>
+            </GlassCard>
+          ) : entries.length > 0 ? (
+            entries.map((entry, index) => {
+              const color = CATEGORY_COLORS[entry.category?.toLowerCase()] ?? Colors.gold;
+              return (
+                <GlassCard key={`${entry.category}-${index}`} style={styles.entryCard}>
+                  <View style={styles.entryHeader}>
+                    <View style={[styles.categoryDot, { backgroundColor: color }]} />
+                    <Text style={[styles.entryCategory, { color }]}>
+                      {entry.icon ? `${entry.icon} ` : ''}{entry.title || entry.category}
+                    </Text>
+                  </View>
+                  <Text style={styles.entryContent}>{entry.content}</Text>
                 </GlassCard>
-              ))}
-            </>
+              );
+            })
+          ) : (
+            <GlassCard style={styles.emptyCard}>
+              <Sparkles size={32} color={Colors.textMuted} />
+              <Text style={styles.emptyTitle}>No {period} reading available</Text>
+              <Text style={styles.emptyDesc}>
+                {period === 'daily'
+                  ? 'Your astrologer is preparing today\'s reading. Check back soon!'
+                  : 'Monthly readings are published at the start of each month.'}
+              </Text>
+            </GlassCard>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -125,23 +150,22 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
-  header: { marginTop: 8, marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: '800' as const, color: Colors.textPrimary },
-  signLabel: { fontSize: 16, color: Colors.purpleLight, marginTop: 4, fontWeight: '600' as const },
-  todayCard: { marginBottom: 24 },
-  todayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  todayTitle: { fontSize: 17, fontWeight: '700' as const, color: Colors.textPrimary, flex: 1 },
-  todayDate: { fontSize: 13, color: Colors.textMuted },
-  todayContent: { fontSize: 16, color: Colors.textSecondary, lineHeight: 24 },
-  noContent: { fontSize: 15, color: Colors.textMuted, fontStyle: 'italic' as const, lineHeight: 22 },
-  sectionTitle: { fontSize: 18, fontWeight: '700' as const, color: Colors.textPrimary, marginBottom: 14 },
-  metersCard: { marginBottom: 24, gap: 16 },
-  meterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  meterLabel: { fontSize: 14, color: Colors.textSecondary, width: 55 },
-  meterTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.08)' },
-  meterFill: { height: 8, borderRadius: 4 },
-  meterValue: { fontSize: 13, fontWeight: '700' as const, width: 40, textAlign: 'right' as const },
-  pastCard: { marginBottom: 12 },
-  pastDate: { fontSize: 13, color: Colors.textMuted, marginBottom: 6, fontWeight: '600' as const },
-  pastContent: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  header: { marginTop: 8, marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary },
+  signLabel: { fontSize: 16, color: Colors.purpleLight, marginTop: 4, fontWeight: '600' },
+  periodTabs: { flexDirection: 'row', backgroundColor: Colors.bgCard, borderRadius: 14, padding: 4, marginBottom: 24, borderWidth: 1, borderColor: Colors.bgCardBorder },
+  periodTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  periodTabActive: { backgroundColor: Colors.purple },
+  periodTabText: { fontSize: 15, fontWeight: '600', color: Colors.textMuted },
+  periodTabTextActive: { color: '#fff' },
+  loadingCard: { alignItems: 'center', paddingVertical: 40 },
+  loadingText: { fontSize: 15, color: Colors.textMuted, fontStyle: 'italic' },
+  entryCard: { marginBottom: 16 },
+  entryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  categoryDot: { width: 8, height: 8, borderRadius: 4 },
+  entryCategory: { fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
+  entryContent: { fontSize: 15, color: Colors.textSecondary, lineHeight: 23 },
+  emptyCard: { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: 20 },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Sun, Compass, MessageCircle, User } from 'lucide-react-native';
+import { Home, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 export default function AppTabLayout() {
@@ -17,7 +17,7 @@ export default function AppTabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600' as const,
+          fontWeight: '600',
         },
       }}
     >
@@ -36,17 +36,32 @@ export default function AppTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chart"
-        options={{
-          title: 'Chart',
-          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
           tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="compatibility"
+        options={{
+          title: 'Match',
+          tabBarIcon: ({ color, size }) => <Heart size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          title: 'Insights',
+          tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chart"
+        options={{
+          title: 'Chart',
+          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
+          href: null, // Hidden from tab bar, accessible via navigation
         }}
       />
       <Tabs.Screen

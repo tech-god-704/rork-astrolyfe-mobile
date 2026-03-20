@@ -3,11 +3,22 @@ import { Session, User } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 
+const ADMIN_UUID = '48355a3b-3a15-414b-9bf4-f344e98a7c19';
+
 export interface UserProfile {
   email: string;
   display_name: string | null;
   zodiac_sign: string | null;
   birth_date: string | null;
+}
+
+function checkIsAdmin(session: Session | null): boolean {
+  if (!session?.user) return false;
+  return (
+    session.user.id === ADMIN_UUID ||
+    session.user.app_metadata?.role === 'admin' ||
+    session.user.user_metadata?.role === 'admin'
+  );
 }
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
@@ -18,9 +29,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [skipAuth, setSkipAuth] = useState<boolean>(false);
 
+  const isAdmin = useMemo(() => checkIsAdmin(session), [session]);
+
   const fetchProfile = useCallback(async (email: string) => {
     try {
-      console.log('[Auth] Fetching profile for:', email);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -30,7 +42,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         console.log('[Auth] Profile fetch error:', error.message);
         return null;
       }
-      console.log('[Auth] Profile fetched:', data);
       return data as UserProfile;
     } catch (e) {
       console.log('[Auth] Profile fetch exception:', e);
@@ -41,13 +52,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     const init = async () => {
       try {
-        console.log('[Auth] Initializing session...');
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Session check timed out')), 8000)
         );
         const { data: { session: existing } } = await Promise.race([sessionPromise, timeoutPromise]);
-        console.log('[Auth] Existing session:', existing ? 'found' : 'none');
         setSession(existing);
         setUser(existing?.user ?? null);
         if (existing?.user?.email) {
@@ -64,7 +73,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     void init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      console.log('[Auth] Auth state changed:', _event);
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user?.email) {
@@ -79,15 +87,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, [fetchProfile]);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string, zodiacSign: string, birthDate: string) => {
-    console.log('[Auth] Signing up:', email);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
 
     const { error: insertError } = await supabase.from('users').insert({
       email,
       display_name: displayName,
-      zodiac_sign: zodiacSign,
-      birth_date: birthDate,
+      zodiac_sign: zodiacSign || null,
+      birth_date: birthDate || null,
     });
     if (insertError) {
       console.log('[Auth] Insert user row error:', insertError.message);
@@ -96,14 +103,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    console.log('[Auth] Signing in:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
   }, []);
 
   const signOut = useCallback(async () => {
-    console.log('[Auth] Signing out');
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
@@ -124,11 +129,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     isLoading,
     isReady,
     isAuthenticated: !!session || skipAuth,
+    isAdmin,
     skipAuth,
     setSkipAuth,
     signUp,
     signIn,
     signOut,
     refreshProfile,
-  }), [session, user, profile, isLoading, isReady, skipAuth, signUp, signIn, signOut, refreshProfile]);
+  }), [session, user, profile, isLoading, isReady, skipAuth, isAdmin, signUp, signIn, signOut, refreshProfile]);
 });
