@@ -32,7 +32,7 @@ export default function HoroscopeScreen() {
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
   const moonPhase = getMoonPhase();
   const [period, setPeriod] = useState<PeriodType>('daily');
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const contentAnim = useRef(new Animated.Value(1)).current;
 
   // Generate content INSTANTLY — no network, no async, no loading
   const signName = profile?.zodiac_sign || 'Aries';
@@ -43,30 +43,21 @@ export default function HoroscopeScreen() {
     [localReading]
   );
 
-  // Stagger animations for entry cards
-  const entryAnims = useRef<Animated.Value[]>([]);
-
+  // Fade in content whenever period changes
   useEffect(() => {
-    entryAnims.current = displayCategories.map(() => new Animated.Value(0));
-    const animations = entryAnims.current.map((anim, i) =>
-      Animated.timing(anim, {
-        toValue: 1,
-        duration: 350,
-        delay: i * 100,
-        useNativeDriver: true,
-      })
-    );
-    Animated.stagger(100, animations).start();
-  }, [displayCategories.length, period]);
+    contentAnim.setValue(0);
+    Animated.timing(contentAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [period]);
 
   const handlePeriodChange = useCallback((p: PeriodType) => {
     if (p === period) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    Animated.timing(fadeAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
-      setPeriod(p);
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-    });
-  }, [period, fadeAnim]);
+    setPeriod(p);
+  }, [period]);
 
   const onRefresh = useCallback(() => {
     // Content is generated locally and changes daily/weekly/monthly
@@ -141,7 +132,7 @@ export default function HoroscopeScreen() {
             <Text style={styles.dateText}>{getPeriodLabel()}</Text>
           </View>
 
-          <Animated.View style={{ opacity: fadeAnim }}>
+          <Animated.View style={{ opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
             {/* Full reading card */}
             <GlassCard variant="elevated" style={styles.fullReadingCard}>
               <LinearGradient
@@ -173,34 +164,20 @@ export default function HoroscopeScreen() {
               const cat = entry.category?.toLowerCase() || 'general';
               const config = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.general;
               const IconComponent = config.Icon;
-              const animValue = entryAnims.current[index];
 
               return (
-                <Animated.View
-                  key={`${cat}-${index}`}
-                  style={animValue ? {
-                    opacity: animValue,
-                    transform: [{
-                      translateY: animValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0],
-                      }),
-                    }],
-                  } : undefined}
-                >
-                  <GlassCard style={styles.entryCard}>
-                    <View style={styles.entryHeader}>
-                      <View style={[styles.categoryIconCircle, { backgroundColor: `${config.color}18` }]}>
-                        <IconComponent size={18} color={config.color} />
-                      </View>
-                      <Text style={[styles.entryCategory, { color: config.color }]}>
-                        {entry.title}
-                      </Text>
+                <GlassCard key={`${cat}-${index}`} style={styles.entryCard}>
+                  <View style={styles.entryHeader}>
+                    <View style={[styles.categoryIconCircle, { backgroundColor: `${config.color}18` }]}>
+                      <IconComponent size={18} color={config.color} />
                     </View>
-                    <Text style={styles.entryContent}>{entry.content}</Text>
-                    <View style={[styles.accentLine, { backgroundColor: config.color }]} />
-                  </GlassCard>
-                </Animated.View>
+                    <Text style={[styles.entryCategory, { color: config.color }]}>
+                      {entry.title}
+                    </Text>
+                  </View>
+                  <Text style={styles.entryContent}>{entry.content}</Text>
+                  <View style={[styles.accentLine, { backgroundColor: config.color }]} />
+                </GlassCard>
               );
             })}
           </Animated.View>
