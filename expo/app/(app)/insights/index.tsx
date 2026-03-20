@@ -7,9 +7,8 @@ import { Lock, Unlock, BookOpen, ShoppingCart } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
-import { fetchProducts, fetchUnlockedSlugs, type Product } from '@/services/purchases';
+import { fetchProducts, fetchUnlockedSlugs, recordPurchase, type Product } from '@/services/purchases';
 import { createPaymentIntent } from '@/services/stripe';
-import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/GlassCard';
 
 export default function InsightsScreen() {
@@ -41,22 +40,37 @@ export default function InsightsScreen() {
       const amountInCents = Math.round(product.price * 100);
       const clientSecret = await createPaymentIntent(amountInCents);
 
-      // For now, record the purchase with the client secret as PI ID
-      // In production, integrate with @stripe/stripe-react-native initPaymentSheet + presentPaymentSheet
+      // TODO: In production, use @stripe/stripe-react-native:
+      //   await initPaymentSheet({ paymentIntentClientSecret: clientSecret });
+      //   const { error } = await presentPaymentSheet();
+      //   if (error) throw error;
+      // For now, confirm the intent was created successfully before recording
       const piId = clientSecret.split('_secret_')[0] ?? clientSecret;
 
-      const { error } = await supabase.from('purchases').insert({
-        user_email: user.email,
-        product_id: product.slug,
-        status: 'completed',
-        stripe_payment_intent_id: piId,
-      });
-
-      if (error) throw error;
-
-      await unlockedQuery.refetch();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      Alert.alert('Success', `You've unlocked ${product.name}!`);
+      // Only record purchase after payment intent is created
+      // The PHP endpoint creates the PI — in a full integration,
+      // presentPaymentSheet() would confirm the actual charge
+      Alert.alert(
+        'Confirm Purchase',
+        `Unlock "${product.name}" for $${product.price}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Purchase',
+            onPress: async () => {
+              try {
+                await recordPurchase(user.email!, product.slug, piId);
+                await unlockedQuery.refetch();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                Alert.alert('Success', `You've unlocked ${product.name}!`);
+              } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : 'Purchase recording failed';
+                Alert.alert('Error', msg);
+              }
+            },
+          },
+        ]
+      );
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Payment failed';
       Alert.alert('Error', message);
@@ -113,6 +127,10 @@ export default function InsightsScreen() {
                         style={({ pressed }) => [styles.viewBtn, pressed && { opacity: 0.8 }]}
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                          Alert.alert(
+                            product.name,
+                            product.description + '\n\nFull content is available in the web dashboard at app.astrolyfe.co',
+                          );
                         }}
                       >
                         <BookOpen size={16} color={Colors.success} />

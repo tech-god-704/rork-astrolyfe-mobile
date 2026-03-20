@@ -193,18 +193,30 @@ function getElementOf(sign: string): string {
   return z?.element ?? 'Unknown';
 }
 
+// Simple hash for deterministic variation based on sign names
+function signHash(s1: string, s2: string): number {
+  const str = [s1, s2].sort().join('');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash; // 32-bit int
+  }
+  return Math.abs(hash);
+}
+
 function calculateZodiacScore(sign1: string, sign2: string): number {
   const el1 = getElementOf(sign1);
   const el2 = getElementOf(sign2);
-  if (el1 === el2) return 85 + Math.floor(Math.random() * 10);
+  const variation = signHash(sign1, sign2) % 10;
+  if (el1 === el2) return 85 + variation;
   const compat: Record<string, string[]> = {
     Fire: ['Air'],
     Air: ['Fire'],
     Earth: ['Water'],
     Water: ['Earth'],
   };
-  if (compat[el1]?.includes(el2)) return 70 + Math.floor(Math.random() * 15);
-  return 45 + Math.floor(Math.random() * 20);
+  if (compat[el1]?.includes(el2)) return 70 + variation;
+  return 50 + variation;
 }
 
 function getZodiacDescription(sign1: string, sign2: string): string {

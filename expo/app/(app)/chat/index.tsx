@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,6 +72,25 @@ export default function ChatListScreen() {
       return (data ?? []) as Astrologer[];
     },
   });
+
+  // Realtime subscription for conversation updates (new messages, reordering)
+  useEffect(() => {
+    if (!user?.email) return;
+    const channel = supabase
+      .channel('conversations-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_conversations',
+      }, () => {
+        void conversationsQuery.refetch();
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
 
   const startConversation = useMutation({
     mutationFn: async (astrologer: Astrologer) => {

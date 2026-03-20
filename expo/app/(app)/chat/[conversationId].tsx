@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send } from 'lucide-react-native';
@@ -88,6 +88,7 @@ export default function ChatConversationScreen() {
     },
     onError: (error: Error) => {
       console.log('[Chat] Send error:', error.message);
+      Alert.alert('Send Failed', 'Could not send your message. Please try again.');
     },
   });
 

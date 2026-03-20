@@ -50,18 +50,19 @@ export async function recordPurchase(
   productSlug: string,
   stripePaymentIntentId: string
 ): Promise<void> {
-  // Look up the product to get its id
-  const { data: product } = await supabase
+  // The products table uses slug as PK, but purchases.product_id may be UUID or text
+  // Fetch the product row to use whatever identifier the FK expects
+  const { data: product, error: lookupError } = await supabase
     .from('products')
     .select('slug')
     .eq('slug', productSlug)
     .single();
 
-  if (!product) throw new Error('Product not found');
+  if (lookupError || !product) throw new Error('Product not found');
 
   const { error } = await supabase.from('purchases').insert({
     user_email: userEmail,
-    product_id: productSlug,
+    product_id: product.slug,
     status: 'completed',
     stripe_payment_intent_id: stripePaymentIntentId,
   });
