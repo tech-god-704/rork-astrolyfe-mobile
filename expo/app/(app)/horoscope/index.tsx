@@ -2,13 +2,14 @@ import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { Sparkles, Heart, Briefcase, Activity, TrendingUp, Flame, Star, Sun } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { getHoroscope, categorizeHoroscope, type HoroscopePeriod } from '@/services/horoscope';
+import { getHoroscope, fetchCuratedHoroscope, categorizeHoroscope, type HoroscopePeriod } from '@/services/horoscope';
 
 type PeriodType = HoroscopePeriod;
 
@@ -34,13 +35,21 @@ export default function HoroscopeScreen() {
   const [period, setPeriod] = useState<PeriodType>('daily');
   const contentAnim = useRef(new Animated.Value(1)).current;
 
-  // Generate content INSTANTLY — no network, no async, no loading
+  // Try curated horoscope from Supabase (written by the web app), fall back to local
   const signName = profile?.zodiac_sign || 'Aries';
   const localReading = useMemo(() => getHoroscope(signName, period), [signName, period]);
-  const displayText = localReading.horoscope;
+
+  const curatedQuery = useQuery({
+    queryKey: ['curatedHoroscope', signName, period],
+    queryFn: () => fetchCuratedHoroscope(signName, period),
+    staleTime: 1000 * 60 * 30, // 30 min — curated content changes infrequently
+  });
+
+  const activeReading = curatedQuery.data ?? localReading;
+  const displayText = activeReading.horoscope;
   const displayCategories = useMemo(
-    () => categorizeHoroscope(localReading),
-    [localReading]
+    () => categorizeHoroscope(activeReading),
+    [activeReading]
   );
 
   // Fade in content whenever period changes

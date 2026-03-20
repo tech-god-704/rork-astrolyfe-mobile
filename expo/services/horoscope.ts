@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase';
+
 export type HoroscopePeriod = 'daily' | 'weekly' | 'monthly';
 
 export interface HoroscopeReading {
@@ -5,6 +7,7 @@ export interface HoroscopeReading {
   period: HoroscopePeriod;
   date: string;
   horoscope: string;
+  source: 'curated' | 'local';
 }
 
 export interface CategorizedReading {
@@ -14,8 +17,42 @@ export interface CategorizedReading {
 }
 
 /**
+ * Fetch curated horoscope from the Supabase `horoscopes` table.
+ * The web app writes curated daily/weekly/monthly content per zodiac sign.
+ * Returns null if no curated content exists (falls back to local generation).
+ */
+export async function fetchCuratedHoroscope(
+  sign: string,
+  period: HoroscopePeriod,
+): Promise<HoroscopeReading | null> {
+  try {
+    const { data, error } = await supabase
+      .from('horoscopes')
+      .select('content, title, category')
+      .eq('zodiac_sign', sign.toLowerCase())
+      .eq('period_type', period)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data?.content) return null;
+
+    return {
+      sign,
+      period,
+      date: new Date().toISOString().split('T')[0],
+      horoscope: data.content,
+      source: 'curated',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get horoscope content immediately (no network required).
  * Content changes daily based on sign + date.
+ * Use fetchCuratedHoroscope() for server-side curated content when available.
  */
 export function getHoroscope(sign: string, period: HoroscopePeriod): HoroscopeReading {
   const hash = getDayHash(sign, period);
@@ -44,6 +81,7 @@ export function getHoroscope(sign: string, period: HoroscopePeriod): HoroscopeRe
     period,
     date: new Date().toISOString().split('T')[0],
     horoscope: personalized,
+    source: 'local',
   };
 }
 
