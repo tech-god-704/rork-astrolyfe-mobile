@@ -1,6 +1,6 @@
 import { fetchWithRetry, parseResponseOrThrow } from '@/lib/network';
 
-const STRIPE_ENDPOINT = process.env.EXPO_PUBLIC_STRIPE_ENDPOINT!;
+const STRIPE_ENDPOINT = process.env.EXPO_PUBLIC_STRIPE_ENDPOINT || 'https://astrolyfe.co/assets/includes/stripe/create-pay.php';
 
 interface PaymentIntentResponse {
   clientSecret: string;
