@@ -117,8 +117,10 @@ export default function LoginScreen() {
 
             {/* Dev bypass */}
             <View style={styles.devBypassRow}>
-              <Pressable onPress={() => setShowPinModal(true)} style={({ pressed }) => [styles.devLockBtn, pressed && { opacity: 0.5 }]} hitSlop={12}>
-                <KeyRound size={16} color={Colors.textMuted} style={{ opacity: 0.4 }} />
+              <Pressable onPress={() => setShowPinModal(true)} style={({ pressed }) => [styles.devLockBtn, pressed && { opacity: 0.6 }]} hitSlop={16}>
+                <View style={styles.devLockInner}>
+                  <KeyRound size={20} color={Colors.textSecondary} />
+                </View>
               </Pressable>
             </View>
           </ScrollView>
@@ -203,7 +205,17 @@ const styles = StyleSheet.create({
   signupText: { fontSize: 15, color: Colors.textSecondary },
   signupTextBold: { color: Colors.purpleLight, fontWeight: '700' },
   devBypassRow: { alignItems: 'center', marginTop: 40, paddingBottom: 20 },
-  devLockBtn: { padding: 10 },
+  devLockBtn: { padding: 12 },
+  devLockInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.bgCardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
   modalCard: {
     backgroundColor: Colors.bgCard,
