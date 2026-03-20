@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +11,9 @@ export interface UserProfile {
   display_name: string | null;
   zodiac_sign: string | null;
   birth_date: string | null;
+  birth_city: string | null;
+  birth_lat: number | null;
+  birth_lon: number | null;
 }
 
 function checkIsAdmin(session: Session | null): boolean {
@@ -29,13 +33,24 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [skipAuth, setSkipAuth] = useState<boolean>(false);
 
+  // Guard against concurrent profile fetches
+  const fetchInFlight = useRef(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
   const isAdmin = useMemo(() => checkIsAdmin(session), [session]);
 
-  const fetchProfile = useCallback(async (email: string) => {
+  const fetchProfile = useCallback(async (email: string): Promise<UserProfile | null> => {
+    if (fetchInFlight.current) return null;
+    fetchInFlight.current = true;
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('email, display_name, zodiac_sign, birth_date, birth_city, birth_lat, birth_lon')
         .eq('email', email)
         .single();
       if (error) {
@@ -46,6 +61,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     } catch (e) {
       console.log('[Auth] Profile fetch exception:', e);
       return null;
+    } finally {
+      fetchInFlight.current = false;
     }
   }, []);
 
@@ -57,27 +74,31 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           setTimeout(() => reject(new Error('Session check timed out')), 8000)
         );
         const { data: { session: existing } } = await Promise.race([sessionPromise, timeoutPromise]);
+        if (!isMounted.current) return;
         setSession(existing);
         setUser(existing?.user ?? null);
         if (existing?.user?.email) {
           const p = await fetchProfile(existing.user.email);
-          setProfile(p);
+          if (isMounted.current) setProfile(p);
         }
       } catch (e) {
         console.log('[Auth] Init error:', e);
       } finally {
-        setIsLoading(false);
-        setIsReady(true);
+        if (isMounted.current) {
+          setIsLoading(false);
+          setIsReady(true);
+        }
       }
     };
     void init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!isMounted.current) return;
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user?.email) {
         const p = await fetchProfile(newSession.user.email);
-        setProfile(p);
+        if (isMounted.current) setProfile(p);
       } else {
         setProfile(null);
       }
@@ -86,18 +107,44 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
+  // Refresh session when app returns from background
+  useEffect(() => {
+    const handleAppState = (state: AppStateStatus) => {
+      if (state === 'active') {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppState);
+    return () => sub.remove();
+  }, []);
+
   const signUp = useCallback(async (email: string, password: string, displayName: string, zodiacSign: string, birthDate: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
 
+    // Create user profile row — this MUST succeed for the app to work
     const { error: insertError } = await supabase.from('users').insert({
       email,
       display_name: displayName,
       zodiac_sign: zodiacSign || null,
       birth_date: birthDate || null,
     });
+
     if (insertError) {
-      console.log('[Auth] Insert user row error:', insertError.message);
+      // If it's a unique constraint error, the user might already exist — try upsert
+      if (insertError.code === '23505') {
+        console.log('[Auth] User row already exists, updating instead');
+        await supabase.from('users').update({
+          display_name: displayName,
+          zodiac_sign: zodiacSign || null,
+          birth_date: birthDate || null,
+        }).eq('email', email);
+      } else {
+        console.error('[Auth] Failed to create user profile:', insertError.message);
+        throw new Error('Account created but profile setup failed. Please sign in and update your profile.');
+      }
     }
     return data;
   }, []);
@@ -105,20 +152,38 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Ensure user row exists (edge case: auth exists but users row doesn't)
+    const { data: existing } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .single();
+
+    if (!existing) {
+      console.log('[Auth] Creating missing user row on sign-in');
+      await supabase.from('users').insert({
+        email,
+        display_name: email.split('@')[0],
+      });
+    }
+
     return data;
   }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
+    if (isMounted.current) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    }
   }, []);
 
   const refreshProfile = useCallback(async () => {
     if (user?.email) {
       const p = await fetchProfile(user.email);
-      setProfile(p);
+      if (isMounted.current) setProfile(p);
     }
   }, [user, fetchProfile]);
 

@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { parseBirthDate, getWesternHoroscope, type BirthData } from '@/services/astrology';
+import { getProfileLocation } from '@/services/location';
 
 interface CompatibilityResult {
   score: number;
@@ -42,8 +43,9 @@ export default function CompatibilityScreen() {
         const parsed1 = parseBirthDate(profile.birth_date);
         const parsed2 = parseBirthDate(partnerBirthDate);
         if (parsed1 && parsed2) {
-          const data1: BirthData = { ...parsed1, hour: 12, min: 0, lat: 40.7128, lon: -74.006, tzone: -5 };
-          const data2: BirthData = { ...parsed2, hour: 12, min: 0, lat: 40.7128, lon: -74.006, tzone: -5 };
+          const loc = getProfileLocation(profile.birth_lat, profile.birth_lon);
+          const data1: BirthData = { ...parsed1, hour: 12, min: 0, lat: loc.lat, lon: loc.lon, tzone: loc.tzone };
+          const data2: BirthData = { ...parsed2, hour: 12, min: 0, lat: loc.lat, lon: loc.lon, tzone: loc.tzone };
           try {
             const apiResult = await getWesternHoroscope(data1, data2);
             if (apiResult && typeof apiResult === 'object') {

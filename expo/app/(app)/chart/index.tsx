@@ -9,6 +9,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getPlanets, parseBirthDate, type BirthData, type PlanetPosition } from '@/services/astrology';
+import { getProfileLocation } from '@/services/location';
 
 const CHART_SIZE = 320;
 const CENTER = CHART_SIZE / 2;
@@ -32,18 +33,19 @@ export default function ChartScreen() {
   const userSign = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
 
   const planetsQuery = useQuery({
-    queryKey: ['planets', profile?.birth_date],
+    queryKey: ['planets', profile?.birth_date, profile?.birth_lat, profile?.birth_lon],
     queryFn: async () => {
       if (!profile?.birth_date) return null;
       const parsed = parseBirthDate(profile.birth_date);
       if (!parsed) return null;
+      const location = getProfileLocation(profile.birth_lat, profile.birth_lon);
       const data: BirthData = {
         ...parsed,
         hour: 12,
         min: 0,
-        lat: 40.7128,
-        lon: -74.006,
-        tzone: -5.0,
+        lat: location.lat,
+        lon: location.lon,
+        tzone: location.tzone,
       };
       try {
         return await getPlanets(data);

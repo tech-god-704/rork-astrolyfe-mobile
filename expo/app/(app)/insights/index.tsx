@@ -38,8 +38,7 @@ export default function InsightsScreen() {
 
     try {
       const amountInCents = Math.round(product.price * 100);
-      const clientSecret = await createPaymentIntent(amountInCents);
-      const piId = clientSecret.split('_secret_')[0] ?? clientSecret;
+      const { paymentIntentId } = await createPaymentIntent(amountInCents);
 
       Alert.alert(
         'Confirm Purchase',
@@ -50,7 +49,7 @@ export default function InsightsScreen() {
             text: 'Purchase',
             onPress: async () => {
               try {
-                await recordPurchase(user.email!, product.slug, piId);
+                await recordPurchase(user.email!, product.slug, paymentIntentId);
                 await unlockedQuery.refetch();
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
                 Alert.alert('Success', `You've unlocked ${product.name}!`);
