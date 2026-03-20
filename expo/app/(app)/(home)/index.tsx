@@ -1,24 +1,45 @@
-import React, { useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated, Dimensions, Platform } from 'react-native';
+import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, Calendar, TrendingUp } from 'lucide-react-native';
+import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { fetchHoroscope, categorizeHoroscope } from '@/services/horoscope';
+import { getHoroscope, categorizeHoroscope, fetchLiveHoroscope } from '@/services/horoscope';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const moonPhase = getMoonPhase();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
+  const [liveText, setLiveText] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Generate horoscope content INSTANTLY — no network, no async
+  const signName = profile?.zodiac_sign || 'Aries';
+  const localReading = useMemo(() => getHoroscope(signName, 'daily'), [signName]);
+  const categories = useMemo(() => {
+    const reading = liveText ? { ...localReading, horoscope: liveText } : localReading;
+    return categorizeHoroscope(reading);
+  }, [localReading, liveText]);
+
+  const firstCategory = categories[0];
+  const remainingCount = categories.length - 1;
+
+  // Try live API in background
+  useEffect(() => {
+    let cancelled = false;
+    fetchLiveHoroscope(signName, 'daily').then((result) => {
+      if (!cancelled && result?.horoscope) setLiveText(result.horoscope);
+    });
+    return () => { cancelled = true; };
+  }, [signName]);
 
   // Animations
   const heroOpacity = useRef(new Animated.Value(0)).current;
@@ -39,25 +60,14 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  // Fetch live horoscope from API
-  const horoscopeQuery = useQuery({
-    queryKey: ['dailyHoroscope', profile?.zodiac_sign, todayStr],
-    queryFn: async () => {
-      if (!profile?.zodiac_sign) return null;
-      const reading = await fetchHoroscope(profile.zodiac_sign, 'daily');
-      const categories = categorizeHoroscope(reading);
-      return { reading, categories };
-    },
-    enabled: !!profile?.zodiac_sign,
-    staleTime: 1000 * 60 * 30, // 30 min cache
-    gcTime: 1000 * 60 * 60, // 1 hour gc
-  });
-
   const onRefresh = useCallback(() => {
-    void horoscopeQuery.refetch();
-  }, [horoscopeQuery]);
+    setRefreshing(true);
+    setLiveText(null);
+    fetchLiveHoroscope(signName, 'daily').then((result) => {
+      if (result?.horoscope) setLiveText(result.horoscope);
+      setRefreshing(false);
+    }).catch(() => setRefreshing(false));
+  }, [signName]);
 
   const handlePress = useCallback((route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -71,10 +81,6 @@ export default function HomeScreen() {
     return 'Good evening';
   };
 
-  const data = horoscopeQuery.data;
-  const firstCategory = data?.categories?.[0];
-  const remainingCount = (data?.categories?.length ?? 0) - 1;
-
   return (
     <View style={styles.container}>
       <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
@@ -82,7 +88,7 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={horoscopeQuery.isRefetching} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]}>
@@ -150,11 +156,7 @@ export default function HomeScreen() {
                 ) : (
                   <View style={styles.heroContent}>
                     <Text style={styles.heroPlaceholder}>
-                      {horoscopeQuery.isLoading
-                        ? 'Consulting the stars...'
-                        : !profile?.zodiac_sign
-                        ? 'Set your zodiac sign in your profile to receive daily readings.'
-                        : 'Your cosmic reading is loading...'}
+                      Set your zodiac sign in your profile to receive daily readings.
                     </Text>
                   </View>
                 )}
