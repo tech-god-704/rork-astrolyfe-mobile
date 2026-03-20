@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { Stack } from 'expo-router';
+import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
@@ -12,7 +12,8 @@ interface ChatMessage {
   id: string;
   conversation_id: string;
   sender_type: 'user' | 'astrologer';
-  content: string;
+  sender_id: string;
+  message: string;
   created_at: string;
 }
 
@@ -27,13 +28,15 @@ export default function ChatConversationScreen() {
     queryKey: ['chatMessages', conversationId],
     queryFn: async () => {
       if (!conversationId) return [];
-      console.log('[Chat] Fetching messages for:', conversationId);
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
-      if (error) { console.log('[Chat] Messages error:', error.message); return []; }
+      if (error) {
+        console.log('[Chat] Messages error:', error.message);
+        return [];
+      }
       return (data ?? []) as ChatMessage[];
     },
     enabled: !!conversationId,
@@ -41,54 +44,51 @@ export default function ChatConversationScreen() {
 
   useEffect(() => {
     if (!conversationId) return;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    try {
-      console.log('[Chat] Setting up realtime for:', conversationId);
-      channel = supabase
-        .channel(`chat-${conversationId}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        }, (payload) => {
-          console.log('[Chat] New message received:', payload.new);
-          queryClient.setQueryData<ChatMessage[]>(['chatMessages', conversationId], (old) => {
-            const newMsg = payload.new as ChatMessage;
-            if (!old) return [newMsg];
-            if (old.some((m) => m.id === newMsg.id)) return old;
-            return [...old, newMsg];
-          });
-        })
-        .subscribe();
-    } catch (e) {
-      console.log('[Chat] Realtime setup error:', e);
-    }
+    const channel = supabase
+      .channel(`chat-${conversationId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        queryClient.setQueryData<ChatMessage[]>(['chatMessages', conversationId], (old) => {
+          const newMsg = payload.new as ChatMessage;
+          if (!old) return [newMsg];
+          if (old.some((m) => m.id === newMsg.id)) return old;
+          return [...old, newMsg];
+        });
+      })
+      .subscribe();
 
     return () => {
-      if (channel) {
-        console.log('[Chat] Cleaning up realtime for:', conversationId);
-        void supabase.removeChannel(channel);
-      }
+      void supabase.removeChannel(channel);
     };
   }, [conversationId, queryClient]);
 
   const sendMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async (text: string) => {
       if (!conversationId || !user?.email) throw new Error('Missing context');
-      console.log('[Chat] Sending message');
       const { error } = await supabase.from('chat_messages').insert({
         conversation_id: conversationId,
         sender_type: 'user',
-        content,
+        sender_id: user.email,
+        message: text,
       });
       if (error) throw error;
+      // Update last_message_at on the conversation
+      await supabase
+        .from('chat_conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversationId);
     },
     onSuccess: () => {
       setMessageText('');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     },
     onError: (error: Error) => {
       console.log('[Chat] Send error:', error.message);
+      Alert.alert('Send Failed', 'Could not send your message. Please try again.');
     },
   });
 
@@ -104,7 +104,9 @@ export default function ChatConversationScreen() {
     const isUser = item.sender_type === 'user';
     return (
       <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.astrologerBubble]}>
-        <Text style={[styles.messageText, isUser ? styles.userText : styles.astrologerText]}>{item.content}</Text>
+        <Text style={[styles.messageText, isUser ? styles.userText : styles.astrologerText]}>
+          {item.message}
+        </Text>
         <Text style={styles.messageTime}>
           {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
@@ -167,12 +169,12 @@ const styles = StyleSheet.create({
   loader: { marginTop: 40 },
   messageList: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, flexGrow: 1 },
   messageBubble: { maxWidth: '80%' as unknown as number, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 18, marginBottom: 4 },
-  userBubble: { alignSelf: 'flex-end' as const, backgroundColor: Colors.purple, borderBottomRightRadius: 4 },
-  astrologerBubble: { alignSelf: 'flex-start' as const, backgroundColor: Colors.bgCard, borderBottomLeftRadius: 4 },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: Colors.purple, borderBottomRightRadius: 4 },
+  astrologerBubble: { alignSelf: 'flex-start', backgroundColor: Colors.bgCard, borderBottomLeftRadius: 4 },
   messageText: { fontSize: 15, lineHeight: 21 },
   userText: { color: '#fff' },
   astrologerText: { color: Colors.textPrimary },
-  messageTime: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4, alignSelf: 'flex-end' as const },
+  messageTime: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4, alignSelf: 'flex-end' },
   emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyChatText: { fontSize: 15, color: Colors.textMuted },
   inputRow: {
