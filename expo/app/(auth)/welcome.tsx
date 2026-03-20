@@ -1,53 +1,111 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sparkles } from 'lucide-react-native';
+import { Sparkles, Star, ArrowRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import CosmicBackground from '@/components/CosmicBackground';
+
+const { width: SCREEN_W } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { setSkipAuth } = useAuth();
-  const fadeIn = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(40)).current;
-  const logoScale = useRef(new Animated.Value(0.5)).current;
-  const btnOpacity = useRef(new Animated.Value(0)).current;
+
+  const logoScale = useRef(new Animated.Value(0.3)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const subtitleTranslateY = useRef(new Animated.Value(15)).current;
+  const buttonsOpacity = useRef(new Animated.Value(0)).current;
+  const buttonsTranslateY = useRef(new Animated.Value(30)).current;
+  const ringScale = useRef(new Animated.Value(0.5)).current;
+  const ringOpacity = useRef(new Animated.Value(0)).current;
+  const ring2Scale = useRef(new Animated.Value(0.5)).current;
+  const ring2Opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
+      // Logo entrance with rings
       Animated.parallel([
-        Animated.timing(logoScale, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(fadeIn, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.spring(logoScale, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(ringScale, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(ringOpacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
       ]),
+      // Ring 2 expands
       Animated.parallel([
-        Animated.timing(slideUp, { toValue: 0, duration: 600, useNativeDriver: true }),
-        Animated.timing(btnOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(ring2Scale, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(ring2Opacity, { toValue: 0.15, duration: 600, useNativeDriver: true }),
+      ]),
+      // Title
+      Animated.parallel([
+        Animated.timing(titleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.spring(titleTranslateY, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
+      ]),
+      // Subtitle
+      Animated.parallel([
+        Animated.timing(subtitleOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(subtitleTranslateY, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]),
+      // Buttons
+      Animated.parallel([
+        Animated.timing(buttonsOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.spring(buttonsTranslateY, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
       ]),
     ]).start();
-  }, [fadeIn, slideUp, logoScale, btnOpacity]);
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#1a103d', '#120d2e', '#0a0a1a']}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <CosmicBackground>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topSection}>
-          <Animated.View style={[styles.logoContainer, { opacity: fadeIn, transform: [{ scale: logoScale }] }]}>
-            <View style={styles.logoCircle}>
+          {/* Outer ring */}
+          <Animated.View style={[styles.ring2, { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] }]} />
+          {/* Inner ring */}
+          <Animated.View style={[styles.ring1, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
+          {/* Logo */}
+          <Animated.View style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+            <LinearGradient
+              colors={[Colors.purple, Colors.indigoLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoCircle}
+            >
               <Text style={styles.logoEmoji}>✦</Text>
+            </LinearGradient>
+          </Animated.View>
+
+          <Animated.Text style={[styles.title, { opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] }]}>
+            AstroLyfe
+          </Animated.Text>
+          <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity, transform: [{ translateY: subtitleTranslateY }] }]}>
+            Unlock the wisdom of the stars.{'\n'}Your cosmic journey begins here.
+          </Animated.Text>
+
+          {/* Feature highlights */}
+          <Animated.View style={[styles.features, { opacity: subtitleOpacity }]}>
+            <View style={styles.featureItem}>
+              <Star size={14} color={Colors.gold} />
+              <Text style={styles.featureText}>Daily Horoscopes</Text>
+            </View>
+            <View style={styles.featureDot} />
+            <View style={styles.featureItem}>
+              <Sparkles size={14} color={Colors.purpleLight} />
+              <Text style={styles.featureText}>Natal Charts</Text>
+            </View>
+            <View style={styles.featureDot} />
+            <View style={styles.featureItem}>
+              <Star size={14} color={Colors.accent} />
+              <Text style={styles.featureText}>Compatibility</Text>
             </View>
           </Animated.View>
-          <Animated.Text style={[styles.title, { opacity: fadeIn }]}>AstroLyfe</Animated.Text>
-          <Animated.Text style={[styles.subtitle, { opacity: fadeIn }]}>
-            Your cosmic journey begins here
-          </Animated.Text>
         </View>
 
-        <Animated.View style={[styles.bottomSection, { opacity: btnOpacity, transform: [{ translateY: slideUp }] }]}>
+        <Animated.View style={[styles.bottomSection, { opacity: buttonsOpacity, transform: [{ translateY: buttonsTranslateY }] }]}>
           <Pressable
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
             onPress={() => router.push('/(auth)/onboarding')}
@@ -59,8 +117,8 @@ export default function WelcomeScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.btnGradient}
             >
-              <Sparkles size={20} color="#fff" />
               <Text style={styles.primaryBtnText}>Get Started</Text>
+              <ArrowRight size={20} color="#fff" />
             </LinearGradient>
           </Pressable>
 
@@ -69,7 +127,7 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/(auth)/login')}
             testID="login-btn"
           >
-            <Text style={styles.secondaryBtnText}>Already have an account? Log in</Text>
+            <Text style={styles.secondaryBtnText}>Already have an account? <Text style={styles.secondaryBtnBold}>Log in</Text></Text>
           </Pressable>
 
           <Pressable
@@ -84,15 +142,11 @@ export default function WelcomeScreen() {
           </Pressable>
         </Animated.View>
       </SafeAreaView>
-    </View>
+    </CosmicBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg,
-  },
   safeArea: {
     flex: 1,
     justifyContent: 'space-between',
@@ -104,42 +158,84 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   logoContainer: {
-    marginBottom: 24,
+    marginBottom: 28,
+    zIndex: 2,
   },
   logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.purpleDim,
-    borderWidth: 2,
-    borderColor: Colors.purpleGlow,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoEmoji: {
-    fontSize: 44,
-    color: Colors.purpleLight,
+    fontSize: 48,
+    color: '#fff',
+  },
+  ring1: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1.5,
+    borderColor: Colors.purpleLight,
+    top: '50%',
+    marginTop: -120,
+    zIndex: 1,
+  },
+  ring2: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    borderWidth: 1,
+    borderColor: Colors.purpleLight,
+    top: '50%',
+    marginTop: -150,
+    zIndex: 0,
   },
   title: {
-    fontSize: 42,
-    fontWeight: '800' as const,
+    fontSize: 46,
+    fontWeight: '800',
     color: Colors.textPrimary,
-    letterSpacing: -1,
+    letterSpacing: -1.5,
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: 16,
     color: Colors.textSecondary,
-    marginTop: 8,
+    marginTop: 12,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  features: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 28,
+    gap: 10,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  featureText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  featureDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.textMuted,
   },
   bottomSection: {
     paddingHorizontal: 24,
     paddingBottom: 20,
-    gap: 14,
+    gap: 12,
   },
   primaryBtn: {
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: 'hidden',
   },
   btnGradient: {
@@ -151,24 +247,32 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     fontSize: 17,
-    fontWeight: '700' as const,
+    fontWeight: '700',
     color: '#fff',
   },
   secondaryBtn: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
+    backgroundColor: Colors.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.bgCardBorder,
   },
   secondaryBtnText: {
     fontSize: 15,
     color: Colors.textSecondary,
   },
+  secondaryBtnBold: {
+    color: Colors.purpleLight,
+    fontWeight: '700',
+  },
   btnPressed: {
-    opacity: 0.8,
+    opacity: 0.85,
     transform: [{ scale: 0.98 }],
   },
   skipBtn: {
-    paddingVertical: 12,
-    alignItems: 'center' as const,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   skipBtnText: {
     fontSize: 14,

@@ -4,11 +4,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle } from 'lucide-react-native';
+import { MessageCircle, ChevronRight, Sparkles, Star } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
+import GlassCard from '@/components/GlassCard';
 
 interface Astrologer {
   id: string;
@@ -32,6 +33,18 @@ function getAstrologer(conv: Conversation): Astrologer | null {
   const a = conv.astrologers;
   if (!a) return null;
   return Array.isArray(a) ? a[0] ?? null : a;
+}
+
+function getTimeAgo(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }
 
 export default function ChatListScreen() {
@@ -73,7 +86,6 @@ export default function ChatListScreen() {
     },
   });
 
-  // Realtime subscription for conversation updates (new messages, reordering)
   useEffect(() => {
     if (!user?.email) return;
     const channel = supabase
@@ -95,7 +107,6 @@ export default function ChatListScreen() {
   const startConversation = useMutation({
     mutationFn: async (astrologer: Astrologer) => {
       if (!user?.email) throw new Error('Not authenticated');
-      // Check if conversation already exists
       const { data: existing } = await supabase
         .from('chat_conversations')
         .select('id')
@@ -140,27 +151,38 @@ export default function ChatListScreen() {
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const astrologer = getAstrologer(item);
+    const timeAgo = getTimeAgo(item.last_message_at);
     return (
       <Pressable
-        style={({ pressed }) => [styles.convCard, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
         onPress={() => handleOpenConversation(item)}
       >
-        <View style={[styles.avatar, { backgroundColor: astrologer?.is_online ? Colors.purpleDim : Colors.bgCard }]}>
-          <Text style={styles.avatarText}>{(astrologer?.name ?? 'A')[0]}</Text>
-          {astrologer?.is_online && <View style={styles.onlineDot} />}
-        </View>
-        <View style={styles.convInfo}>
-          <Text style={styles.convName}>{astrologer?.name ?? 'Astrologer'}</Text>
-          <Text style={styles.convSpecialty}>{astrologer?.specialty ?? ''}</Text>
-        </View>
-        <MessageCircle size={18} color={Colors.textMuted} />
+        <GlassCard variant="subtle" style={styles.convCard}>
+          <View style={styles.avatarWrap}>
+            <LinearGradient
+              colors={astrologer?.is_online ? [Colors.purple, Colors.indigoLight] : [Colors.bgCard, Colors.bgCard]}
+              style={styles.avatar}
+            >
+              <Text style={styles.avatarText}>{(astrologer?.name ?? 'A')[0]}</Text>
+            </LinearGradient>
+            {astrologer?.is_online && <View style={styles.onlineDot} />}
+          </View>
+          <View style={styles.convInfo}>
+            <View style={styles.convTopRow}>
+              <Text style={styles.convName}>{astrologer?.name ?? 'Astrologer'}</Text>
+              {timeAgo ? <Text style={styles.convTime}>{timeAgo}</Text> : null}
+            </View>
+            <Text style={styles.convSpecialty} numberOfLines={1}>{astrologer?.specialty ?? ''}</Text>
+          </View>
+          <ChevronRight size={16} color={Colors.textMuted} />
+        </GlassCard>
       </Pressable>
     );
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#1a103d', '#120d2e', '#0a0a1a']} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <Text style={styles.title}>Messages</Text>
 
@@ -173,30 +195,74 @@ export default function ChatListScreen() {
             renderItem={renderConversation}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListFooterComponent={
+              (astrologersQuery.data ?? []).length > 0 ? (
+                <View style={styles.newChatSection}>
+                  <Text style={styles.newChatLabel}>Start a new conversation</Text>
+                  {(astrologersQuery.data ?? []).map((a) => (
+                    <Pressable
+                      key={a.id}
+                      style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+                      onPress={() => handleStartChat(a)}
+                      disabled={startConversation.isPending}
+                    >
+                      <GlassCard variant="subtle" style={styles.astrologerCard}>
+                        <View style={styles.astrologerAvatar}>
+                          <Text style={styles.astrologerAvatarText}>{a.name[0]}</Text>
+                          {a.is_online && <View style={styles.onlineDotSmall} />}
+                        </View>
+                        <View style={styles.astrologerInfo}>
+                          <Text style={styles.astrologerName}>{a.name}</Text>
+                          <Text style={styles.astrologerSpecialty}>{a.specialty}</Text>
+                        </View>
+                        <View style={styles.chatIconWrap}>
+                          <MessageCircle size={16} color={Colors.purpleLight} />
+                        </View>
+                      </GlassCard>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null
+            }
           />
         ) : (
           <View style={styles.emptyState}>
-            <MessageCircle size={48} color={Colors.textMuted} />
+            <View style={styles.emptyIconWrap}>
+              <Sparkles size={36} color={Colors.purpleLight} />
+            </View>
             <Text style={styles.emptyTitle}>No conversations yet</Text>
-            <Text style={styles.emptyDesc}>Start a chat with one of our astrologers</Text>
+            <Text style={styles.emptyDesc}>Start a chat with one of our expert astrologers</Text>
 
             {(astrologersQuery.data ?? []).length > 0 && (
               <View style={styles.astrologerList}>
                 {(astrologersQuery.data ?? []).map((a) => (
                   <Pressable
                     key={a.id}
-                    style={({ pressed }) => [styles.astrologerCard, pressed && { opacity: 0.8 }]}
+                    style={({ pressed }) => [pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
                     onPress={() => handleStartChat(a)}
                     disabled={startConversation.isPending}
                   >
-                    <View style={styles.astrologerAvatar}>
-                      <Text style={styles.astrologerAvatarText}>{a.name[0]}</Text>
-                      {a.is_online && <View style={styles.onlineDot} />}
-                    </View>
-                    <View style={styles.astrologerInfo}>
-                      <Text style={styles.astrologerName}>{a.name}</Text>
-                      <Text style={styles.astrologerSpecialty}>{a.specialty}</Text>
-                    </View>
+                    <GlassCard variant="glow" glowColor={Colors.purple} style={styles.astrologerCardLarge}>
+                      <LinearGradient
+                        colors={[Colors.purple, Colors.indigoLight]}
+                        style={styles.astrologerAvatarLarge}
+                      >
+                        <Text style={styles.astrologerAvatarLargeText}>{a.name[0]}</Text>
+                      </LinearGradient>
+                      <View style={styles.astrologerInfo}>
+                        <Text style={styles.astrologerName}>{a.name}</Text>
+                        <Text style={styles.astrologerSpecialty}>{a.specialty}</Text>
+                        {a.is_online && (
+                          <View style={styles.onlineLabel}>
+                            <View style={styles.onlineDotInline} />
+                            <Text style={styles.onlineLabelText}>Online</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.startChatBtn}>
+                        <MessageCircle size={18} color="#fff" />
+                      </View>
+                    </GlassCard>
                   </Pressable>
                 ))}
               </View>
@@ -211,42 +277,47 @@ export default function ChatListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  title: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, marginTop: 8, marginBottom: 20 },
+  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, marginTop: 8, marginBottom: 20, letterSpacing: -0.5 },
   loader: { marginTop: 40 },
-  listContent: { paddingHorizontal: 20, gap: 10 },
+  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 20 },
   convCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
-    padding: 16,
     gap: 14,
-  },
-  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 18, fontWeight: '700', color: Colors.purpleLight },
-  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.success, borderWidth: 2, borderColor: Colors.bg },
-  convInfo: { flex: 1 },
-  convName: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  convSpecialty: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  emptyDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
-  astrologerList: { width: '100%', marginTop: 24, gap: 10 },
-  astrologerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.bgCard,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
     padding: 14,
-    gap: 12,
   },
-  astrologerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center' },
+  avatarWrap: { position: 'relative' },
+  avatar: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  onlineDot: { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: Colors.success, borderWidth: 2.5, borderColor: Colors.bg },
+  convInfo: { flex: 1 },
+  convTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  convName: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  convTime: { fontSize: 12, color: Colors.textMuted },
+  convSpecialty: { fontSize: 13, color: Colors.textSecondary, marginTop: 3 },
+
+  newChatSection: { marginTop: 24, gap: 8 },
+  newChatLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  astrologerCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  astrologerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center' },
   astrologerAvatarText: { fontSize: 16, fontWeight: '700', color: Colors.purpleLight },
+  onlineDotSmall: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.success, borderWidth: 2, borderColor: Colors.bg },
   astrologerInfo: { flex: 1 },
   astrologerName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   astrologerSpecialty: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  chatIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center' },
+
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, gap: 12 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
+  emptyDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+
+  astrologerList: { width: '100%', marginTop: 28, gap: 10 },
+  astrologerCardLarge: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
+  astrologerAvatarLarge: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  astrologerAvatarLargeText: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  onlineLabel: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  onlineDotInline: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success },
+  onlineLabelText: { fontSize: 11, color: Colors.success, fontWeight: '600' },
+  startChatBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.purple, alignItems: 'center', justifyContent: 'center' },
 });

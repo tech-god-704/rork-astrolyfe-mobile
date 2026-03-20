@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, Alert, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
-import { Heart, Sparkles } from 'lucide-react-native';
+import { Heart, Sparkles, Star, Check, ArrowRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -25,6 +25,12 @@ export default function CompatibilityScreen() {
   const [partnerSign, setPartnerSign] = useState<string>('');
   const [partnerBirthDate, setPartnerBirthDate] = useState<string>('');
   const [result, setResult] = useState<CompatibilityResult | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Animated score
+  const scoreAnim = useRef(new Animated.Value(0)).current;
+  const resultOpacity = useRef(new Animated.Value(0)).current;
+  const resultSlide = useRef(new Animated.Value(30)).current;
 
   const compatMutation = useMutation({
     mutationFn: async () => {
@@ -32,7 +38,6 @@ export default function CompatibilityScreen() {
         throw new Error('Please select both zodiac signs');
       }
 
-      // Try API call if birth dates are available
       if (profile.birth_date && partnerBirthDate) {
         const parsed1 = parseBirthDate(profile.birth_date);
         const parsed2 = parseBirthDate(partnerBirthDate);
@@ -41,7 +46,6 @@ export default function CompatibilityScreen() {
           const data2: BirthData = { ...parsed2, hour: 12, min: 0, lat: 40.7128, lon: -74.006, tzone: -5 };
           try {
             const apiResult = await getWesternHoroscope(data1, data2);
-            // Parse API result into our format
             if (apiResult && typeof apiResult === 'object') {
               return {
                 score: typeof apiResult.score === 'number' ? apiResult.score : calculateZodiacScore(profile.zodiac_sign, partnerSign),
@@ -56,7 +60,6 @@ export default function CompatibilityScreen() {
         }
       }
 
-      // Fallback to local zodiac-based calculation
       return {
         score: calculateZodiacScore(profile.zodiac_sign, partnerSign),
         description: getZodiacDescription(profile.zodiac_sign, partnerSign),
@@ -67,6 +70,19 @@ export default function CompatibilityScreen() {
     onSuccess: (data) => {
       setResult(data);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+      // Animate score and result appearance
+      scoreAnim.setValue(0);
+      resultOpacity.setValue(0);
+      resultSlide.setValue(30);
+
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(resultOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.spring(resultSlide, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
+        ]),
+        Animated.timing(scoreAnim, { toValue: data.score, duration: 1200, useNativeDriver: false }),
+      ]).start();
     },
     onError: (error: Error) => {
       Alert.alert('Error', error.message);
@@ -80,52 +96,84 @@ export default function CompatibilityScreen() {
 
   const partnerZodiac = partnerSign ? getZodiacByName(partnerSign) : null;
 
+  // Animated score display
+  const displayScore = scoreAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, 100],
+    extrapolate: 'clamp',
+  });
+
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#1a103d', '#120d2e', '#0a0a1a']} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Compatibility</Text>
           <Text style={styles.subtitle}>Discover your cosmic connection</Text>
 
-          <GlassCard style={styles.yourSignCard}>
-            <Text style={styles.fieldLabel}>Your Sign</Text>
+          {/* Signs Display */}
+          <View style={styles.signsRow}>
             <View style={styles.signDisplay}>
-              <Text style={styles.signDisplaySymbol}>{userZodiac?.symbol ?? '?'}</Text>
-              <Text style={styles.signDisplayName}>{userZodiac?.name ?? 'Set in profile'}</Text>
+              <View style={[styles.signCircle, { borderColor: userZodiac?.color ?? Colors.purple }]}>
+                <Text style={styles.signCircleSymbol}>{userZodiac?.symbol ?? '?'}</Text>
+              </View>
+              <Text style={styles.signDisplayName}>{userZodiac?.name ?? 'You'}</Text>
+            </View>
+
+            <View style={styles.heartContainer}>
+              <Heart size={24} color={Colors.accent} fill={result ? Colors.accent : 'none'} />
+            </View>
+
+            <View style={styles.signDisplay}>
+              <View style={[styles.signCircle, partnerZodiac ? { borderColor: partnerZodiac.color } : {}]}>
+                <Text style={styles.signCircleSymbol}>{partnerZodiac?.symbol ?? '?'}</Text>
+              </View>
+              <Text style={styles.signDisplayName}>{partnerZodiac?.name ?? 'Partner'}</Text>
+            </View>
+          </View>
+
+          {/* Partner Sign Picker */}
+          <GlassCard style={styles.partnerCard}>
+            <Text style={styles.fieldLabel}>Select partner's sign</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.signScroll} contentContainerStyle={styles.signScrollContent}>
+              {ZODIAC_SIGNS.map((sign) => {
+                const isSelected = partnerSign === sign.name;
+                return (
+                  <Pressable
+                    key={sign.name}
+                    style={[styles.signChip, isSelected && { backgroundColor: `${sign.color}15`, borderColor: sign.color }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setPartnerSign(sign.name);
+                    }}
+                  >
+                    <Text style={[styles.signChipSymbol, isSelected && { fontSize: 20 }]}>{sign.symbol}</Text>
+                    <Text style={[styles.signChipLabel, isSelected && { color: sign.color }]}>{sign.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>Partner's birth date (optional)</Text>
+            <View style={[styles.inputWrap, focusedField === 'date' && styles.inputWrapFocused]}>
+              <TextInput
+                style={styles.input}
+                value={partnerBirthDate}
+                onChangeText={setPartnerBirthDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={Colors.textMuted}
+                onFocus={() => setFocusedField('date')}
+                onBlur={() => setFocusedField(null)}
+              />
             </View>
           </GlassCard>
 
-          <GlassCard style={styles.partnerCard}>
-            <Text style={styles.fieldLabel}>Partner's Sign</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.signScroll} contentContainerStyle={styles.signScrollContent}>
-              {ZODIAC_SIGNS.map((sign) => (
-                <Pressable
-                  key={sign.name}
-                  style={[styles.signChip, partnerSign === sign.name && styles.signChipActive]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                    setPartnerSign(sign.name);
-                  }}
-                >
-                  <Text style={styles.signChipSymbol}>{sign.symbol}</Text>
-                  <Text style={[styles.signChipLabel, partnerSign === sign.name && styles.signChipLabelActive]}>{sign.name}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-
-            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Partner's Birth Date (optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={partnerBirthDate}
-              onChangeText={setPartnerBirthDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textMuted}
-            />
-          </GlassCard>
-
           <Pressable
-            style={({ pressed }) => [styles.checkBtn, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [
+              styles.checkBtn,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+              (!partnerSign || !profile?.zodiac_sign) && { opacity: 0.4 },
+            ]}
             onPress={handleCheck}
             disabled={!partnerSign || !profile?.zodiac_sign || compatMutation.isPending}
           >
@@ -134,52 +182,70 @@ export default function CompatibilityScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Heart size={20} color="#fff" />
+                  <Heart size={18} color="#fff" />
                   <Text style={styles.checkBtnText}>Check Compatibility</Text>
+                  <ArrowRight size={16} color="#fff" />
                 </>
               )}
             </LinearGradient>
           </Pressable>
 
           {result && (
-            <View style={styles.resultSection}>
-              <GlassCard style={styles.scoreCard}>
+            <Animated.View style={[styles.resultSection, { opacity: resultOpacity, transform: [{ translateY: resultSlide }] }]}>
+              {/* Score Card */}
+              <GlassCard variant="glow" glowColor={Colors.accent} style={styles.scoreCard}>
                 <View style={styles.scoreRow}>
                   <Text style={styles.scoreEmoji}>{userZodiac?.symbol ?? '?'}</Text>
                   <View style={styles.scoreCenter}>
-                    <Text style={styles.scoreValue}>{result.score}%</Text>
+                    <AnimatedScoreText score={displayScore} />
                     <Text style={styles.scoreLabel}>Match Score</Text>
                   </View>
                   <Text style={styles.scoreEmoji}>{partnerZodiac?.symbol ?? '?'}</Text>
                 </View>
                 <View style={styles.scoreBar}>
-                  <View style={[styles.scoreBarFill, { width: `${result.score}%` }]} />
+                  <Animated.View style={[styles.scoreBarFill, {
+                    width: scoreAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }]}>
+                    <LinearGradient colors={[Colors.accent, '#E11D48']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
+                  </Animated.View>
                 </View>
               </GlassCard>
 
+              {/* Description */}
               <GlassCard style={styles.descCard}>
                 <Sparkles size={18} color={Colors.gold} />
                 <Text style={styles.descText}>{result.description}</Text>
               </GlassCard>
 
+              {/* Strengths */}
               {result.strengths.length > 0 && (
                 <GlassCard style={styles.listCard}>
                   <Text style={styles.listTitle}>Strengths</Text>
                   {result.strengths.map((s, i) => (
-                    <Text key={i} style={styles.listItem}>+ {s}</Text>
+                    <View key={i} style={styles.listItemRow}>
+                      <View style={[styles.listDot, { backgroundColor: Colors.success }]} />
+                      <Text style={styles.listItem}>{s}</Text>
+                    </View>
                   ))}
                 </GlassCard>
               )}
 
+              {/* Challenges */}
               {result.challenges.length > 0 && (
                 <GlassCard style={styles.listCard}>
                   <Text style={[styles.listTitle, { color: Colors.accent }]}>Challenges</Text>
                   {result.challenges.map((c, i) => (
-                    <Text key={i} style={styles.listItem}>- {c}</Text>
+                    <View key={i} style={styles.listItemRow}>
+                      <View style={[styles.listDot, { backgroundColor: Colors.accent }]} />
+                      <Text style={styles.listItem}>{c}</Text>
+                    </View>
                   ))}
                 </GlassCard>
               )}
-            </View>
+            </Animated.View>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -187,19 +253,36 @@ export default function CompatibilityScreen() {
   );
 }
 
-// Local zodiac compatibility logic as fallback
+// Animated score text component
+function AnimatedScoreText({ score }: { score: Animated.AnimatedInterpolation<number> }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const listenerId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = score.addListener(({ value }) => {
+      setDisplayValue(Math.round(value));
+    });
+    listenerId.current = id;
+    return () => {
+      score.removeListener(id);
+    };
+  }, [score]);
+
+  return <Text style={styles.scoreValue}>{displayValue}%</Text>;
+}
+
+// Local zodiac compatibility logic
 function getElementOf(sign: string): string {
   const z = getZodiacByName(sign);
   return z?.element ?? 'Unknown';
 }
 
-// Simple hash for deterministic variation based on sign names
 function signHash(s1: string, s2: string): number {
   const str = [s1, s2].sort().join('');
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash = hash & hash; // 32-bit int
+    hash = hash & hash;
   }
   return Math.abs(hash);
 }
@@ -210,10 +293,7 @@ function calculateZodiacScore(sign1: string, sign2: string): number {
   const variation = signHash(sign1, sign2) % 10;
   if (el1 === el2) return 85 + variation;
   const compat: Record<string, string[]> = {
-    Fire: ['Air'],
-    Air: ['Fire'],
-    Earth: ['Water'],
-    Water: ['Earth'],
+    Fire: ['Air'], Air: ['Fire'], Earth: ['Water'], Water: ['Earth'],
   };
   if (compat[el1]?.includes(el2)) return 70 + variation;
   return 50 + variation;
@@ -222,14 +302,14 @@ function calculateZodiacScore(sign1: string, sign2: string): number {
 function getZodiacDescription(sign1: string, sign2: string): string {
   const el1 = getElementOf(sign1);
   const el2 = getElementOf(sign2);
-  if (el1 === el2) return `${sign1} and ${sign2} share the ${el1} element, creating a natural understanding and deep resonance between you. Your energies align beautifully.`;
-  return `${sign1} (${el1}) and ${sign2} (${el2}) bring different energies together. This pairing offers opportunities for growth through balancing each other's strengths.`;
+  if (el1 === el2) return `${sign1} and ${sign2} share the ${el1} element, creating a natural understanding and deep resonance. Your energies align beautifully, fostering an intuitive connection.`;
+  return `${sign1} (${el1}) and ${sign2} (${el2}) bring complementary energies together. This dynamic pairing offers growth through balancing each other's unique strengths.`;
 }
 
 function getStrengths(sign1: string, sign2: string): string[] {
   const el1 = getElementOf(sign1);
   const el2 = getElementOf(sign2);
-  if (el1 === el2) return ['Natural understanding', 'Shared values', 'Easy communication', 'Mutual respect'];
+  if (el1 === el2) return ['Natural understanding', 'Shared core values', 'Easy communication', 'Mutual respect'];
   return ['Complementary strengths', 'Growth opportunities', 'Balance of energies'];
 }
 
@@ -244,56 +324,73 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  title: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginTop: 8 },
-  subtitle: { fontSize: 16, color: Colors.textSecondary, marginTop: 4, marginBottom: 24 },
-  yourSignCard: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 8 },
-  signDisplay: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  signDisplaySymbol: { fontSize: 32 },
-  signDisplayName: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  partnerCard: { marginBottom: 24 },
+  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginTop: 8, letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4, marginBottom: 24 },
+
+  signsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 24 },
+  signDisplay: { alignItems: 'center', gap: 8 },
+  signCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: Colors.bgCardBorder,
+    backgroundColor: Colors.bgCard,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signCircleSymbol: { fontSize: 30 },
+  signDisplayName: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  heartContainer: { marginTop: -20 },
+
+  partnerCard: { marginBottom: 20 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   signScroll: { marginBottom: 4 },
   signScrollContent: { gap: 8, paddingVertical: 4 },
   signChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 22,
     backgroundColor: Colors.bgInput,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.bgInputBorder,
   },
-  signChipActive: { backgroundColor: 'rgba(244,114,182,0.15)', borderColor: Colors.accent },
   signChipSymbol: { fontSize: 16 },
   signChipLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
-  signChipLabelActive: { color: Colors.accent },
-  input: {
+  inputWrap: {
     backgroundColor: Colors.bgInput,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: Colors.bgInputBorder,
     paddingHorizontal: 14,
-    height: 48,
-    fontSize: 15,
-    color: Colors.textPrimary,
+    height: 50,
+    justifyContent: 'center',
   },
-  checkBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 24 },
+  inputWrapFocused: { borderColor: Colors.purpleGlow, backgroundColor: Colors.bgInputFocused },
+  input: { fontSize: 15, color: Colors.textPrimary },
+
+  checkBtn: { borderRadius: 18, overflow: 'hidden', marginBottom: 24 },
   checkBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 8 },
   checkBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
-  resultSection: { gap: 16 },
-  scoreCard: { alignItems: 'center' },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 24, marginBottom: 16 },
-  scoreEmoji: { fontSize: 36 },
+
+  resultSection: { gap: 14 },
+  scoreCard: { alignItems: 'center', paddingVertical: 24 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 28, marginBottom: 20 },
+  scoreEmoji: { fontSize: 40 },
   scoreCenter: { alignItems: 'center' },
-  scoreValue: { fontSize: 42, fontWeight: '800', color: Colors.accent },
-  scoreLabel: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
-  scoreBar: { width: '100%', height: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 4 },
-  scoreBarFill: { height: 8, borderRadius: 4, backgroundColor: Colors.accent },
+  scoreValue: { fontSize: 48, fontWeight: '800', color: Colors.accent, letterSpacing: -2 },
+  scoreLabel: { fontSize: 12, color: Colors.textMuted, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 },
+  scoreBar: { width: '100%', height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
+  scoreBarFill: { height: 6, borderRadius: 3, overflow: 'hidden' },
+
   descCard: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  descText: { flex: 1, fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
-  listCard: { gap: 8 },
+  descText: { flex: 1, fontSize: 15, color: Colors.textSecondary, lineHeight: 23 },
+  listCard: { gap: 10 },
   listTitle: { fontSize: 15, fontWeight: '700', color: Colors.success },
-  listItem: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  listItemRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  listDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  listItem: { flex: 1, fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
 });
