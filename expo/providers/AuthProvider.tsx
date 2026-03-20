@@ -16,6 +16,18 @@ export interface UserProfile {
   birth_lon: number | null;
 }
 
+// Default admin profile for PIN-bypass testing — gives the natal chart
+// real data to calculate with (Cancer Sun, born in Los Angeles)
+const ADMIN_TEST_PROFILE: UserProfile = {
+  email: 'admin@astrolyfe.app',
+  display_name: 'AstroLyfe Admin',
+  zodiac_sign: 'Cancer',
+  birth_date: '1990-07-15',
+  birth_city: 'Los Angeles, CA',
+  birth_lat: 34.0522,
+  birth_lon: -118.2437,
+};
+
 function checkIsAdmin(session: Session | null): boolean {
   if (!session?.user) return false;
   return (
@@ -42,7 +54,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     return () => { isMounted.current = false; };
   }, []);
 
-  const isAdmin = useMemo(() => checkIsAdmin(session), [session]);
+  const isAdmin = useMemo(() => skipAuth || checkIsAdmin(session), [skipAuth, session]);
 
   const fetchProfile = useCallback(async (email: string): Promise<UserProfile | null> => {
     if (fetchInFlight.current) return null;
@@ -106,6 +118,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
+
+  // Load admin test profile when PIN bypass is activated
+  useEffect(() => {
+    if (skipAuth && !profile) {
+      setProfile(ADMIN_TEST_PROFILE);
+      setIsLoading(false);
+      setIsReady(true);
+    }
+  }, [skipAuth, profile]);
 
   // Refresh session when app returns from background
   useEffect(() => {
