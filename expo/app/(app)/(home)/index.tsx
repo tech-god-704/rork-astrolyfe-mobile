@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,35 +9,21 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { getHoroscope, categorizeHoroscope, fetchLiveHoroscope } from '@/services/horoscope';
+import { getHoroscope, categorizeHoroscope } from '@/services/horoscope';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useAuth();
   const moonPhase = getMoonPhase();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
-  const [liveText, setLiveText] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Generate horoscope content INSTANTLY — no network, no async
   const signName = profile?.zodiac_sign || 'Aries';
   const localReading = useMemo(() => getHoroscope(signName, 'daily'), [signName]);
-  const categories = useMemo(() => {
-    const reading = liveText ? { ...localReading, horoscope: liveText } : localReading;
-    return categorizeHoroscope(reading);
-  }, [localReading, liveText]);
+  const categories = useMemo(() => categorizeHoroscope(localReading), [localReading]);
 
   const firstCategory = categories[0];
   const remainingCount = categories.length - 1;
-
-  // Try live API in background
-  useEffect(() => {
-    let cancelled = false;
-    fetchLiveHoroscope(signName, 'daily').then((result) => {
-      if (!cancelled && result?.horoscope) setLiveText(result.horoscope);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [signName]);
 
   // Animations
   const heroOpacity = useRef(new Animated.Value(0)).current;
@@ -59,13 +45,8 @@ export default function HomeScreen() {
   }, []);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setLiveText(null);
-    fetchLiveHoroscope(signName, 'daily').then((result) => {
-      if (result?.horoscope) setLiveText(result.horoscope);
-      setRefreshing(false);
-    }).catch(() => setRefreshing(false));
-  }, [signName]);
+    // Content is generated locally and changes daily
+  }, []);
 
   const handlePress = useCallback((route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -86,7 +67,7 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]}>
