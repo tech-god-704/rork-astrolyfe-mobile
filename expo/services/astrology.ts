@@ -1,8 +1,8 @@
 import { fetchWithRetry, parseResponseOrThrow } from '@/lib/network';
 import { parseAndValidateBirthDate, isValidCoordinates, isValidTimezone } from '@/lib/validation';
 
-const API_URL = process.env.EXPO_PUBLIC_ASTRO_API_URL!;
-const API_KEY = process.env.EXPO_PUBLIC_ASTRO_API_KEY!;
+const API_URL = process.env.EXPO_PUBLIC_ASTRO_API_URL || 'https://json.astrologyapi.com/v1';
+const API_KEY = process.env.EXPO_PUBLIC_ASTRO_API_KEY || 'ask_52801e29c50b20313b5cac494760afe5fefa02cf2943ae295f49166e13064efb';
 
 const headers: Record<string, string> = {
   'Content-Type': 'application/json',
