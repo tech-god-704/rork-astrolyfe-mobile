@@ -82,13 +82,41 @@ export default function ChatConversationScreen() {
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', conversationId);
     },
-    onSuccess: () => {
+    // Optimistic update: show message immediately before server confirms
+    onMutate: async (text: string) => {
+      await queryClient.cancelQueries({ queryKey: ['chatMessages', conversationId] });
+      const previous = queryClient.getQueryData<ChatMessage[]>(['chatMessages', conversationId]);
+
+      const optimisticMsg: ChatMessage = {
+        id: `optimistic-${Date.now()}`,
+        conversation_id: conversationId!,
+        sender_type: 'user',
+        sender_id: user?.email ?? '',
+        message: text,
+        created_at: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<ChatMessage[]>(
+        ['chatMessages', conversationId],
+        (old) => [...(old ?? []), optimisticMsg],
+      );
+
       setMessageText('');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+
+      return { previous };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _text, context) => {
+      // Rollback optimistic update
+      if (context?.previous) {
+        queryClient.setQueryData(['chatMessages', conversationId], context.previous);
+      }
       console.log('[Chat] Send error:', error.message);
       Alert.alert('Send Failed', 'Could not send your message. Please try again.');
+    },
+    onSettled: () => {
+      // Invalidate conversations list to update last_message_at
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
 
