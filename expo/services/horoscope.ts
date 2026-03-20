@@ -48,40 +48,6 @@ export function getHoroscope(sign: string, period: HoroscopePeriod): HoroscopeRe
 }
 
 /**
- * Try fetching from the live API. Returns null on failure (never throws).
- */
-export async function fetchLiveHoroscope(
-  sign: string,
-  period: HoroscopePeriod,
-): Promise<HoroscopeReading | null> {
-  const signLower = sign.toLowerCase();
-  const url = `https://freehoroscopeapi.com/api/v1/get-horoscope/${period}?sign=${signLower}`;
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    if (!response.ok) return null;
-
-    const json = await response.json();
-    const horoscope = json?.data?.horoscope;
-    if (!horoscope || typeof horoscope !== 'string' || horoscope.length < 20) return null;
-
-    return {
-      sign: json.data.sign || sign,
-      period,
-      date: json.data.date || new Date().toISOString().split('T')[0],
-      horoscope,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Split a horoscope text into categorized sections for richer display.
  */
 export function categorizeHoroscope(reading: HoroscopeReading): CategorizedReading[] {
