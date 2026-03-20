@@ -8,7 +8,7 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { getHoroscope, categorizeHoroscope, fetchLiveHoroscope, type HoroscopePeriod } from '@/services/horoscope';
+import { getHoroscope, categorizeHoroscope, type HoroscopePeriod } from '@/services/horoscope';
 
 type PeriodType = HoroscopePeriod;
 
@@ -33,33 +33,15 @@ export default function HoroscopeScreen() {
   const moonPhase = getMoonPhase();
   const [period, setPeriod] = useState<PeriodType>('daily');
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const [liveText, setLiveText] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Generate content INSTANTLY — no network, no async, no loading
   const signName = profile?.zodiac_sign || 'Aries';
   const localReading = useMemo(() => getHoroscope(signName, period), [signName, period]);
-
-  // Use live API text if available, otherwise local
-  const displayText = liveText || localReading.horoscope;
+  const displayText = localReading.horoscope;
   const displayCategories = useMemo(
-    () => categorizeHoroscope({ ...localReading, horoscope: displayText }),
-    [localReading, displayText]
+    () => categorizeHoroscope(localReading),
+    [localReading]
   );
-
-  // Try fetching live data in background (non-blocking)
-  useEffect(() => {
-    setLiveText(null); // Reset when period/sign changes
-    let cancelled = false;
-
-    fetchLiveHoroscope(signName, period).then((result) => {
-      if (!cancelled && result?.horoscope) {
-        setLiveText(result.horoscope);
-      }
-    }).catch(() => {});
-
-    return () => { cancelled = true; };
-  }, [signName, period]);
 
   // Stagger animations for entry cards
   const entryAnims = useRef<Animated.Value[]>([]);
@@ -75,7 +57,7 @@ export default function HoroscopeScreen() {
       })
     );
     Animated.stagger(100, animations).start();
-  }, [displayCategories.length, period, liveText]);
+  }, [displayCategories.length, period]);
 
   const handlePeriodChange = useCallback((p: PeriodType) => {
     if (p === period) return;
@@ -87,13 +69,8 @@ export default function HoroscopeScreen() {
   }, [period, fadeAnim]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setLiveText(null);
-    fetchLiveHoroscope(signName, period).then((result) => {
-      if (result?.horoscope) setLiveText(result.horoscope);
-      setRefreshing(false);
-    }).catch(() => setRefreshing(false));
-  }, [signName, period]);
+    // Content is generated locally and changes daily/weekly/monthly
+  }, []);
 
   const getPeriodLabel = () => {
     const now = new Date();
@@ -113,7 +90,7 @@ export default function HoroscopeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
           {/* Header with zodiac info */}
           <View style={styles.header}>
