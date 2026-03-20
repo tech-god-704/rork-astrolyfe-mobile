@@ -4,13 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star } from 'lucide-react-native';
+import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, Calendar, TrendingUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
-import { supabase } from '@/lib/supabase';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
+import { fetchHoroscope, categorizeHoroscope } from '@/services/horoscope';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -41,23 +41,18 @@ export default function HomeScreen() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // Fetch live horoscope from API
   const horoscopeQuery = useQuery({
-    queryKey: ['todayHoroscope', profile?.zodiac_sign, todayStr],
+    queryKey: ['dailyHoroscope', profile?.zodiac_sign, todayStr],
     queryFn: async () => {
       if (!profile?.zodiac_sign) return null;
-      const { data, error } = await supabase
-        .from('horoscopes')
-        .select('category, title, icon, content')
-        .eq('zodiac_sign', profile.zodiac_sign)
-        .eq('period_type', 'daily')
-        .eq('period_date', todayStr);
-      if (error) {
-        console.log('[Home] Horoscope fetch error:', error.message);
-        return null;
-      }
-      return data && data.length > 0 ? data : null;
+      const reading = await fetchHoroscope(profile.zodiac_sign, 'daily');
+      const categories = categorizeHoroscope(reading);
+      return { reading, categories };
     },
     enabled: !!profile?.zodiac_sign,
+    staleTime: 1000 * 60 * 30, // 30 min cache
+    gcTime: 1000 * 60 * 60, // 1 hour gc
   });
 
   const onRefresh = useCallback(() => {
@@ -76,8 +71,9 @@ export default function HomeScreen() {
     return 'Good evening';
   };
 
-  const horoscopes = horoscopeQuery.data;
-  const firstHoroscope = horoscopes?.[0];
+  const data = horoscopeQuery.data;
+  const firstCategory = data?.categories?.[0];
+  const remainingCount = (data?.categories?.length ?? 0) - 1;
 
   return (
     <View style={styles.container}>
@@ -131,20 +127,36 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {firstHoroscope ? (
+                {zodiac && (
+                  <View style={styles.heroSignRow}>
+                    <Text style={styles.heroSignSymbol}>{zodiac.symbol}</Text>
+                    <Text style={styles.heroSignName}>{zodiac.name}</Text>
+                    <View style={[styles.heroElementBadge, { backgroundColor: `${zodiac.color}20` }]}>
+                      <Text style={[styles.heroElementText, { color: zodiac.color }]}>{zodiac.element}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {firstCategory ? (
                   <View style={styles.heroContent}>
-                    <Text style={styles.heroCategory}>
-                      {firstHoroscope.icon ? `${firstHoroscope.icon} ` : ''}{firstHoroscope.title || firstHoroscope.category}
-                    </Text>
-                    <Text style={styles.heroText} numberOfLines={3}>{firstHoroscope.content}</Text>
-                    {horoscopes && horoscopes.length > 1 && (
-                      <Text style={styles.moreCategories}>+{horoscopes.length - 1} more categories</Text>
+                    <Text style={styles.heroText} numberOfLines={4}>{firstCategory.content}</Text>
+                    {remainingCount > 0 && (
+                      <View style={styles.moreBadge}>
+                        <TrendingUp size={12} color={Colors.purpleLight} />
+                        <Text style={styles.moreCategories}>+{remainingCount} more insights</Text>
+                      </View>
                     )}
                   </View>
                 ) : (
-                  <Text style={styles.heroPlaceholder}>
-                    {horoscopeQuery.isLoading ? 'Consulting the stars...' : 'Your reading is being prepared. Check back soon!'}
-                  </Text>
+                  <View style={styles.heroContent}>
+                    <Text style={styles.heroPlaceholder}>
+                      {horoscopeQuery.isLoading
+                        ? 'Consulting the stars...'
+                        : !profile?.zodiac_sign
+                        ? 'Set your zodiac sign in your profile to receive daily readings.'
+                        : 'Your cosmic reading is loading...'}
+                    </Text>
+                  </View>
                 )}
 
                 <View style={styles.heroFooter}>
@@ -264,17 +276,22 @@ const styles = StyleSheet.create({
 
   // Hero Card
   heroCard: { marginBottom: 28, padding: 22 },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   heroLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroLabelText: { fontSize: 13, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.8 },
   moonBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   moonEmoji: { fontSize: 16 },
   moonText: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
+  heroSignRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  heroSignSymbol: { fontSize: 22 },
+  heroSignName: { fontSize: 18, fontWeight: '700', color: Colors.purpleLight },
+  heroElementBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  heroElementText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   heroContent: {},
-  heroCategory: { fontSize: 14, fontWeight: '600', color: Colors.purpleLight, marginBottom: 8 },
-  heroText: { fontSize: 16, color: Colors.textSecondary, lineHeight: 24 },
+  heroText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
   heroPlaceholder: { fontSize: 15, color: Colors.textMuted, lineHeight: 22, fontStyle: 'italic' },
-  moreCategories: { fontSize: 12, color: Colors.textMuted, marginTop: 8 },
+  moreBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
+  moreCategories: { fontSize: 12, color: Colors.purpleLight, fontWeight: '600' },
   heroFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 16, alignSelf: 'flex-end' },
   readMoreText: { fontSize: 13, fontWeight: '600', color: Colors.purpleLight },
 
