@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, Activi
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
-import { LogOut, Save, Shield, Star, Calendar, Check, Settings } from 'lucide-react-native';
+import { LogOut, Save, Shield, Star, Calendar, Check, Settings, MapPin, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -15,6 +15,8 @@ export default function ProfileScreen() {
   const { profile, user, signOut, refreshProfile, isAdmin } = useAuth();
   const [displayName, setDisplayName] = useState<string>('');
   const [birthDate, setBirthDate] = useState<string>('');
+  const [birthTime, setBirthTime] = useState<string>('');
+  const [birthCity, setBirthCity] = useState<string>('');
   const [selectedSign, setSelectedSign] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -23,6 +25,12 @@ export default function ProfileScreen() {
       setDisplayName(profile.display_name ?? '');
       setBirthDate(profile.birth_date ?? '');
       setSelectedSign(profile.zodiac_sign ?? '');
+      setBirthCity(profile.birth_city ?? '');
+      // Reconstruct birth time from quiz_data if available
+      const qd = profile.quiz_data;
+      if (qd?.birth_hour != null && qd?.birth_minute != null) {
+        setBirthTime(`${String(qd.birth_hour).padStart(2, '0')}:${String(qd.birth_minute).padStart(2, '0')}`);
+      }
     }
   }, [profile]);
 
@@ -31,12 +39,29 @@ export default function ProfileScreen() {
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!user?.email) throw new Error('Not authenticated');
+
+      // Parse birth time (HH:MM) for quiz_data
+      const timeParts = birthTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+      const birthHour = timeParts ? parseInt(timeParts[1], 10) : undefined;
+      const birthMinute = timeParts ? parseInt(timeParts[2], 10) : undefined;
+
+      // Merge new values into existing quiz_data (preserve web quiz fields)
+      const existingQuiz = profile?.quiz_data ?? {};
+      const updatedQuiz = {
+        ...existingQuiz,
+        ...(birthCity.trim() ? { birth_place: birthCity.trim() } : {}),
+        ...(birthHour != null ? { birth_hour: birthHour } : {}),
+        ...(birthMinute != null ? { birth_minute: birthMinute } : {}),
+      };
+
       const { error } = await supabase
         .from('users')
         .update({
           display_name: displayName.trim(),
           birth_date: birthDate.trim() || null,
           zodiac_sign: selectedSign || null,
+          birth_city: birthCity.trim() || null,
+          quiz_data: Object.keys(updatedQuiz).length > 0 ? updatedQuiz : null,
         })
         .eq('email', user.email);
       if (error) throw error;
@@ -124,6 +149,34 @@ export default function ProfileScreen() {
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
                 onFocus={() => setFocusedField('birth')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+
+            <Text style={styles.fieldLabel}>Birth Time</Text>
+            <View style={[styles.inputWrap, focusedField === 'time' && styles.inputWrapFocused]}>
+              <Clock size={16} color={focusedField === 'time' ? Colors.purpleLight : Colors.textMuted} />
+              <TextInput
+                style={styles.input}
+                value={birthTime}
+                onChangeText={setBirthTime}
+                placeholder="HH:MM (24hr, e.g. 14:30)"
+                placeholderTextColor={Colors.textMuted}
+                onFocus={() => setFocusedField('time')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+
+            <Text style={styles.fieldLabel}>Birth City</Text>
+            <View style={[styles.inputWrap, focusedField === 'city' && styles.inputWrapFocused]}>
+              <MapPin size={16} color={focusedField === 'city' ? Colors.purpleLight : Colors.textMuted} />
+              <TextInput
+                style={styles.input}
+                value={birthCity}
+                onChangeText={setBirthCity}
+                placeholder="City, State/Country"
+                placeholderTextColor={Colors.textMuted}
+                onFocus={() => setFocusedField('city')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>

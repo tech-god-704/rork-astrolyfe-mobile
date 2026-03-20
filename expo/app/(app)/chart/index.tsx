@@ -36,6 +36,7 @@ export default function ChartScreen() {
   const [expandedPlanet, setExpandedPlanet] = useState<string | null>(null);
 
   // Calculate natal chart locally — no API, no loading, instant
+  // Uses birth_hour/birth_minute from quiz_data (set via web quiz) for accurate Ascendant
   const chart = useMemo(() => {
     try {
       if (!profile?.birth_date) return null;
@@ -47,17 +48,24 @@ export default function ChartScreen() {
       if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
       if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
+      // Pull birth time from quiz_data (web quiz stores hour/minute separately)
+      const qd = profile.quiz_data;
+      const hour = qd?.birth_hour ?? undefined;
+      const minute = qd?.birth_minute ?? undefined;
+
       return calculateNatalChart({
         year,
         month,
         day,
+        hour,
+        minute,
         latitude: profile.birth_lat ?? undefined,
         longitude: profile.birth_lon ?? undefined,
       });
     } catch {
       return null;
     }
-  }, [profile?.birth_date, profile?.birth_lat, profile?.birth_lon]);
+  }, [profile?.birth_date, profile?.birth_lat, profile?.birth_lon, profile?.quiz_data]);
 
   const planets = chart?.planets ?? [];
 

@@ -1,18 +1,20 @@
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { Lock, Unlock, BookOpen, ShoppingCart, Sparkles, Star, ChevronRight } from 'lucide-react-native';
+import { Lock, Unlock, BookOpen, ShoppingCart, Sparkles, Star, ChevronRight, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { fetchProducts, fetchUnlockedSlugs, recordPurchase, type Product } from '@/services/purchases';
 import { createPaymentIntent } from '@/services/stripe';
+import { fetchUserReports, REPORT_META, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
 
 export default function InsightsScreen() {
   const { user, isAdmin } = useAuth();
+  const [viewingReport, setViewingReport] = useState<UserReport | null>(null);
 
   const productsQuery = useQuery({
     queryKey: ['products'],
@@ -25,8 +27,23 @@ export default function InsightsScreen() {
     enabled: !!user?.email,
   });
 
+  // Fetch premium reports generated on the web dashboard
+  const reportsQuery = useQuery({
+    queryKey: ['userReports', user?.email],
+    queryFn: () => fetchUserReports(user!.email!),
+    enabled: !!user?.email,
+  });
+
   const products = productsQuery.data ?? [];
   const unlockedSlugs = unlockedQuery.data ?? [];
+  const reports = reportsQuery.data ?? [];
+
+  // Map product slugs to their web-generated report content
+  const reportBySlug = new Map<string, UserReport>();
+  for (const r of reports) {
+    // Match report_type to product slug (e.g. 'full_map' → 'full_map')
+    reportBySlug.set(r.report_type, r);
+  }
 
   const handlePurchase = useCallback(async (product: Product) => {
     if (!user?.email) {
@@ -70,7 +87,8 @@ export default function InsightsScreen() {
   const onRefresh = useCallback(() => {
     void productsQuery.refetch();
     void unlockedQuery.refetch();
-  }, [productsQuery, unlockedQuery]);
+    void reportsQuery.refetch();
+  }, [productsQuery, unlockedQuery, reportsQuery]);
 
   return (
     <View style={styles.container}>
@@ -144,14 +162,21 @@ export default function InsightsScreen() {
                         style={({ pressed }) => [styles.viewBtn, pressed && { opacity: 0.8 }]}
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                          Alert.alert(
-                            product.name,
-                            product.description + '\n\nFull content is available in the web dashboard at app.astrolyfe.co',
-                          );
+                          const report = reportBySlug.get(product.slug);
+                          if (report) {
+                            setViewingReport(report);
+                          } else {
+                            Alert.alert(
+                              product.name,
+                              'Your report is being generated. Check back soon or view it at app.astrolyfe.co',
+                            );
+                          }
                         }}
                       >
                         <BookOpen size={14} color={Colors.success} />
-                        <Text style={styles.viewBtnText}>View Content</Text>
+                        <Text style={styles.viewBtnText}>
+                          {reportBySlug.has(product.slug) ? 'Read Report' : 'View Content'}
+                        </Text>
                         <ChevronRight size={14} color={Colors.success} />
                       </Pressable>
                     ) : (
@@ -180,8 +205,52 @@ export default function InsightsScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+
+      {/* Report Viewer Modal */}
+      <Modal visible={!!viewingReport} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setViewingReport(null)}>
+        <View style={styles.modalContainer}>
+          <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+          <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleWrap}>
+                <Text style={styles.modalTitle}>
+                  {viewingReport ? (REPORT_META[viewingReport.report_type]?.title ?? 'Report') : ''}
+                </Text>
+              </View>
+              <Pressable style={styles.modalClose} onPress={() => setViewingReport(null)}>
+                <X size={20} color={Colors.textPrimary} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {viewingReport && (
+                <GlassCard style={styles.reportCard}>
+                  <Text style={styles.reportContent}>
+                    {stripHtml(viewingReport.content_html)}
+                  </Text>
+                </GlassCard>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </View>
   );
+}
+
+/** Strip HTML tags for plain-text display (reports come as HTML from the web) */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 const styles = StyleSheet.create({
@@ -223,4 +292,14 @@ const styles = StyleSheet.create({
   emptyIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
   emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21, paddingHorizontal: 20 },
+
+  // Report viewer modal
+  modalContainer: { flex: 1, backgroundColor: Colors.bg },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.bgCardBorder },
+  modalTitleWrap: { flex: 1 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
+  modalScroll: { paddingHorizontal: 20, paddingVertical: 20, paddingBottom: 40 },
+  reportCard: { padding: 20 },
+  reportContent: { fontSize: 15, color: Colors.textSecondary, lineHeight: 26 },
 });

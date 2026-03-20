@@ -6,6 +6,17 @@ import { supabase } from '@/lib/supabase';
 
 const ADMIN_UUID = '48355a3b-3a15-414b-9bf4-f344e98a7c19';
 
+export interface QuizData {
+  birth_year?: number;
+  birth_month?: number;
+  birth_day?: number;
+  birth_hour?: number;
+  birth_minute?: number;
+  birth_place?: string;
+  country_code?: string;
+  [key: string]: unknown;
+}
+
 export interface UserProfile {
   email: string;
   display_name: string | null;
@@ -14,6 +25,7 @@ export interface UserProfile {
   birth_city: string | null;
   birth_lat: number | null;
   birth_lon: number | null;
+  quiz_data: QuizData | null;
 }
 
 // Default admin profile for PIN-bypass testing — gives the natal chart
@@ -26,6 +38,15 @@ const ADMIN_TEST_PROFILE: UserProfile = {
   birth_city: 'Los Angeles, CA',
   birth_lat: 34.0522,
   birth_lon: -118.2437,
+  quiz_data: {
+    birth_year: 1990,
+    birth_month: 7,
+    birth_day: 15,
+    birth_hour: 14,
+    birth_minute: 30,
+    birth_place: 'Los Angeles, CA',
+    country_code: 'US',
+  },
 };
 
 function checkIsAdmin(session: Session | null): boolean {
@@ -62,7 +83,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('email, display_name, zodiac_sign, birth_date, birth_city, birth_lat, birth_lon')
+        .select('email, display_name, zodiac_sign, birth_date, birth_city, birth_lat, birth_lon, quiz_data')
         .eq('email', email)
         .single();
       if (error) {
@@ -128,18 +149,24 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }
   }, [skipAuth, profile]);
 
-  // Refresh session when app returns from background
+  // Refresh session and profile when app returns from background
   useEffect(() => {
     const handleAppState = (state: AppStateStatus) => {
       if (state === 'active') {
         supabase.auth.startAutoRefresh();
+        // Re-fetch profile so web-side changes (quiz data, reports, etc.) sync immediately
+        if (user?.email) {
+          void fetchProfile(user.email).then((p) => {
+            if (isMounted.current && p) setProfile(p);
+          });
+        }
       } else {
         supabase.auth.stopAutoRefresh();
       }
     };
     const sub = AppState.addEventListener('change', handleAppState);
     return () => sub.remove();
-  }, []);
+  }, [user, fetchProfile]);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string, zodiacSign: string, birthDate: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });

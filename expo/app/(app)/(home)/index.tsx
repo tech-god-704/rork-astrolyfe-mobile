@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { getHoroscope, categorizeHoroscope } from '@/services/horoscope';
+import { getHoroscope, fetchCuratedHoroscope, categorizeHoroscope } from '@/services/horoscope';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -17,10 +18,18 @@ export default function HomeScreen() {
   const moonPhase = getMoonPhase();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
 
-  // Generate horoscope content INSTANTLY — no network, no async
+  // Try curated horoscope from Supabase, fall back to instant local generation
   const signName = profile?.zodiac_sign || 'Aries';
   const localReading = useMemo(() => getHoroscope(signName, 'daily'), [signName]);
-  const categories = useMemo(() => categorizeHoroscope(localReading), [localReading]);
+
+  const curatedQuery = useQuery({
+    queryKey: ['curatedHoroscope', signName, 'daily'],
+    queryFn: () => fetchCuratedHoroscope(signName, 'daily'),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const activeReading = curatedQuery.data ?? localReading;
+  const categories = useMemo(() => categorizeHoroscope(activeReading), [activeReading]);
 
   const firstCategory = categories[0];
   const remainingCount = categories.length - 1;
