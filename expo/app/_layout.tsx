@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider, focusManager, onlineManager } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
-import { AppState, AppStateStatus, Platform } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { ActivityIndicator, AppState, AppStateStatus, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import Colors from "@/constants/colors";
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -44,9 +45,18 @@ function AuthGate() {
   const { isAuthenticated, isReady } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const splashHidden = useRef(false);
 
   useEffect(() => {
     if (!isReady) return;
+
+    // Hide splash ONLY after we know the auth state
+    if (!splashHidden.current) {
+      splashHidden.current = true;
+      if (Platform.OS !== 'web') {
+        SplashScreen.hideAsync().catch(() => {});
+      }
+    }
 
     const inAuthGroup = segments[0] === "(auth)";
 
@@ -61,6 +71,18 @@ function AuthGate() {
 }
 
 function RootLayoutNav() {
+  const { isReady } = useAuth();
+
+  // Don't render navigation until auth state is determined.
+  // Splash screen stays visible, so user sees nothing flash.
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={Colors.purple} size="large" />
+      </View>
+    );
+  }
+
   return (
     <>
       <AuthGate />
@@ -73,12 +95,6 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, []);
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
