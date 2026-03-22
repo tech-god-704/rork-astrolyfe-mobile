@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Text as SvgText, G, Defs, RadialGradient, Stop } from 'react-native-svg';
@@ -12,12 +12,14 @@ import GlassCard from '@/components/GlassCard';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
 
 const DEG = Math.PI / 180;
-const CHART_SIZE = 320;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CHART_SIZE = Math.min(320, SCREEN_WIDTH - 40);
 const CENTER = CHART_SIZE / 2;
-const OUTER_R = 148;
-const INNER_R = 108;
-const SIGN_R = 128;
-const PLANET_R = 82;
+const SCALE = CHART_SIZE / 320;
+const OUTER_R = Math.round(148 * SCALE);
+const INNER_R = Math.round(108 * SCALE);
+const SIGN_R = Math.round(128 * SCALE);
+const PLANET_R = Math.round(82 * SCALE);
 
 const PLANET_SYMBOLS: Record<string, string> = {
   Sun: '☉', Moon: '☽', Mercury: '☿', Venus: '♀', Mars: '♂',
@@ -134,10 +136,10 @@ export default function ChartScreen() {
                 </RadialGradient>
               </Defs>
 
-              <Circle cx={CENTER} cy={CENTER} r={60} fill="url(#centerGlow)" />
+              <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="url(#centerGlow)" />
               <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke="rgba(167,139,250,0.25)" strokeWidth={1.5} />
               <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke="rgba(167,139,250,0.15)" strokeWidth={1} />
-              <Circle cx={CENTER} cy={CENTER} r={60} fill="none" stroke="rgba(167,139,250,0.1)" strokeWidth={0.5} />
+              <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="none" stroke="rgba(167,139,250,0.1)" strokeWidth={0.5} />
 
               {/* Zodiac sign segments */}
               {ZODIAC_SIGNS.map((sign, i) => {
@@ -174,8 +176,8 @@ export default function ChartScreen() {
                   <Line
                     key={deg}
                     x1={CENTER} y1={CENTER}
-                    x2={CENTER + Math.cos(a) * 58}
-                    y2={CENTER + Math.sin(a) * 58}
+                    x2={CENTER + Math.cos(a) * Math.round(58 * SCALE)}
+                    y2={CENTER + Math.sin(a) * Math.round(58 * SCALE)}
                     stroke={deg % 90 === 0 ? 'rgba(167,139,250,0.2)' : 'rgba(167,139,250,0.08)'}
                     strokeWidth={deg % 90 === 0 ? 1 : 0.5}
                   />
@@ -186,8 +188,8 @@ export default function ChartScreen() {
               {chart?.ascendant != null && (
                 <G>
                   <Line
-                    x1={CENTER + Math.cos((chart.ascendant - 90) * DEG) * 60}
-                    y1={CENTER + Math.sin((chart.ascendant - 90) * DEG) * 60}
+                    x1={CENTER + Math.cos((chart.ascendant - 90) * DEG) * Math.round(60 * SCALE)}
+                    y1={CENTER + Math.sin((chart.ascendant - 90) * DEG) * Math.round(60 * SCALE)}
                     x2={CENTER + Math.cos((chart.ascendant - 90) * DEG) * OUTER_R}
                     y2={CENTER + Math.sin((chart.ascendant - 90) * DEG) * OUTER_R}
                     stroke={Colors.gold}
@@ -233,8 +235,8 @@ export default function ChartScreen() {
               })}
 
               {/* Center dot */}
-              <Circle cx={CENTER} cy={CENTER} r={5} fill={Colors.gold} />
-              <Circle cx={CENTER} cy={CENTER} r={3} fill={Colors.goldLight} />
+              <Circle cx={CENTER} cy={CENTER} r={Math.round(5 * SCALE)} fill={Colors.gold} />
+              <Circle cx={CENTER} cy={CENTER} r={Math.round(3 * SCALE)} fill={Colors.goldLight} />
             </Svg>
           </View>
 
@@ -323,9 +325,9 @@ const styles = StyleSheet.create({
   },
   chartGlow: {
     position: 'absolute',
-    width: CHART_SIZE + 40,
-    height: CHART_SIZE + 40,
-    borderRadius: (CHART_SIZE + 40) / 2,
+    width: CHART_SIZE + 20,
+    height: CHART_SIZE + 20,
+    borderRadius: (CHART_SIZE + 20) / 2,
     backgroundColor: 'rgba(124,58,237,0.06)',
   },
 

@@ -319,9 +319,9 @@ const styles = StyleSheet.create({
   // Sign picker
   pickerCard: { marginBottom: 20 },
   fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
-  signGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  signGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   signGridItem: {
-    width: '30%',
+    width: '29%' as unknown as number,
     flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -342,10 +342,10 @@ const styles = StyleSheet.create({
 
   // Score card
   scoreCard: { marginBottom: 16, paddingVertical: 28, paddingHorizontal: 20 },
-  scoreHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 20 },
-  scoreEmoji: { fontSize: 40 },
-  scoreCenter: { alignItems: 'center' },
-  scoreValue: { fontSize: 52, fontWeight: '800', color: Colors.accent, letterSpacing: -2 },
+  scoreHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 20 },
+  scoreEmoji: { fontSize: 36 },
+  scoreCenter: { alignItems: 'center', flexShrink: 1 },
+  scoreValue: { fontSize: 48, fontWeight: '800', color: Colors.accent, letterSpacing: -2 },
   scoreTagline: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
   scoreBarTrack: { width: '100%', height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
   scoreBarFill: { height: 6, borderRadius: 3, overflow: 'hidden' },
