@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   flex: { flex: 1 },
   loader: { marginTop: 40 },
-  messageList: { paddingHorizontal: 16, paddingVertical: 16, gap: 4, flexGrow: 1 },
+  messageList: { paddingHorizontal: 16, paddingVertical: 16, gap: 2, flexGrow: 1 },
 
   messageWrap: { marginBottom: 6 },
   userWrap: { alignItems: 'flex-end' },
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   userTime: { alignSelf: 'flex-end' },
   astrologerTime: { alignSelf: 'flex-start' },
 
-  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 40 },
+  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
   emptyChatIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   emptyChatEmoji: { fontSize: 28 },
   emptyChatTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },

@@ -307,9 +307,9 @@ function ordinal(n: number): string {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginTop: 8, letterSpacing: -0.5 },
-  subtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 24, flexWrap: 'wrap' },
+  subtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 20, flexWrap: 'wrap' },
   signSymbol: { fontSize: 20 },
   subtitle: { fontSize: 16, color: Colors.purpleLight, fontWeight: '600' },
   ascBadge: { backgroundColor: Colors.goldDim, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },

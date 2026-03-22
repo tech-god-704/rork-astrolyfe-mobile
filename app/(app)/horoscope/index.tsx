@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
 
   header: { marginTop: 8, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
-  signRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  signRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
   signSymbol: { fontSize: 20 },
   signLabel: { fontSize: 16, color: Colors.purpleLight, fontWeight: '700' },
   elementBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   dateText: { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
 
-  fullReadingCard: { marginBottom: 20, padding: 20 },
+  fullReadingCard: { marginBottom: 20, padding: 18 },
   fullReadingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   fullReadingTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.6 },
   readingSignRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
