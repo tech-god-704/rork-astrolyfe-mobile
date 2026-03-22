@@ -20,10 +20,37 @@ export interface NatalPlanet {
   house: number;
 }
 
+export interface NatalAspect {
+  planet1: string;
+  planet2: string;
+  type: 'conjunction' | 'sextile' | 'square' | 'trine' | 'opposition';
+  angle: number;   // actual angle between planets
+  orb: number;     // how far from exact (0 = perfect)
+  applying: boolean; // whether aspect is tightening
+}
+
+export interface ElementDistribution {
+  Fire: string[];
+  Earth: string[];
+  Air: string[];
+  Water: string[];
+  dominant: string;
+}
+
+export interface ModalityDistribution {
+  Cardinal: string[];
+  Fixed: string[];
+  Mutable: string[];
+  dominant: string;
+}
+
 export interface NatalChartResult {
   planets: NatalPlanet[];
   ascendant: number | null;
   ascendantSign: string | null;
+  aspects: NatalAspect[];
+  elements: ElementDistribution;
+  modalities: ModalityDistribution;
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -286,6 +313,84 @@ export function getInterpretation(planet: string, sign: string): string {
   return `${desc}. In ${sign}, this expresses through ${energy}.`;
 }
 
+// ── Aspects ───────────────────────────────────────────────
+
+const ASPECT_DEFS: { type: NatalAspect['type']; angle: number; orb: number }[] = [
+  { type: 'conjunction', angle: 0, orb: 8 },
+  { type: 'sextile', angle: 60, orb: 6 },
+  { type: 'square', angle: 90, orb: 7 },
+  { type: 'trine', angle: 120, orb: 8 },
+  { type: 'opposition', angle: 180, orb: 8 },
+];
+
+function calcAspects(planets: NatalPlanet[]): NatalAspect[] {
+  const aspects: NatalAspect[] = [];
+  for (let i = 0; i < planets.length; i++) {
+    for (let j = i + 1; j < planets.length; j++) {
+      const p1 = planets[i];
+      const p2 = planets[j];
+      let diff = Math.abs(p1.fullDegree - p2.fullDegree);
+      if (diff > 180) diff = 360 - diff;
+
+      for (const def of ASPECT_DEFS) {
+        const orb = Math.abs(diff - def.angle);
+        if (orb <= def.orb) {
+          aspects.push({
+            planet1: p1.name,
+            planet2: p2.name,
+            type: def.type,
+            angle: Math.round(diff * 10) / 10,
+            orb: Math.round(orb * 10) / 10,
+            applying: orb < def.orb * 0.5, // rough heuristic
+          });
+          break; // only one aspect per pair
+        }
+      }
+    }
+  }
+  return aspects;
+}
+
+// ── Element & modality distribution ───────────────────────
+
+const SIGN_ELEMENTS: Record<string, 'Fire' | 'Earth' | 'Air' | 'Water'> = {
+  Aries: 'Fire', Taurus: 'Earth', Gemini: 'Air', Cancer: 'Water',
+  Leo: 'Fire', Virgo: 'Earth', Libra: 'Air', Scorpio: 'Water',
+  Sagittarius: 'Fire', Capricorn: 'Earth', Aquarius: 'Air', Pisces: 'Water',
+};
+
+const SIGN_MODALITIES: Record<string, 'Cardinal' | 'Fixed' | 'Mutable'> = {
+  Aries: 'Cardinal', Taurus: 'Fixed', Gemini: 'Mutable', Cancer: 'Cardinal',
+  Leo: 'Fixed', Virgo: 'Mutable', Libra: 'Cardinal', Scorpio: 'Fixed',
+  Sagittarius: 'Mutable', Capricorn: 'Cardinal', Aquarius: 'Fixed', Pisces: 'Mutable',
+};
+
+function calcElements(planets: NatalPlanet[]): ElementDistribution {
+  const dist: ElementDistribution = { Fire: [], Earth: [], Air: [], Water: [], dominant: 'Fire' };
+  for (const p of planets) {
+    const el = SIGN_ELEMENTS[p.sign];
+    if (el) dist[el].push(p.name);
+  }
+  let max = 0;
+  for (const key of ['Fire', 'Earth', 'Air', 'Water'] as const) {
+    if (dist[key].length > max) { max = dist[key].length; dist.dominant = key; }
+  }
+  return dist;
+}
+
+function calcModalities(planets: NatalPlanet[]): ModalityDistribution {
+  const dist: ModalityDistribution = { Cardinal: [], Fixed: [], Mutable: [], dominant: 'Cardinal' };
+  for (const p of planets) {
+    const mod = SIGN_MODALITIES[p.sign];
+    if (mod) dist[mod].push(p.name);
+  }
+  let max = 0;
+  for (const key of ['Cardinal', 'Fixed', 'Mutable'] as const) {
+    if (dist[key].length > max) { max = dist[key].length; dist.dominant = key; }
+  }
+  return dist;
+}
+
 // ── Public API ─────────────────────────────────────────────
 
 export function calculateNatalChart(params: {
@@ -340,5 +445,9 @@ export function calculateNatalChart(params: {
     };
   });
 
-  return { planets, ascendant: ascLon, ascendantSign: ascSign };
+  const aspects = calcAspects(planets);
+  const elements = calcElements(planets);
+  const modalities = calcModalities(planets);
+
+  return { planets, ascendant: ascLon, ascendantSign: ascSign, aspects, elements, modalities };
 }
