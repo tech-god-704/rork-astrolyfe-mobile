@@ -1,5 +1,4 @@
 const Colors = {
-  // Backgrounds
   bg: '#08081a',
   bgCard: 'rgba(255,255,255,0.05)',
   bgCardBorder: 'rgba(255,255,255,0.08)',
@@ -9,7 +8,6 @@ const Colors = {
   bgInputFocused: 'rgba(124,58,237,0.08)',
   bgInputFocusedBorder: 'rgba(124,58,237,0.3)',
 
-  // Primary Purple
   purple: '#7C3AED',
   purpleLight: '#A78BFA',
   purpleSoft: '#C4B5FD',
@@ -17,17 +15,14 @@ const Colors = {
   purpleGlow: 'rgba(124,58,237,0.35)',
   purpleDeep: '#5B21B6',
 
-  // Indigo
   indigo: '#4F46E5',
   indigoLight: '#6366F1',
 
-  // Accent Pink/Rose
   accent: '#F472B6',
   accentLight: '#FB7DC5',
   accentDim: 'rgba(244,114,182,0.12)',
   accentGlow: 'rgba(244,114,182,0.3)',
 
-  // Status Colors
   gold: '#FBBF24',
   goldLight: '#FCD34D',
   goldDim: 'rgba(251,191,36,0.12)',
@@ -40,18 +35,15 @@ const Colors = {
   blue: '#3B82F6',
   blueDim: 'rgba(59,130,246,0.12)',
 
-  // Text
   textPrimary: '#F8FAFC',
   textSecondary: 'rgba(248,250,252,0.65)',
   textMuted: 'rgba(248,250,252,0.35)',
   textInverse: '#08081a',
 
-  // Gradients
   gradientStart: '#1e1145',
   gradientMid: '#130e30',
   gradientEnd: '#08081a',
 
-  // Shadows & Overlays
   shadowPurple: 'rgba(124,58,237,0.25)',
   shadowDark: 'rgba(0,0,0,0.4)',
   overlay: 'rgba(8,8,26,0.6)',

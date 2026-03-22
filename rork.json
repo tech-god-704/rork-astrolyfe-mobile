@@ -4,6 +4,11 @@
       "name": "AstroLyfe",
       "path": ".",
       "framework": "react-native"
+    },
+    {
+      "name": "AstroLyfe",
+      "path": "expo",
+      "framework": "react-native"
     }
   ]
 }

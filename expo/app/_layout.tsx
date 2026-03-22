@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider, focusManager, onlineManager } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef } from "react";
@@ -9,10 +9,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Colors from "@/constants/colors";
 
 if (Platform.OS !== 'web') {
-  SplashScreen.preventAutoHideAsync().catch(() => {});
+  void SplashScreen.preventAutoHideAsync();
 }
 
-// React Query: refetch on app focus
 focusManager.setEventListener((handleFocus) => {
   const subscription = AppState.addEventListener('change', (status: AppStateStatus) => {
     handleFocus(status === 'active');
@@ -23,14 +22,10 @@ focusManager.setEventListener((handleFocus) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Refetch when user returns to app after 5 minutes
       staleTime: 5 * 60 * 1000,
-      // Cache for 30 minutes
       gcTime: 30 * 60 * 1000,
-      // Retry with backoff
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
-      // Refetch on reconnect and focus
       refetchOnReconnect: true,
       refetchOnWindowFocus: true,
     },
@@ -50,11 +45,10 @@ function AuthGate() {
   useEffect(() => {
     if (!isReady) return;
 
-    // Hide splash ONLY after we know the auth state
     if (!splashHidden.current) {
       splashHidden.current = true;
       if (Platform.OS !== 'web') {
-        SplashScreen.hideAsync().catch(() => {});
+        void SplashScreen.hideAsync();
       }
     }
 
@@ -73,8 +67,6 @@ function AuthGate() {
 function RootLayoutNav() {
   const { isReady } = useAuth();
 
-  // Don't render navigation until auth state is determined.
-  // Splash screen stays visible, so user sees nothing flash.
   if (!isReady) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' }}>
