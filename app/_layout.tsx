@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider, focusManager, onlineManager } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef } from "react";
-import { ActivityIndicator, AppState, AppStateStatus, Platform, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, AppState, AppStateStatus, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -41,7 +41,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function AuthGate() {
+function AuthGate({ onReady }: { onReady: () => void }) {
   const { isAuthenticated, isReady } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -50,14 +50,6 @@ function AuthGate() {
   useEffect(() => {
     if (!isReady) return;
 
-    // Hide splash ONLY after we know the auth state
-    if (!splashHidden.current) {
-      splashHidden.current = true;
-      if (Platform.OS !== 'web') {
-        SplashScreen.hideAsync().catch(() => {});
-      }
-    }
-
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!isAuthenticated && !inAuthGroup) {
@@ -65,34 +57,79 @@ function AuthGate() {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(app)/(home)");
     }
-  }, [isAuthenticated, isReady, segments, router]);
+
+    // Hide splash AFTER navigation is set, with a small delay for the
+    // destination screen to mount. This prevents the white/empty flash.
+    if (!splashHidden.current) {
+      splashHidden.current = true;
+      setTimeout(() => {
+        if (Platform.OS !== 'web') {
+          SplashScreen.hideAsync().catch(() => {});
+        }
+        onReady();
+      }, 150);
+    }
+  }, [isAuthenticated, isReady, segments, router, onReady]);
 
   return null;
 }
 
 function RootLayoutNav() {
   const { isReady } = useAuth();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [appReady, setAppReady] = useState(false);
+
+  const handleReady = useCallback(() => {
+    setAppReady(true);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
   // Don't render navigation until auth state is determined.
   // Splash screen stays visible, so user sees nothing flash.
   if (!isReady) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={layoutStyles.loading}>
         <ActivityIndicator color={Colors.purple} size="large" />
       </View>
     );
   }
 
   return (
-    <>
-      <AuthGate />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(app)" />
-      </Stack>
-    </>
+    <View style={layoutStyles.root}>
+      {/* Dark background to prevent any white flash */}
+      <View style={layoutStyles.loading} />
+      <Animated.View style={[layoutStyles.root, { opacity: appReady ? fadeAnim : 1 }]}>
+        <AuthGate onReady={handleReady} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'fade',
+            animationDuration: 250,
+          }}
+        >
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(app)" />
+        </Stack>
+      </Animated.View>
+    </View>
   );
 }
+
+const layoutStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  loading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default function RootLayout() {
   return (
