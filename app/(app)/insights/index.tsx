@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   emptyCard: { alignItems: 'center', paddingVertical: 50, gap: 14 },
   emptyIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21, paddingHorizontal: 20 },
+  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
 
   // Report viewer modal
   modalContainer: { flex: 1, backgroundColor: Colors.bg },

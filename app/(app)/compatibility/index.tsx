@@ -336,8 +336,8 @@ const styles = StyleSheet.create({
   signGridLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
 
   // Prompt
-  promptContainer: { alignItems: 'center', gap: 10, paddingVertical: 40 },
-  promptText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  promptContainer: { alignItems: 'center', gap: 12, paddingVertical: 36 },
+  promptText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
 
   // Score card
   scoreCard: { marginBottom: 16, paddingVertical: 28, paddingHorizontal: 20 },

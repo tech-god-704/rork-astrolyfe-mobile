@@ -199,7 +199,7 @@ export default function HoroscopeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
   header: { marginTop: 8, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   readingSignName: { fontSize: 18, fontWeight: '700', color: Colors.purpleLight },
   fullReadingText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 26 },
 
-  sectionLabel: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.2 },
+  sectionLabel: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.2 },
 
   entryCard: { marginBottom: 14, overflow: 'hidden' },
   entryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },

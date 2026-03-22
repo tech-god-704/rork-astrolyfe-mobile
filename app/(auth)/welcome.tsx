@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   logoContainer: {
-    marginBottom: 28,
+    marginBottom: 24,
     zIndex: 2,
   },
   logoCircle: {
@@ -276,11 +276,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   skipBtn: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   skipBtnText: {
     fontSize: 14,
     color: Colors.textMuted,
+    fontWeight: '500',
   },
 });

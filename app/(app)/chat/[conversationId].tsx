@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   emptyChatIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   emptyChatEmoji: { fontSize: 28 },
   emptyChatTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  emptyChatText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  emptyChatText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
 
   inputRow: {
     flexDirection: 'row',

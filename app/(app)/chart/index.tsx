@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   interpretText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22, paddingLeft: 6 },
   interpretDetail: { fontSize: 12, color: Colors.textMuted, marginTop: 8, paddingLeft: 6 },
 
-  emptyCard: { alignItems: 'center', paddingVertical: 40, gap: 10 },
+  emptyCard: { alignItems: 'center', paddingVertical: 40, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21, paddingHorizontal: 10 },
+  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 8 },
 });

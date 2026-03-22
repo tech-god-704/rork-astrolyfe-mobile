@@ -80,9 +80,9 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]}>
-            <View>
+            <View style={styles.headerText}>
               <Text style={styles.greeting}>{greeting()}</Text>
-              <Text style={styles.userName}>{profile?.display_name || 'Stargazer'}</Text>
+              <Text style={styles.userName} numberOfLines={1}>{profile?.display_name || 'Stargazer'}</Text>
             </View>
             <Pressable
               onPress={() => handlePress('/(app)/profile')}
@@ -241,7 +241,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
   // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8, gap: 12 },
+  headerText: { flex: 1 },
   greeting: { fontSize: 15, color: Colors.textMuted, fontWeight: '500' },
   userName: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginTop: 2, letterSpacing: -0.5 },
   avatarBtn: {},
