@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
 
   // Hero Card
   heroCard: { marginBottom: 28, padding: 22 },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 },
   heroLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroLabelText: { fontSize: 13, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.8 },
   moonBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
 
   // Quick Actions
   sectionTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.3 },
-  quickActions: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  quickActions: { flexDirection: 'row', gap: 10, marginBottom: 12, justifyContent: 'center' },
   actionCard: { flex: 1, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: Colors.bgCardBorder },
   actionGradient: { paddingVertical: 20, paddingHorizontal: 14, alignItems: 'flex-start', gap: 14, minHeight: 120 },
   actionIconCircle: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

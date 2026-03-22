@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
 
-  header: { marginTop: 8, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  header: { marginTop: 8, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
   signRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   signSymbol: { fontSize: 20 },
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   elementBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   elementText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  moonInfo: { alignItems: 'center', marginTop: 4 },
+  moonInfo: { alignItems: 'center', marginTop: 4, flexShrink: 0 },
   moonEmoji: { fontSize: 24 },
   moonName: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', marginTop: 2 },
 

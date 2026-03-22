@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     borderWidth: 1.5,
     borderColor: Colors.purpleLight,
+    alignSelf: 'center',
     top: '50%',
     marginTop: -120,
     zIndex: 1,
@@ -190,6 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 110,
     borderWidth: 1,
     borderColor: Colors.purpleLight,
+    alignSelf: 'center',
     top: '50%',
     marginTop: -150,
     zIndex: 0,
@@ -210,8 +212,11 @@ const styles = StyleSheet.create({
   features: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
     gap: 10,
+    flexWrap: 'wrap',
+    paddingHorizontal: 10,
   },
   featureItem: {
     flexDirection: 'row',

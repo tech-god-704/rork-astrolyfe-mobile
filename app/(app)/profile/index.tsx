@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
   inputWrapFocused: { borderColor: Colors.purpleGlow, backgroundColor: Colors.bgInputFocused },
   input: { flex: 1, fontSize: 15, color: Colors.textPrimary },
 
-  signScroll: { marginTop: 4 },
-  signScrollContent: { gap: 8, paddingVertical: 4 },
+  signScroll: { marginTop: 4, marginHorizontal: -6 },
+  signScrollContent: { gap: 8, paddingVertical: 4, paddingHorizontal: 6 },
   signChip: {
     flexDirection: 'row',
     alignItems: 'center',

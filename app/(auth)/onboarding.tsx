@@ -227,9 +227,9 @@ const styles = StyleSheet.create({
   nextBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
   btnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   signGrid: { flex: 1, marginBottom: 16 },
-  signGridContent: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 20 },
+  signGridContent: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingBottom: 20 },
   signCard: {
-    width: '30%' as unknown as number,
+    width: '29%' as unknown as number,
     aspectRatio: 1,
     backgroundColor: Colors.bgCard,
     borderRadius: 18,

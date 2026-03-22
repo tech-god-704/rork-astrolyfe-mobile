@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   astrologerDotText: { fontSize: 10, fontWeight: '700', color: Colors.purpleLight },
   astrologerNameText: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
 
-  messageBubble: { maxWidth: '78%' as unknown as number, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, overflow: 'hidden' },
+  messageBubble: { maxWidth: '80%' as unknown as number, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, overflow: 'hidden' },
   userBubble: { borderBottomRightRadius: 6 },
   astrologerBubble: { backgroundColor: Colors.bgCard, borderWidth: 1, borderColor: Colors.bgCardBorder, borderBottomLeftRadius: 6 },
   messageText: { fontSize: 15, lineHeight: 22 },
@@ -263,9 +263,10 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
     backgroundColor: 'rgba(13,13,34,0.95)',
