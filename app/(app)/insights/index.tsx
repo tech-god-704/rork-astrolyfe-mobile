@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 24 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 24, gap: 12 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },
   headerIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   productPrice: { fontSize: 20, fontWeight: '800', color: Colors.gold },
   unlockedBadge: { backgroundColor: Colors.successDim, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   unlockedText: { fontSize: 11, fontWeight: '700', color: Colors.success, textTransform: 'uppercase', letterSpacing: 0.5 },
-  productDesc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, paddingLeft: 2 },
+  productDesc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
 
   viewBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: Colors.successDim, borderRadius: 14, alignSelf: 'flex-start' },
   viewBtnText: { fontSize: 14, fontWeight: '600', color: Colors.success },
@@ -291,11 +291,11 @@ const styles = StyleSheet.create({
   emptyCard: { alignItems: 'center', paddingVertical: 50, gap: 14 },
   emptyIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21, paddingHorizontal: 20 },
+  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
 
   // Report viewer modal
   modalContainer: { flex: 1, backgroundColor: Colors.bg },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.bgCardBorder },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.bgCardBorder, gap: 12 },
   modalTitleWrap: { flex: 1 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },

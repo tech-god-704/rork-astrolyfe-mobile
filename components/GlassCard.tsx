@@ -52,10 +52,10 @@ export default function GlassCard({ children, style, variant = 'default', glowCo
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.bgCardBorder,
-    padding: 20,
+    padding: 18,
     overflow: 'hidden',
     ...Platform.select({
       ios: {

@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4, marginBottom: 24 },
 
   // Signs display
-  signsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 24 },
+  signsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 24 },
   signDisplay: { alignItems: 'center', gap: 8 },
   signCircle: {
     width: 76,
@@ -321,24 +321,23 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
   signGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   signGridItem: {
-    width: '29%' as unknown as number,
-    flexGrow: 1,
+    width: '30%' as unknown as number,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingHorizontal: 10,
     paddingVertical: 11,
     borderRadius: 14,
     backgroundColor: Colors.bgInput,
     borderWidth: 1.5,
     borderColor: Colors.bgInputBorder,
   },
-  signGridSymbol: { fontSize: 18 },
-  signGridLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  signGridSymbol: { fontSize: 16 },
+  signGridLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
 
   // Prompt
-  promptContainer: { alignItems: 'center', gap: 10, paddingVertical: 40 },
-  promptText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  promptContainer: { alignItems: 'center', gap: 12, paddingVertical: 36 },
+  promptText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
 
   // Score card
   scoreCard: { marginBottom: 16, paddingVertical: 28, paddingHorizontal: 20 },

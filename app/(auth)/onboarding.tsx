@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, TextInput, Animated, ScrollView, Key
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, Calendar, MapPin, Star, Check } from 'lucide-react-native';
+import { ArrowRight, ArrowLeft, Calendar, MapPin, Star, Check } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -168,16 +168,23 @@ export default function OnboardingScreen() {
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.progressRow}>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]}>
-                {i < step && (
-                  <View style={styles.progressDotCompleted}>
-                    <Check size={8} color="#fff" />
-                  </View>
-                )}
-              </View>
-            ))}
-            <Pressable onPress={() => { if (step < 2) { animateStep(step + 1); } else { completeMutation.mutate(); } }} style={styles.skipBtn}>
+            {step > 0 && (
+              <Pressable onPress={() => animateStep(step - 1)} style={styles.backBtn} hitSlop={12}>
+                <ArrowLeft size={18} color={Colors.textSecondary} />
+              </Pressable>
+            )}
+            <View style={styles.progressDots}>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]}>
+                  {i < step && (
+                    <View style={styles.progressDotCompleted}>
+                      <Check size={8} color="#fff" />
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+            <Pressable onPress={() => { if (step < 2) { animateStep(step + 1); } else { completeMutation.mutate(); } }} style={styles.skipBtn} hitSlop={8}>
               <Text style={styles.skipBtnText}>Skip</Text>
             </Pressable>
           </View>
@@ -194,18 +201,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   flex: { flex: 1 },
-  progressRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingVertical: 16, alignItems: 'center' },
-  progressDot: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+  progressRow: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 18, alignItems: 'center', paddingHorizontal: 24 },
+  progressDots: { flexDirection: 'row', justifyContent: 'center', gap: 8, flex: 1 },
+  backBtn: { position: 'absolute', left: 24, top: 14 },
+  progressDot: { width: 44, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
   progressDotActive: { backgroundColor: Colors.purple },
-  progressDotCompleted: { width: 16, height: 5, borderRadius: 3, backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center' },
-  skipBtn: { position: 'absolute', right: 24, top: 12 },
+  progressDotCompleted: { width: 20, height: 5, borderRadius: 3, backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center' },
+  skipBtn: { position: 'absolute', right: 24, top: 14 },
   skipBtnText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '600' },
-  stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 20 },
-  stepIconWrap: { marginBottom: 24 },
-  stepIcon: { width: 70, height: 70, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  stepTitle: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, letterSpacing: -0.5 },
-  stepDesc: { fontSize: 16, color: Colors.textSecondary, marginBottom: 32 },
-  form: { gap: 14, marginBottom: 32 },
+  stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 },
+  stepIconWrap: { marginBottom: 20 },
+  stepIcon: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  stepTitle: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, letterSpacing: -0.5 },
+  stepDesc: { fontSize: 16, color: Colors.textSecondary, marginBottom: 28 },
+  form: { gap: 14, marginBottom: 28 },
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,12 +231,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgInputFocused,
   },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
-  nextBtn: { borderRadius: 18, overflow: 'hidden' },
-  nextBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 8 },
+  nextBtn: { borderRadius: 18, overflow: 'hidden', marginTop: 4 },
+  nextBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, gap: 8 },
   nextBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
   btnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-  signGrid: { flex: 1, marginBottom: 16 },
-  signGridContent: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingBottom: 20 },
+  signGrid: { flex: 1, marginBottom: 12 },
+  signGridContent: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingBottom: 16 },
   signCard: {
     width: '29%' as unknown as number,
     aspectRatio: 1,

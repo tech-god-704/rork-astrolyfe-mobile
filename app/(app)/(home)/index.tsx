@@ -80,9 +80,9 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]}>
-            <View>
+            <View style={styles.headerText}>
               <Text style={styles.greeting}>{greeting()}</Text>
-              <Text style={styles.userName}>{profile?.display_name || 'Stargazer'}</Text>
+              <Text style={styles.userName} numberOfLines={1}>{profile?.display_name || 'Stargazer'}</Text>
             </View>
             <Pressable
               onPress={() => handlePress('/(app)/profile')}
@@ -238,12 +238,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
   // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8, gap: 12 },
+  headerText: { flex: 1 },
   greeting: { fontSize: 15, color: Colors.textMuted, fontWeight: '500' },
-  userName: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginTop: 2, letterSpacing: -0.5 },
+  userName: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginTop: 2, letterSpacing: -0.5 },
   avatarBtn: {},
   signBadge: {
     width: 52,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   signSymbol: { fontSize: 24, color: '#fff' },
 
   // Hero Card
-  heroCard: { marginBottom: 28, padding: 22 },
+  heroCard: { marginBottom: 24, padding: 20 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 },
   heroLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroLabelText: { fontSize: 13, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -289,12 +290,12 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.3 },
   quickActions: { flexDirection: 'row', gap: 10, marginBottom: 12, justifyContent: 'center' },
   actionCard: { flex: 1, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: Colors.bgCardBorder },
-  actionGradient: { paddingVertical: 20, paddingHorizontal: 14, alignItems: 'flex-start', gap: 14, minHeight: 120 },
+  actionGradient: { paddingVertical: 18, paddingHorizontal: 14, alignItems: 'flex-start', gap: 12, minHeight: 115 },
   actionIconCircle: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, lineHeight: 19 },
 
   // Secondary Actions
-  secondaryActions: { gap: 10, marginBottom: 20 },
+  secondaryActions: { gap: 10, marginBottom: 16 },
   secondaryCard: {},
   secondaryInner: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
   secondaryIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

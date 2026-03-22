@@ -155,10 +155,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 32,
   },
   logoContainer: {
-    marginBottom: 28,
+    marginBottom: 24,
     zIndex: 2,
   },
   logoCircle: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   featureText: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textMuted,
     fontWeight: '600',
   },
@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     paddingHorizontal: 24,
-    paddingBottom: 20,
-    gap: 12,
+    paddingBottom: 28,
+    gap: 14,
   },
   primaryBtn: {
     borderRadius: 18,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   secondaryBtn: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     backgroundColor: Colors.bgCard,
     borderRadius: 16,
@@ -276,11 +276,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   skipBtn: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   skipBtnText: {
     fontSize: 14,
     color: Colors.textMuted,
+    fontWeight: '500',
   },
 });

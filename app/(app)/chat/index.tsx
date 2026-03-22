@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, marginTop: 8, marginBottom: 20, letterSpacing: -0.5 },
   loader: { marginTop: 40 },
-  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 20 },
+  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 40 },
   convCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   astrologerSpecialty: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
   chatIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center' },
 
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, gap: 12 },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 12 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
   emptyDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
