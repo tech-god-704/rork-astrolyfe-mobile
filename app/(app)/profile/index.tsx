@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
+import { getBirthDateError } from '@/lib/validation';
 
 export default function ProfileScreen() {
   const { profile, user, signOut, refreshProfile, isAdmin } = useAuth();
@@ -19,6 +20,8 @@ export default function ProfileScreen() {
   const [birthCity, setBirthCity] = useState<string>('');
   const [selectedSign, setSelectedSign] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ birth?: string; time?: string }>({});
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -36,9 +39,40 @@ export default function ProfileScreen() {
 
   const zodiac = selectedSign ? getZodiacByName(selectedSign) : null;
 
+  const completeness = useMemo(() => {
+    let filled = 0;
+    const total = 5;
+    if (displayName.trim()) filled++;
+    if (birthDate.trim()) filled++;
+    if (birthTime.trim()) filled++;
+    if (birthCity.trim()) filled++;
+    if (selectedSign) filled++;
+    return { filled, total, percent: Math.round((filled / total) * 100) };
+  }, [displayName, birthDate, birthTime, birthCity, selectedSign]);
+
+  const validateProfile = (): boolean => {
+    const errors: { birth?: string; time?: string } = {};
+    if (birthDate.trim()) {
+      const err = getBirthDateError(birthDate);
+      if (err) errors.birth = err;
+    }
+    if (birthTime.trim() && !/^\d{1,2}:\d{2}$/.test(birthTime.trim())) {
+      errors.time = 'Please use HH:MM format';
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return false;
+    }
+    setFieldErrors({});
+    return true;
+  };
+
   const updateMutation = useMutation({
     mutationFn: async () => {
+      setSaveMessage(null);
       if (!user?.email) throw new Error('Not authenticated');
+      if (!validateProfile()) throw new Error('__validation__');
 
       // Parse birth time (HH:MM) for quiz_data
       const timeParts = birthTime.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -69,10 +103,12 @@ export default function ProfileScreen() {
     onSuccess: () => {
       void refreshProfile();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      Alert.alert('Saved', 'Your profile has been updated.');
+      setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
     },
     onError: (error: Error) => {
-      Alert.alert('Error', error.message);
+      if (error.message === '__validation__') return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setSaveMessage({ type: 'error', text: error.message });
     },
   });
 
@@ -120,6 +156,15 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
+            {/* Completeness indicator */}
+            <View style={styles.completenessRow}>
+              <View style={styles.completenessBar}>
+                <View style={[styles.completenessFill, { width: `${completeness.percent}%` as unknown as number }]}>
+                  <LinearGradient colors={[Colors.purple, Colors.indigoLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
+                </View>
+              </View>
+              <Text style={styles.completenessText}>{completeness.percent}% complete</Text>
+            </View>
           </View>
 
           {/* Form */}
@@ -140,32 +185,34 @@ export default function ProfileScreen() {
             </View>
 
             <Text style={styles.fieldLabel}>Birth Date</Text>
-            <View style={[styles.inputWrap, focusedField === 'birth' && styles.inputWrapFocused]}>
-              <Calendar size={16} color={focusedField === 'birth' ? Colors.purpleLight : Colors.textMuted} />
+            <View style={[styles.inputWrap, focusedField === 'birth' && styles.inputWrapFocused, !!fieldErrors.birth && styles.inputWrapError]}>
+              <Calendar size={16} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.purpleLight : Colors.textMuted} />
               <TextInput
                 style={styles.input}
                 value={birthDate}
-                onChangeText={setBirthDate}
+                onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
                 onFocus={() => setFocusedField('birth')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>
+            {fieldErrors.birth && <Text style={styles.fieldError}>{fieldErrors.birth}</Text>}
 
             <Text style={styles.fieldLabel}>Birth Time</Text>
-            <View style={[styles.inputWrap, focusedField === 'time' && styles.inputWrapFocused]}>
-              <Clock size={16} color={focusedField === 'time' ? Colors.purpleLight : Colors.textMuted} />
+            <View style={[styles.inputWrap, focusedField === 'time' && styles.inputWrapFocused, !!fieldErrors.time && styles.inputWrapError]}>
+              <Clock size={16} color={fieldErrors.time ? Colors.danger : focusedField === 'time' ? Colors.purpleLight : Colors.textMuted} />
               <TextInput
                 style={styles.input}
                 value={birthTime}
-                onChangeText={setBirthTime}
+                onChangeText={(t) => { setBirthTime(t); if (fieldErrors.time) setFieldErrors((p) => ({ ...p, time: undefined })); }}
                 placeholder="HH:MM (24hr, e.g. 14:30)"
                 placeholderTextColor={Colors.textMuted}
                 onFocus={() => setFocusedField('time')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>
+            {fieldErrors.time && <Text style={styles.fieldError}>{fieldErrors.time}</Text>}
 
             <Text style={styles.fieldLabel}>Birth City</Text>
             <View style={[styles.inputWrap, focusedField === 'city' && styles.inputWrapFocused]}>
@@ -206,6 +253,12 @@ export default function ProfileScreen() {
               })}
             </ScrollView>
           </GlassCard>
+
+          {saveMessage && (
+            <View style={[styles.saveMessageRow, saveMessage.type === 'success' ? styles.saveMessageSuccess : styles.saveMessageError]}>
+              <Text style={[styles.saveMessageText, { color: saveMessage.type === 'success' ? Colors.success : Colors.danger }]}>{saveMessage.text}</Text>
+            </View>
+          )}
 
           <Pressable
             style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
@@ -283,7 +336,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   inputWrapFocused: { borderColor: Colors.purpleGlow, backgroundColor: Colors.bgInputFocused },
+  inputWrapError: { borderColor: Colors.danger },
   input: { flex: 1, fontSize: 15, color: Colors.textPrimary },
+  fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: 2 },
 
   signScroll: { marginTop: 4, marginHorizontal: -6 },
   signScrollContent: { gap: 8, paddingVertical: 4, paddingHorizontal: 6 },
@@ -302,6 +357,14 @@ const styles = StyleSheet.create({
   signChipLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 2 },
 
+  completenessRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, width: '80%' as unknown as number },
+  completenessBar: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  completenessFill: { height: '100%' as unknown as number, borderRadius: 3, overflow: 'hidden' },
+  completenessText: { fontSize: 12, color: Colors.textMuted, fontWeight: '600' },
+  saveMessageRow: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
+  saveMessageSuccess: { backgroundColor: Colors.successDim },
+  saveMessageError: { backgroundColor: Colors.dangerDim },
+  saveMessageText: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
   saveBtn: { borderRadius: 18, overflow: 'hidden', marginBottom: 14 },
   saveBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 8 },
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Animated, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Animated, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { ZODIAC_SIGNS } from '@/constants/zodiac';
 import { useAuth } from '@/providers/AuthProvider';
+import { isValidEmail, getPasswordError, getBirthDateError } from '@/lib/validation';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function OnboardingScreen() {
   const [birthCity, setBirthCity] = useState<string>('');
   const [selectedSign, setSelectedSign] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; password?: string; birth?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const animateStep = (next: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -41,14 +44,46 @@ export default function OnboardingScreen() {
     });
   };
 
+  const validateStep0 = (): boolean => {
+    const errors: { name?: string; email?: string; password?: string } = {};
+    if (displayName.trim() && email.trim()) {
+      if (!isValidEmail(email)) errors.email = 'Please enter a valid email';
+      const pwErr = password ? getPasswordError(password) : null;
+      if (pwErr) errors.password = pwErr;
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return false;
+    }
+    setFieldErrors({});
+    return true;
+  };
+
+  const validateStep1 = (): boolean => {
+    if (birthDate.trim()) {
+      const err = getBirthDateError(birthDate);
+      if (err) {
+        setFieldErrors({ birth: err });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+        return false;
+      }
+    }
+    setFieldErrors({});
+    return true;
+  };
+
   const completeMutation = useMutation({
     mutationFn: async () => {
+      setFormError(null);
       const trimmedEmail = email.trim();
       const trimmedName = displayName.trim();
       if (!trimmedEmail || !password || !trimmedName) {
         return 'skip';
       }
-      if (password.length < 6) throw new Error('Password must be at least 6 characters');
+      if (!isValidEmail(trimmedEmail)) throw new Error('__validation__');
+      const pwErr = getPasswordError(password);
+      if (pwErr) throw new Error('__validation__');
       return signUp(trimmedEmail, password, trimmedName, selectedSign || 'Aries', birthDate || '2000-01-01');
     },
     onSuccess: (result) => {
@@ -60,7 +95,9 @@ export default function OnboardingScreen() {
       router.replace('/(app)/(home)');
     },
     onError: (error: Error) => {
-      Alert.alert('Error', error.message);
+      if (error.message === '__validation__') return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setFormError(error.message);
     },
   });
 
@@ -73,18 +110,26 @@ export default function OnboardingScreen() {
       </View>
       <Text style={styles.stepTitle}>Who are you?</Text>
       <Text style={styles.stepDesc}>Let's start with the basics</Text>
+      {formError && (
+        <View style={styles.formErrorRow}>
+          <Text style={styles.formErrorText}>{formError}</Text>
+        </View>
+      )}
       <View style={styles.form}>
-        <View style={[styles.inputGroup, focusedField === 'name' && styles.inputGroupFocused]}>
-          <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={Colors.textMuted} value={displayName} onChangeText={setDisplayName} autoCapitalize="words" onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)} />
+        <View style={[styles.inputGroup, focusedField === 'name' && styles.inputGroupFocused, !!fieldErrors.name && styles.inputGroupError]}>
+          <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={Colors.textMuted} value={displayName} onChangeText={(t) => { setDisplayName(t); if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined })); }} autoCapitalize="words" onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)} />
         </View>
-        <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused]}>
-          <TextInput style={styles.input} placeholder="Email" placeholderTextColor={Colors.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} />
+        {fieldErrors.name && <Text style={styles.fieldError}>{fieldErrors.name}</Text>}
+        <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused, !!fieldErrors.email && styles.inputGroupError]}>
+          <TextInput style={styles.input} placeholder="Email" placeholderTextColor={Colors.textMuted} value={email} onChangeText={(t) => { setEmail(t); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} />
         </View>
-        <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused]}>
-          <TextInput style={styles.input} placeholder="Password (min 6 characters)" placeholderTextColor={Colors.textMuted} value={password} onChangeText={setPassword} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField(null)} />
+        {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
+        <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused, !!fieldErrors.password && styles.inputGroupError]}>
+          <TextInput style={styles.input} placeholder="Password (min 6 characters)" placeholderTextColor={Colors.textMuted} value={password} onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField(null)} />
         </View>
+        {fieldErrors.password && <Text style={styles.fieldError}>{fieldErrors.password}</Text>}
       </View>
-      <Pressable style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]} onPress={() => animateStep(1)}>
+      <Pressable style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]} onPress={() => { if (validateStep0()) animateStep(1); }}>
         <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnInner}>
           <Text style={styles.nextBtnText}>Next</Text>
           <ArrowRight size={18} color="#fff" />
@@ -103,16 +148,17 @@ export default function OnboardingScreen() {
       <Text style={styles.stepTitle}>When were you born?</Text>
       <Text style={styles.stepDesc}>We'll calculate your natal chart</Text>
       <View style={styles.form}>
-        <View style={[styles.inputGroup, focusedField === 'birth' && styles.inputGroupFocused]}>
-          <Calendar size={18} color={focusedField === 'birth' ? Colors.gold : Colors.textMuted} />
-          <TextInput style={styles.input} placeholder="Birth date (YYYY-MM-DD)" placeholderTextColor={Colors.textMuted} value={birthDate} onChangeText={setBirthDate} onFocus={() => setFocusedField('birth')} onBlur={() => setFocusedField(null)} />
+        <View style={[styles.inputGroup, focusedField === 'birth' && styles.inputGroupFocused, !!fieldErrors.birth && styles.inputGroupError]}>
+          <Calendar size={18} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.gold : Colors.textMuted} />
+          <TextInput style={styles.input} placeholder="Birth date (YYYY-MM-DD)" placeholderTextColor={Colors.textMuted} value={birthDate} onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }} onFocus={() => setFocusedField('birth')} onBlur={() => setFocusedField(null)} />
         </View>
+        {fieldErrors.birth && <Text style={styles.fieldError}>{fieldErrors.birth}</Text>}
         <View style={[styles.inputGroup, focusedField === 'city' && styles.inputGroupFocused]}>
           <MapPin size={18} color={focusedField === 'city' ? Colors.teal : Colors.textMuted} />
           <TextInput style={styles.input} placeholder="Birth city (optional)" placeholderTextColor={Colors.textMuted} value={birthCity} onChangeText={setBirthCity} onFocus={() => setFocusedField('city')} onBlur={() => setFocusedField(null)} />
         </View>
       </View>
-      <Pressable style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]} onPress={() => animateStep(2)}>
+      <Pressable style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]} onPress={() => { if (validateStep1()) animateStep(2); }}>
         <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnInner}>
           <Text style={styles.nextBtnText}>Next</Text>
           <ArrowRight size={18} color="#fff" />
@@ -230,7 +276,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.purpleGlow,
     backgroundColor: Colors.bgInputFocused,
   },
+  inputGroupError: {
+    borderColor: Colors.danger,
+  },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
+  fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: -6 },
+  formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
+  formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },
   nextBtn: { borderRadius: 18, overflow: 'hidden', marginTop: 4 },
   nextBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, gap: 8 },
   nextBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
