@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkles, Heart, Briefcase, Activity, TrendingUp, Flame, Star, Sun } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -30,17 +30,20 @@ const PERIOD_LABELS: { key: PeriodType; label: string }[] = [
 
 export default function HoroscopeScreen() {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
   const moonPhase = getMoonPhase();
   const [period, setPeriod] = useState<PeriodType>('daily');
+  const [refreshing, setRefreshing] = useState(false);
   const contentAnim = useRef(new Animated.Value(1)).current;
 
   // Try curated horoscope from Supabase (written by the web app), fall back to local
   const signName = profile?.zodiac_sign || 'Aries';
+  const todayKey = new Date().toDateString(); // auto-invalidate at midnight
   const localReading = useMemo(() => getHoroscope(signName, period), [signName, period]);
 
   const curatedQuery = useQuery({
-    queryKey: ['curatedHoroscope', signName, period],
+    queryKey: ['curatedHoroscope', signName, period, todayKey],
     queryFn: () => fetchCuratedHoroscope(signName, period),
     staleTime: 1000 * 60 * 30, // 30 min — curated content changes infrequently
   });
@@ -68,9 +71,14 @@ export default function HoroscopeScreen() {
     setPeriod(p);
   }, [period]);
 
-  const onRefresh = useCallback(() => {
-    // Content is generated locally and changes daily/weekly/monthly
-  }, []);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['curatedHoroscope', signName, period] });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, signName, period]);
 
   const getPeriodLabel = () => {
     const now = new Date();
@@ -90,7 +98,7 @@ export default function HoroscopeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
           {/* Header with zodiac info */}
           <View style={styles.header}>

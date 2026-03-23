@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Modal } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import { isValidEmail } from '@/lib/validation';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function LoginScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pin, setPin] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(30)).current;
@@ -29,9 +32,28 @@ export default function LoginScreen() {
     ]).start();
   }, []);
 
+  const clearErrors = () => {
+    setFormError(null);
+    setFieldErrors({});
+  };
+
+  const validate = (): boolean => {
+    const errors: { email?: string; password?: string } = {};
+    if (!email.trim()) errors.email = 'Email is required';
+    else if (!isValidEmail(email)) errors.email = 'Please enter a valid email';
+    if (!password.trim()) errors.password = 'Password is required';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return false;
+    }
+    return true;
+  };
+
   const loginMutation = useMutation({
     mutationFn: async () => {
-      if (!email.trim() || !password.trim()) throw new Error('Please fill in all fields');
+      clearErrors();
+      if (!validate()) throw new Error('__validation__');
       return signIn(email.trim(), password);
     },
     onSuccess: () => {
@@ -39,8 +61,9 @@ export default function LoginScreen() {
       router.replace('/(app)/(home)');
     },
     onError: (error: Error) => {
+      if (error.message === '__validation__') return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert('Login Failed', error.message);
+      setFormError(error.message);
     },
   });
 
@@ -58,15 +81,21 @@ export default function LoginScreen() {
               <Text style={styles.title}>Welcome{'\n'}back</Text>
               <Text style={styles.subtitle}>Sign in to continue your cosmic journey</Text>
 
+              {formError && (
+                <View style={styles.formErrorRow}>
+                  <Text style={styles.formErrorText}>{formError}</Text>
+                </View>
+              )}
+
               <View style={styles.form}>
-                <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused]}>
-                  <Mail size={18} color={focusedField === 'email' ? Colors.purpleLight : Colors.textMuted} />
+                <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused, !!fieldErrors.email && styles.inputGroupError]}>
+                  <Mail size={18} color={fieldErrors.email ? Colors.danger : focusedField === 'email' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="Email"
                     placeholderTextColor={Colors.textMuted}
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(t) => { setEmail(t); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -75,24 +104,26 @@ export default function LoginScreen() {
                     testID="email-input"
                   />
                 </View>
+                {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
 
-                <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused]}>
-                  <Lock size={18} color={focusedField === 'password' ? Colors.purpleLight : Colors.textMuted} />
+                <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused, !!fieldErrors.password && styles.inputGroupError]}>
+                  <Lock size={18} color={fieldErrors.password ? Colors.danger : focusedField === 'password' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="Password"
                     placeholderTextColor={Colors.textMuted}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
                     secureTextEntry={!showPassword}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     testID="password-input"
                   />
-                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8}>
-                    {showPassword ? <EyeOff size={18} color={Colors.textMuted} /> : <Eye size={18} color={Colors.textMuted} />}
+                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={[styles.eyeBtn, showPassword && styles.eyeBtnActive]}>
+                    {showPassword ? <EyeOff size={18} color={Colors.purpleLight} /> : <Eye size={18} color={Colors.textMuted} />}
                   </Pressable>
                 </View>
+                {fieldErrors.password && <Text style={styles.fieldError}>{fieldErrors.password}</Text>}
               </View>
 
               <Pressable
@@ -195,7 +226,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.purpleGlow,
     backgroundColor: Colors.bgInputFocused,
   },
+  inputGroupError: {
+    borderColor: Colors.danger,
+  },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
+  eyeBtn: { padding: 4, borderRadius: 12 },
+  eyeBtnActive: { backgroundColor: 'rgba(167,139,250,0.12)' },
+  fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: -6 },
+  formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
+  formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },
   loginBtn: { borderRadius: 18, overflow: 'hidden', marginBottom: 24 },
   btnGradient: { paddingVertical: 17, alignItems: 'center', justifyContent: 'center' },
   loginBtnText: { fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },

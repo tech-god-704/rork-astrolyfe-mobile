@@ -1,10 +1,10 @@
-import React, { useCallback, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated } from 'react-native';
+import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp } from 'lucide-react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -15,15 +15,18 @@ import { getHoroscope, fetchCuratedHoroscope, categorizeHoroscope } from '@/serv
 export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const moonPhase = getMoonPhase();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
+  const [refreshing, setRefreshing] = useState(false);
 
   // Try curated horoscope from Supabase, fall back to instant local generation
   const signName = profile?.zodiac_sign || 'Aries';
+  const todayKey = new Date().toDateString(); // auto-invalidate at midnight
   const localReading = useMemo(() => getHoroscope(signName, 'daily'), [signName]);
 
   const curatedQuery = useQuery({
-    queryKey: ['curatedHoroscope', signName, 'daily'],
+    queryKey: ['curatedHoroscope', signName, 'daily', todayKey],
     queryFn: () => fetchCuratedHoroscope(signName, 'daily'),
     staleTime: 1000 * 60 * 30,
   });
@@ -33,6 +36,16 @@ export default function HomeScreen() {
 
   const firstCategory = categories[0];
   const remainingCount = categories.length - 1;
+
+  // Profile completeness check
+  const profileMissing = useMemo(() => {
+    if (!profile) return null;
+    const missing: string[] = [];
+    if (!profile.birth_date) missing.push('birth date');
+    if (profile.quiz_data?.birth_hour == null) missing.push('birth time');
+    if (!profile.birth_lat || !profile.birth_lon) missing.push('birth location');
+    return missing.length > 0 ? missing : null;
+  }, [profile]);
 
   // Animations
   const heroOpacity = useRef(new Animated.Value(0)).current;
@@ -53,9 +66,14 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
-  const onRefresh = useCallback(() => {
-    // Content is generated locally and changes daily
-  }, []);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['curatedHoroscope'] });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
 
   const handlePress = useCallback((route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -76,7 +94,7 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]}>
@@ -128,6 +146,13 @@ export default function HomeScreen() {
                     <View style={[styles.heroElementBadge, { backgroundColor: `${zodiac.color}20` }]}>
                       <Text style={[styles.heroElementText, { color: zodiac.color }]}>{zodiac.element}</Text>
                     </View>
+                  </View>
+                )}
+
+                {curatedQuery.isLoading && (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color={Colors.purpleLight} />
+                    <Text style={styles.loadingText}>Fetching today's reading…</Text>
                   </View>
                 )}
 
@@ -216,6 +241,26 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
+            {/* Profile Completion Prompt */}
+            {profileMissing && (
+              <Pressable onPress={() => handlePress('/(app)/profile')} style={({ pressed }) => [pressed && { opacity: 0.9 }]}>
+                <GlassCard style={styles.profilePromptCard}>
+                  <View style={styles.profilePromptRow}>
+                    <View style={styles.profilePromptIcon}>
+                      <AlertCircle size={18} color={Colors.gold} />
+                    </View>
+                    <View style={styles.profilePromptText}>
+                      <Text style={styles.profilePromptTitle}>Complete your profile</Text>
+                      <Text style={styles.profilePromptDesc}>
+                        Add your {profileMissing.join(', ')} for more accurate readings and charts.
+                      </Text>
+                    </View>
+                    <ChevronRight size={16} color={Colors.textMuted} />
+                  </View>
+                </GlassCard>
+              </Pressable>
+            )}
+
             {/* Cosmic Tip */}
             <GlassCard variant="glow" glowColor={Colors.gold} style={styles.tipCard}>
               <View style={styles.tipHeader}>
@@ -302,6 +347,18 @@ const styles = StyleSheet.create({
   secondaryText: { flex: 1 },
   secondaryTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   secondaryDesc: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+
+  // Loading
+  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  loadingText: { fontSize: 12, color: Colors.textMuted, fontWeight: '500' },
+
+  // Profile prompt
+  profilePromptCard: { marginBottom: 16 },
+  profilePromptRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  profilePromptIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
+  profilePromptText: { flex: 1 },
+  profilePromptTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold },
+  profilePromptDesc: { fontSize: 12, color: Colors.textMuted, marginTop: 2, lineHeight: 18 },
 
   // Cosmic Tip
   tipCard: { marginBottom: 20 },

@@ -72,6 +72,7 @@ export default function InsightsScreen() {
                 Alert.alert('Success', `You've unlocked ${product.name}!`);
               } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : 'Purchase recording failed';
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
                 Alert.alert('Error', msg);
               }
             },
@@ -80,6 +81,7 @@ export default function InsightsScreen() {
       );
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Payment failed';
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Error', message);
     }
   }, [user, unlockedQuery]);
