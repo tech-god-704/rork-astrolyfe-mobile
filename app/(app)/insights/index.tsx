@@ -19,6 +19,7 @@ export default function InsightsScreen() {
   const productsQuery = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts,
+    staleTime: 1000 * 60 * 60,
   });
 
   const unlockedQuery = useQuery({

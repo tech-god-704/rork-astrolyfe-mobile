@@ -97,7 +97,14 @@ export default function ChatListScreen() {
       }, () => {
         void conversationsQuery.refetch();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('[Chat] Realtime subscription failed, falling back to polling');
+          const interval = setInterval(() => { void conversationsQuery.refetch(); }, 30000);
+          channel.unsubscribe();
+          setTimeout(() => clearInterval(interval), 300000);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);

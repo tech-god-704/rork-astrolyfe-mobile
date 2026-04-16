@@ -26,6 +26,9 @@ export async function fetchCuratedHoroscope(
   period: HoroscopePeriod,
 ): Promise<HoroscopeReading | null> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const { data, error } = await supabase
       .from('horoscopes')
       .select('content, title, category')
@@ -33,7 +36,10 @@ export async function fetchCuratedHoroscope(
       .eq('period_type', period)
       .order('created_at', { ascending: false })
       .limit(1)
+      .abortSignal(controller.signal)
       .maybeSingle();
+
+    clearTimeout(timeoutId);
 
     if (error || !data?.content) return null;
 

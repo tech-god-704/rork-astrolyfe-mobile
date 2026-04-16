@@ -230,8 +230,8 @@ export default function OnboardingScreen() {
                 </View>
               ))}
             </View>
-            <Pressable onPress={() => { if (step < 2) { animateStep(step + 1); } else { completeMutation.mutate(); } }} style={styles.skipBtn} hitSlop={8}>
-              <Text style={styles.skipBtnText}>Skip</Text>
+            <Pressable onPress={() => { if (step < 2) { animateStep(step + 1); } else { completeMutation.mutate(); } }} style={styles.skipBtn} hitSlop={8} disabled={completeMutation.isPending}>
+              <Text style={[styles.skipBtnText, completeMutation.isPending && { opacity: 0.4 }]}>Skip</Text>
             </Pressable>
           </View>
           <Animated.View style={[styles.flex, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>

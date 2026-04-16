@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp, AlertCircle } from 'lucide-react-native';
+import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp, AlertCircle, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -19,6 +19,7 @@ export default function HomeScreen() {
   const moonPhase = getMoonPhase();
   const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
   const [refreshing, setRefreshing] = useState(false);
+  const [promptDismissed, setPromptDismissed] = useState(false);
 
   // Try curated horoscope from Supabase, fall back to instant local generation
   const signName = profile?.zodiac_sign || 'Aries';
@@ -105,6 +106,8 @@ export default function HomeScreen() {
             <Pressable
               onPress={() => handlePress('/(app)/profile')}
               style={({ pressed }) => [styles.avatarBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }]}
+              accessibilityLabel="View profile"
+              accessibilityRole="button"
             >
               {zodiac ? (
                 <LinearGradient colors={[Colors.purple, Colors.indigoLight]} style={styles.signBadge}>
@@ -242,10 +245,10 @@ export default function HomeScreen() {
             </View>
 
             {/* Profile Completion Prompt */}
-            {profileMissing && (
-              <Pressable onPress={() => handlePress('/(app)/profile')} style={({ pressed }) => [pressed && { opacity: 0.9 }]}>
-                <GlassCard style={styles.profilePromptCard}>
-                  <View style={styles.profilePromptRow}>
+            {profileMissing && !promptDismissed && (
+              <GlassCard style={styles.profilePromptCard}>
+                <View style={styles.profilePromptRow}>
+                  <Pressable onPress={() => handlePress('/(app)/profile')} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }]}>
                     <View style={styles.profilePromptIcon}>
                       <AlertCircle size={18} color={Colors.gold} />
                     </View>
@@ -255,10 +258,12 @@ export default function HomeScreen() {
                         Add your {profileMissing.join(', ')} for more accurate readings and charts.
                       </Text>
                     </View>
-                    <ChevronRight size={16} color={Colors.textMuted} />
-                  </View>
-                </GlassCard>
-              </Pressable>
+                  </Pressable>
+                  <Pressable onPress={() => setPromptDismissed(true)} hitSlop={8} style={styles.dismissBtn}>
+                    <X size={14} color={Colors.textMuted} />
+                  </Pressable>
+                </View>
+              </GlassCard>
             )}
 
             {/* Cosmic Tip */}
@@ -359,6 +364,7 @@ const styles = StyleSheet.create({
   profilePromptText: { flex: 1 },
   profilePromptTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold },
   profilePromptDesc: { fontSize: 12, color: Colors.textMuted, marginTop: 2, lineHeight: 18 },
+  dismissBtn: { padding: 6, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)' },
 
   // Cosmic Tip
   tipCard: { marginBottom: 20 },

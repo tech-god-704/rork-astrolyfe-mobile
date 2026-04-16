@@ -94,6 +94,7 @@ export default function ChartScreen() {
   }, [profile?.birth_date, profile?.birth_lat, profile?.birth_lon, profile?.quiz_data]);
 
   const planets = chart?.planets ?? [];
+  const hasExactBirthTime = profile?.quiz_data?.birth_hour != null;
 
   const togglePlanet = (name: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -170,6 +171,12 @@ export default function ChartScreen() {
               </View>
             )}
           </View>
+
+          {chart && !hasExactBirthTime && (
+            <View style={styles.approxBadge}>
+              <Text style={styles.approxText}>⏱ Approximate — using noon as default birth time</Text>
+            </View>
+          )}
 
           {/* SVG Chart */}
           <View style={styles.chartContainer}>
@@ -319,6 +326,9 @@ export default function ChartScreen() {
                 setShowAspects((v) => !v);
               }}
               hitSlop={8}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: showAspects }}
+              accessibilityLabel="Toggle aspect lines on chart"
             >
               <Text style={[styles.aspectToggleText, showAspects && { color: Colors.purpleLight }]}>
                 {showAspects ? 'Hide' : 'Show'} Aspect Lines
@@ -538,6 +548,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginTop: 8, letterSpacing: -0.5 },
   subtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 20, flexWrap: 'wrap' },
+  approxBadge: { backgroundColor: Colors.goldDim, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 16, alignSelf: 'flex-start' },
+  approxText: { fontSize: 11, color: Colors.gold, fontWeight: '600' },
   signSymbol: { fontSize: 20 },
   subtitle: { fontSize: 16, color: Colors.purpleLight, fontWeight: '600' },
   ascBadge: { backgroundColor: Colors.goldDim, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },

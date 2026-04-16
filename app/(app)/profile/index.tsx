@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
-import { LogOut, Save, Shield, Star, Calendar, Check, Settings, MapPin, Clock } from 'lucide-react-native';
+import { LogOut, Save, Shield, Calendar, Check, MapPin, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -56,8 +56,13 @@ export default function ProfileScreen() {
       const err = getBirthDateError(birthDate);
       if (err) errors.birth = err;
     }
-    if (birthTime.trim() && !/^\d{1,2}:\d{2}$/.test(birthTime.trim())) {
-      errors.time = 'Please use HH:MM format';
+    if (birthTime.trim()) {
+      const tm = birthTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (!tm) {
+        errors.time = 'Please use HH:MM format';
+      } else if (parseInt(tm[1], 10) > 23 || parseInt(tm[2], 10) > 59) {
+        errors.time = 'Invalid time (hours 0-23, minutes 0-59)';
+      }
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);

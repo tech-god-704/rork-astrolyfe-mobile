@@ -114,6 +114,7 @@ export default function CompatibilityScreen() {
   const resultAnim = useRef(new Animated.Value(0)).current;
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const ringAnim = useRef(new Animated.Value(0)).current;
+  const tabAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (result) {
@@ -334,8 +335,11 @@ export default function CompatibilityScreen() {
                     key={tab}
                     style={[styles.tab, activeTab === tab && styles.tabActive]}
                     onPress={() => {
+                      if (activeTab === tab) return;
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      tabAnim.setValue(0);
                       setActiveTab(tab);
+                      Animated.timing(tabAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
                     }}
                   >
                     <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
@@ -347,7 +351,7 @@ export default function CompatibilityScreen() {
 
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <>
+                <Animated.View style={{ opacity: tabAnim }}>
                   {/* Summary */}
                   <GlassCard style={styles.summaryCard}>
                     <View style={styles.summaryHeader}>
@@ -402,12 +406,12 @@ export default function CompatibilityScreen() {
                       </View>
                     ))}
                   </GlassCard>
-                </>
+                </Animated.View>
               )}
 
               {/* Details Tab */}
               {activeTab === 'details' && (
-                <>
+                <Animated.View style={{ opacity: tabAnim }}>
                   <Text style={styles.sectionTitle}>Category Deep Dive</Text>
                   {(Object.keys(CATEGORY_META) as CategoryKey[]).map((key) => {
                     const meta = CATEGORY_META[key];
@@ -440,12 +444,12 @@ export default function CompatibilityScreen() {
                       </Pressable>
                     );
                   })}
-                </>
+                </Animated.View>
               )}
 
               {/* Advice Tab */}
               {activeTab === 'advice' && (
-                <>
+                <Animated.View style={{ opacity: tabAnim }}>
                   {/* Daily Cosmic Tip */}
                   <GlassCard variant="glow" glowColor={Colors.indigo} style={styles.dailyTipCard}>
                     <View style={styles.dailyTipHeader}>
@@ -481,7 +485,7 @@ export default function CompatibilityScreen() {
                       to unlock this pairing's full potential.
                     </Text>
                   </GlassCard>
-                </>
+                </Animated.View>
               )}
             </Animated.View>
           )}

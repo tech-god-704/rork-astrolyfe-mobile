@@ -66,8 +66,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [skipAuth, setSkipAuth] = useState<boolean>(false);
 
-  // Guard against concurrent profile fetches
-  const fetchInFlight = useRef(false);
+  const fetchVersion = useRef(0);
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -78,14 +77,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const isAdmin = useMemo(() => skipAuth || checkIsAdmin(session), [skipAuth, session]);
 
   const fetchProfile = useCallback(async (email: string): Promise<UserProfile | null> => {
-    if (fetchInFlight.current) return null;
-    fetchInFlight.current = true;
+    const version = ++fetchVersion.current;
     try {
       const { data, error } = await supabase
         .from('users')
         .select('email, display_name, zodiac_sign, birth_date, birth_city, birth_lat, birth_lon, quiz_data')
         .eq('email', email)
         .single();
+      if (version !== fetchVersion.current) return null;
       if (error) {
         console.log('[Auth] Profile fetch error:', error.message);
         return null;
@@ -94,8 +93,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     } catch (e) {
       console.log('[Auth] Profile fetch exception:', e);
       return null;
-    } finally {
-      fetchInFlight.current = false;
     }
   }, []);
 
