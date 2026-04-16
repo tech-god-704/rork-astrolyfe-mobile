@@ -65,6 +65,7 @@ export default function AppTabLayout() {
         options={{
           title: 'Match',
           tabBarIcon: ({ color, size }) => <Heart size={size - 2} color={color} />,
+          href: null,
         }}
       />
       <Tabs.Screen
