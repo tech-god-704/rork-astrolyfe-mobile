@@ -64,17 +64,27 @@ export const REPORT_META: Record<ReportType, { title: string; description: strin
 export async function fetchUserReports(userEmail: string): Promise<UserReport[]> {
   if (!userEmail) return [];
 
-  const { data, error } = await supabase
-    .from('user_reports')
-    .select('id, user_email, report_type, content_html, created_at')
-    .eq('user_email', userEmail)
-    .order('created_at', { ascending: false });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .select('id, user_email, report_type, content_html, created_at')
+      .eq('user_email', userEmail)
+      .order('created_at', { ascending: false })
+      .abortSignal(controller.signal);
 
-  if (error) {
-    console.log('[Reports] user_reports fetch error:', error.message);
+    if (error) {
+      console.log('[Reports] user_reports fetch error:', error.message);
+      return [];
+    }
+    return (data ?? []) as UserReport[];
+  } catch (e) {
+    console.log('[Reports] user_reports fetch exception:', e);
     return [];
+  } finally {
+    clearTimeout(timer);
   }
-  return (data ?? []) as UserReport[];
 }
 
 /**
@@ -85,17 +95,27 @@ export async function fetchUserReports(userEmail: string): Promise<UserReport[]>
 export async function fetchAstroReport(userEmail: string): Promise<AstroReport | null> {
   if (!userEmail) return null;
 
-  const { data, error } = await supabase
-    .from('astro_reports')
-    .select('id, user_email, natal_data, astrocartography_data, transit_data, created_at')
-    .eq('user_email', userEmail)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const { data, error } = await supabase
+      .from('astro_reports')
+      .select('id, user_email, natal_data, astrocartography_data, transit_data, created_at')
+      .eq('user_email', userEmail)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .abortSignal(controller.signal);
 
-  if (error) {
-    console.log('[Reports] astro_reports fetch error:', error.message);
+    if (error) {
+      console.log('[Reports] astro_reports fetch error:', error.message);
+      return null;
+    }
+    return data as AstroReport | null;
+  } catch (e) {
+    console.log('[Reports] astro_reports fetch exception:', e);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
-  return data as AstroReport | null;
 }

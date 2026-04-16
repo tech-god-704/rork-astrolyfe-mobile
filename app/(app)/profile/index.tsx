@@ -114,6 +114,7 @@ export default function ProfileScreen() {
       void refreshProfile();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
+      setTimeout(() => setSaveMessage(null), 3000);
     },
     onError: (error: Error) => {
       if (error.message === '__validation__') return;

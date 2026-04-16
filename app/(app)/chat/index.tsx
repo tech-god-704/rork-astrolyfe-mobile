@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -54,6 +54,7 @@ export default function ChatListScreen() {
 
   const conversationsQuery = useQuery({
     queryKey: ['conversations', user?.email],
+    staleTime: 1000 * 30,
     queryFn: async () => {
       if (!user?.email) return [];
       const { data, error } = await supabase
@@ -72,6 +73,7 @@ export default function ChatListScreen() {
 
   const astrologersQuery = useQuery({
     queryKey: ['astrologers'],
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('astrologers')
@@ -155,6 +157,16 @@ export default function ChatListScreen() {
   }, [startConversation]);
 
   const conversations = conversationsQuery.data ?? [];
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([conversationsQuery.refetch(), astrologersQuery.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [conversationsQuery, astrologersQuery]);
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const astrologer = getAstrologer(item);
@@ -202,6 +214,7 @@ export default function ChatListScreen() {
             renderItem={renderConversation}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
             ListFooterComponent={
               (astrologersQuery.data ?? []).length > 0 ? (
                 <View style={styles.newChatSection}>

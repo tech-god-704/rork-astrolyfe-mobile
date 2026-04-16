@@ -26,13 +26,14 @@ export default function InsightsScreen() {
     queryKey: ['unlockedSlugs', user?.email],
     queryFn: () => fetchUnlockedSlugs(user!.email!),
     enabled: !!user?.email,
+    staleTime: 1000 * 30,
   });
 
-  // Fetch premium reports generated on the web dashboard
   const reportsQuery = useQuery({
     queryKey: ['userReports', user?.email],
     queryFn: () => fetchUserReports(user!.email!),
     enabled: !!user?.email,
+    staleTime: 1000 * 60 * 2,
   });
 
   const products = productsQuery.data ?? [];
