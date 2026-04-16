@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, type TextInput as TextInputType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,10 @@ export default function SignupScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+
+  const nameRef = useRef<TextInputType>(null);
+  const emailRef = useRef<TextInputType>(null);
+  const passwordRef = useRef<TextInputType>(null);
 
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(30)).current;
@@ -94,12 +98,15 @@ export default function SignupScreen() {
                 <View style={[styles.inputGroup, focusedField === 'name' && styles.inputGroupFocused, !!fieldErrors.name && styles.inputGroupError]}>
                   <User size={18} color={fieldErrors.name ? Colors.danger : focusedField === 'name' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
+                    ref={nameRef}
                     style={styles.input}
                     placeholder="Display name"
                     placeholderTextColor={Colors.textMuted}
                     value={displayName}
                     onChangeText={(t) => { setDisplayName(t); if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined })); }}
                     autoCapitalize="words"
+                    returnKeyType="next"
+                    onSubmitEditing={() => emailRef.current?.focus()}
                     onFocus={() => setFocusedField('name')}
                     onBlur={() => setFocusedField(null)}
                     testID="name-input"
@@ -110,6 +117,7 @@ export default function SignupScreen() {
                 <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused, !!fieldErrors.email && styles.inputGroupError]}>
                   <Mail size={18} color={fieldErrors.email ? Colors.danger : focusedField === 'email' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
+                    ref={emailRef}
                     style={styles.input}
                     placeholder="Email"
                     placeholderTextColor={Colors.textMuted}
@@ -118,6 +126,8 @@ export default function SignupScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     testID="email-input"
@@ -128,12 +138,15 @@ export default function SignupScreen() {
                 <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused, !!fieldErrors.password && styles.inputGroupError]}>
                   <Lock size={18} color={fieldErrors.password ? Colors.danger : focusedField === 'password' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
+                    ref={passwordRef}
                     style={styles.input}
                     placeholder="Password (min 6 characters)"
                     placeholderTextColor={Colors.textMuted}
                     value={password}
                     onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
                     secureTextEntry={!showPassword}
+                    returnKeyType="go"
+                    onSubmitEditing={() => { if (isValid) signupMutation.mutate(); }}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     testID="password-input"

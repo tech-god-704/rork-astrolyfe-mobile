@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Animated, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Animated, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, type TextInput as TextInputType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, ArrowLeft, Calendar, MapPin, Star, Check } from 'lucide-react-native';
+import { ArrowRight, ArrowLeft, Calendar, MapPin, Star, Check, User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -24,9 +24,16 @@ export default function OnboardingScreen() {
   const [birthDate, setBirthDate] = useState<string>('');
   const [birthCity, setBirthCity] = useState<string>('');
   const [selectedSign, setSelectedSign] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; password?: string; birth?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
+
+  const nameRef = useRef<TextInputType>(null);
+  const emailRef = useRef<TextInputType>(null);
+  const passwordRef = useRef<TextInputType>(null);
+  const birthRef = useRef<TextInputType>(null);
+  const cityRef = useRef<TextInputType>(null);
 
   const animateStep = (next: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -117,15 +124,21 @@ export default function OnboardingScreen() {
       )}
       <View style={styles.form}>
         <View style={[styles.inputGroup, focusedField === 'name' && styles.inputGroupFocused, !!fieldErrors.name && styles.inputGroupError]}>
-          <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={Colors.textMuted} value={displayName} onChangeText={(t) => { setDisplayName(t); if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined })); }} autoCapitalize="words" onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)} />
+          <User size={18} color={fieldErrors.name ? Colors.danger : focusedField === 'name' ? Colors.purpleLight : Colors.textMuted} />
+          <TextInput ref={nameRef} style={styles.input} placeholder="Your name" placeholderTextColor={Colors.textMuted} value={displayName} onChangeText={(t) => { setDisplayName(t); if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined })); }} autoCapitalize="words" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)} />
         </View>
         {fieldErrors.name && <Text style={styles.fieldError}>{fieldErrors.name}</Text>}
         <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused, !!fieldErrors.email && styles.inputGroupError]}>
-          <TextInput style={styles.input} placeholder="Email" placeholderTextColor={Colors.textMuted} value={email} onChangeText={(t) => { setEmail(t); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} />
+          <Mail size={18} color={fieldErrors.email ? Colors.danger : focusedField === 'email' ? Colors.purpleLight : Colors.textMuted} />
+          <TextInput ref={emailRef} style={styles.input} placeholder="Email" placeholderTextColor={Colors.textMuted} value={email} onChangeText={(t) => { setEmail(t); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} />
         </View>
         {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
         <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused, !!fieldErrors.password && styles.inputGroupError]}>
-          <TextInput style={styles.input} placeholder="Password (min 6 characters)" placeholderTextColor={Colors.textMuted} value={password} onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }} secureTextEntry onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField(null)} />
+          <Lock size={18} color={fieldErrors.password ? Colors.danger : focusedField === 'password' ? Colors.purpleLight : Colors.textMuted} />
+          <TextInput ref={passwordRef} style={styles.input} placeholder="Password (min 6 characters)" placeholderTextColor={Colors.textMuted} value={password} onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }} secureTextEntry={!showPassword} returnKeyType="next" onSubmitEditing={() => { if (validateStep0()) animateStep(1); }} onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField(null)} />
+          <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={[styles.eyeBtn, showPassword && styles.eyeBtnActive]}>
+            {showPassword ? <EyeOff size={18} color={Colors.purpleLight} /> : <Eye size={18} color={Colors.textMuted} />}
+          </Pressable>
         </View>
         {fieldErrors.password && <Text style={styles.fieldError}>{fieldErrors.password}</Text>}
       </View>
@@ -150,12 +163,12 @@ export default function OnboardingScreen() {
       <View style={styles.form}>
         <View style={[styles.inputGroup, focusedField === 'birth' && styles.inputGroupFocused, !!fieldErrors.birth && styles.inputGroupError]}>
           <Calendar size={18} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.gold : Colors.textMuted} />
-          <TextInput style={styles.input} placeholder="Birth date (YYYY-MM-DD)" placeholderTextColor={Colors.textMuted} value={birthDate} onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }} onFocus={() => setFocusedField('birth')} onBlur={() => setFocusedField(null)} />
+          <TextInput ref={birthRef} style={styles.input} placeholder="Birth date (YYYY-MM-DD)" placeholderTextColor={Colors.textMuted} value={birthDate} onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }} returnKeyType="next" onSubmitEditing={() => cityRef.current?.focus()} onFocus={() => setFocusedField('birth')} onBlur={() => setFocusedField(null)} />
         </View>
         {fieldErrors.birth && <Text style={styles.fieldError}>{fieldErrors.birth}</Text>}
         <View style={[styles.inputGroup, focusedField === 'city' && styles.inputGroupFocused]}>
           <MapPin size={18} color={focusedField === 'city' ? Colors.teal : Colors.textMuted} />
-          <TextInput style={styles.input} placeholder="Birth city (optional)" placeholderTextColor={Colors.textMuted} value={birthCity} onChangeText={setBirthCity} onFocus={() => setFocusedField('city')} onBlur={() => setFocusedField(null)} />
+          <TextInput ref={cityRef} style={styles.input} placeholder="Birth city (optional)" placeholderTextColor={Colors.textMuted} value={birthCity} onChangeText={setBirthCity} returnKeyType="next" onSubmitEditing={() => { if (validateStep1()) animateStep(2); }} onFocus={() => setFocusedField('city')} onBlur={() => setFocusedField(null)} />
         </View>
       </View>
       <Pressable style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]} onPress={() => { if (validateStep1()) animateStep(2); }}>
@@ -182,6 +195,8 @@ export default function OnboardingScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setSelectedSign(sign.name);
               }}
+              accessibilityLabel={`${sign.name} zodiac sign`}
+              accessibilityState={{ selected: isSelected }}
             >
               <Text style={[styles.signSymbol, isSelected && { fontSize: 32 }]}>{sign.symbol}</Text>
               <Text style={[styles.signName, isSelected && { color: sign.color }]}>{sign.name}</Text>
@@ -280,6 +295,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.danger,
   },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
+  eyeBtn: { padding: 4, borderRadius: 12 },
+  eyeBtnActive: { backgroundColor: 'rgba(167,139,250,0.12)' },
   fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: -6 },
   formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
   formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },

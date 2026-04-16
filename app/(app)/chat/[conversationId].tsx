@@ -266,6 +266,7 @@ export default function ChatConversationScreen() {
               onChangeText={setMessageText}
               multiline
               maxLength={500}
+              blurOnSubmit={false}
             />
           </View>
           <Pressable

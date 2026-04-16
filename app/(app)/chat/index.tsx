@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, marginTop: 8, marginBottom: 20, letterSpacing: -0.5 },
   loader: { marginTop: 40 },
-  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 40 },
+  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 100 },
   convCard: {
     flexDirection: 'row',
     alignItems: 'center',

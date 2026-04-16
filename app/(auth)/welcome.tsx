@@ -110,6 +110,8 @@ export default function WelcomeScreen() {
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
             onPress={() => router.push('/(auth)/onboarding')}
             testID="get-started-btn"
+            accessibilityLabel="Get started with AstroLyfe"
+            accessibilityRole="button"
           >
             <LinearGradient
               colors={[Colors.purple, Colors.indigo]}
@@ -126,6 +128,8 @@ export default function WelcomeScreen() {
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
             onPress={() => router.push('/(auth)/login')}
             testID="login-btn"
+            accessibilityLabel="Log in to existing account"
+            accessibilityRole="button"
           >
             <Text style={styles.secondaryBtnText}>Already have an account? <Text style={styles.secondaryBtnBold}>Log in</Text></Text>
           </Pressable>
@@ -137,6 +141,8 @@ export default function WelcomeScreen() {
               router.replace('/(app)/(home)');
             }}
             testID="skip-btn"
+            accessibilityLabel="Skip sign up and browse"
+            accessibilityRole="button"
           >
             <Text style={styles.skipBtnText}>Skip for now</Text>
           </Pressable>
