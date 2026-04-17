@@ -13,8 +13,8 @@ import GlassCard from '@/components/GlassCard';
 
 interface Astrologer {
   id: string;
-  name: string;
-  specialty: string;
+  name: string | null;
+  specialty: string | null;
   avatar_url: string | null;
   is_online: boolean;
   is_active: boolean;
@@ -133,14 +133,15 @@ const DEFAULT_PROFILE: AstrologerProfile = {
   symbol: '✧',
 };
 
-function getAstrologerProfile(specialty: string): AstrologerProfile {
+function getAstrologerProfile(specialty?: string | null): AstrologerProfile {
+  if (!specialty) return DEFAULT_PROFILE;
   const lower = specialty.toLowerCase();
   for (const [key, profile] of Object.entries(SPECIALTY_PROFILES)) {
     if (lower.includes(key)) return profile;
   }
   return {
     ...DEFAULT_PROFILE,
-    title: specialty || 'Professional Astrologer',
+    title: specialty,
   };
 }
 
@@ -213,7 +214,7 @@ function AstrologerCardLarge({ astrologer, onPress, disabled }: {
 
           <View style={styles.expertHeaderInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.expertName} numberOfLines={1}>{astrologer.name}</Text>
+              <Text style={styles.expertName} numberOfLines={1}>{astrologer.name ?? 'Astrologer'}</Text>
               <BadgeCheck size={14} color={Colors.purpleLight} />
             </View>
             <Text style={styles.expertTitle} numberOfLines={1}>{profile.title}</Text>
@@ -354,7 +355,7 @@ export default function ChatListScreen() {
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       router.push({
         pathname: '/(app)/chat/[conversationId]',
-        params: { conversationId: convId, name: astrologer.name },
+        params: { conversationId: convId, name: astrologer.name ?? 'Astrologer' },
       } as never);
     },
   });
@@ -386,7 +387,7 @@ export default function ChatListScreen() {
   const renderConversation = ({ item }: { item: Conversation }) => {
     const astrologer = getAstrologer(item);
     const timeAgo = getTimeAgo(item.last_message_at);
-    const profile = getAstrologerProfile(astrologer?.specialty ?? '');
+    const profile = getAstrologerProfile(astrologer?.specialty);
 
     return (
       <Pressable
@@ -420,10 +421,6 @@ export default function ChatListScreen() {
       </Pressable>
     );
   };
-
-  const ListHeader = useMemo(() => (
-    conversations.length > 0 ? null : undefined
-  ), [conversations.length]);
 
   return (
     <View style={styles.container}>
