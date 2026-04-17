@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Refresh
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, ChevronRight, Sparkles, Star, Clock, Award, BadgeCheck } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -268,7 +268,7 @@ function AstrologerCardLarge({ astrologer, onPress, disabled }: {
 export default function ChatListScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+
 
   const conversationsQuery = useQuery({
     queryKey: ['conversations', user?.email],
@@ -331,52 +331,18 @@ export default function ChatListScreen() {
     };
   }, [user?.email]);
 
-  const startConversation = useMutation({
-    mutationFn: async (astrologer: Astrologer) => {
-      if (!user?.email) throw new Error('Not authenticated');
-      const { data: existing } = await supabase
-        .from('chat_conversations')
-        .select('id')
-        .eq('user_email', user.email)
-        .eq('astrologer_id', astrologer.id)
-        .maybeSingle();
-
-      if (existing) return existing.id;
-
-      const { data: newConv, error } = await supabase
-        .from('chat_conversations')
-        .insert({ user_email: user.email, astrologer_id: astrologer.id })
-        .select('id')
-        .single();
-      if (error) throw error;
-      return newConv!.id;
-    },
-    onSuccess: (convId: string, astrologer: Astrologer) => {
-      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      router.push({
-        pathname: '/chat/[conversationId]',
-        params: { conversationId: convId, name: astrologer.name ?? 'Astrologer', specialty: astrologer.specialty ?? '' },
-      } as never);
-    },
-    onError: (error: Error) => {
-      console.log('[Chat] Start conversation error:', error.message);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-    },
-  });
-
-  const handleOpenConversation = useCallback((conv: Conversation) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const astrologer = getAstrologer(conv);
-    router.push({
-      pathname: '/chat/[conversationId]',
-      params: { conversationId: conv.id, name: astrologer?.name ?? 'Astrologer', specialty: astrologer?.specialty ?? '' },
-    } as never);
-  }, [router]);
-
   const handleStartChat = useCallback((astrologer: Astrologer) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    startConversation.mutate(astrologer);
-  }, [startConversation]);
+    const id = astrologer.id || `astro-${Date.now()}`;
+    router.push({
+      pathname: '/chat/[conversationId]',
+      params: {
+        conversationId: id,
+        name: astrologer.name ?? 'Astrologer',
+        specialty: astrologer.specialty ?? '',
+      },
+    } as never);
+  }, [router]);
 
   const conversations = conversationsQuery.data ?? [];
   const astrologers = useMemo(() => astrologersQuery.data ?? [], [astrologersQuery.data]);
@@ -455,7 +421,7 @@ export default function ChatListScreen() {
                       key={a.id}
                       astrologer={a}
                       onPress={() => handleStartChat(a)}
-                      disabled={startConversation.isPending}
+                      disabled={false}
                     />
                   ))}
                 </View>
@@ -506,7 +472,7 @@ export default function ChatListScreen() {
               <AstrologerCardLarge
                 astrologer={a}
                 onPress={() => handleStartChat(a)}
-                disabled={startConversation.isPending}
+                disabled={false}
               />
             )}
             ListEmptyComponent={
