@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -54,6 +54,7 @@ export default function ChatListScreen() {
 
   const conversationsQuery = useQuery({
     queryKey: ['conversations', user?.email],
+    staleTime: 1000 * 30,
     queryFn: async () => {
       if (!user?.email) return [];
       const { data, error } = await supabase
@@ -72,6 +73,7 @@ export default function ChatListScreen() {
 
   const astrologersQuery = useQuery({
     queryKey: ['astrologers'],
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('astrologers')
@@ -97,7 +99,14 @@ export default function ChatListScreen() {
       }, () => {
         void conversationsQuery.refetch();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('[Chat] Realtime subscription failed, falling back to polling');
+          const interval = setInterval(() => { void conversationsQuery.refetch(); }, 30000);
+          channel.unsubscribe();
+          setTimeout(() => clearInterval(interval), 300000);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);
@@ -149,6 +158,13 @@ export default function ChatListScreen() {
 
   const conversations = conversationsQuery.data ?? [];
 
+  const onRefresh = useCallback(async () => {
+    await conversationsQuery.refetch();
+    if (astrologersQuery.isStale) {
+      await astrologersQuery.refetch();
+    }
+  }, [conversationsQuery, astrologersQuery]);
+
   const renderConversation = ({ item }: { item: Conversation }) => {
     const astrologer = getAstrologer(item);
     const timeAgo = getTimeAgo(item.last_message_at);
@@ -195,6 +211,7 @@ export default function ChatListScreen() {
             renderItem={renderConversation}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={conversationsQuery.isRefetching} onRefresh={onRefresh} tintColor={Colors.purple} />}
             ListFooterComponent={
               (astrologersQuery.data ?? []).length > 0 ? (
                 <View style={styles.newChatSection}>
@@ -279,7 +296,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, marginTop: 8, marginBottom: 20, letterSpacing: -0.5 },
   loader: { marginTop: 40 },
-  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 40 },
+  listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 100 },
   convCard: {
     flexDirection: 'row',
     alignItems: 'center',

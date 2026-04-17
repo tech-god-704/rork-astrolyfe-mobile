@@ -30,6 +30,7 @@ export default function ChatConversationScreen() {
   const queryClient = useQueryClient();
   const [messageText, setMessageText] = useState<string>('');
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+  const isNearBottom = useRef(true);
   const [failedMessages, setFailedMessages] = useState<FailedMessage[]>([]);
 
   const messagesQuery = useQuery({
@@ -69,7 +70,14 @@ export default function ChatConversationScreen() {
           return [...filtered, newMsg];
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('[Chat] Message subscription failed, falling back to polling');
+          const interval = setInterval(() => { void messagesQuery.refetch(); }, 10000);
+          channel.unsubscribe();
+          setTimeout(() => clearInterval(interval), 300000);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);
@@ -231,7 +239,12 @@ export default function ChatConversationScreen() {
             renderItem={renderMessage}
             contentContainerStyle={styles.messageList}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onContentSizeChange={() => { if (isNearBottom.current) flatListRef.current?.scrollToEnd({ animated: true }); }}
+            onScroll={({ nativeEvent }) => {
+              const { contentOffset, layoutMeasurement, contentSize } = nativeEvent;
+              isNearBottom.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 100;
+            }}
+            scrollEventThrottle={200}
             ListEmptyComponent={
               <View style={styles.emptyChat}>
                 <View style={styles.emptyChatIcon}>
@@ -253,6 +266,7 @@ export default function ChatConversationScreen() {
               onChangeText={setMessageText}
               multiline
               maxLength={500}
+              blurOnSubmit={false}
             />
           </View>
           <Pressable

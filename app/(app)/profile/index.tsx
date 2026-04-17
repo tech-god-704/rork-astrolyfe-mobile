@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, type TextInput as TextInputType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
-import { LogOut, Save, Shield, Star, Calendar, Check, Settings, MapPin, Clock } from 'lucide-react-native';
+import { LogOut, Save, Shield, Calendar, Check, MapPin, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -22,6 +22,18 @@ export default function ProfileScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ birth?: string; time?: string }>({});
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const nameRef = useRef<TextInputType>(null);
+  const birthRef = useRef<TextInputType>(null);
+  const timeRef = useRef<TextInputType>(null);
+  const cityRef = useRef<TextInputType>(null);
+  const saveMessageTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => {
+      if (saveMessageTimer.current) clearTimeout(saveMessageTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -56,8 +68,13 @@ export default function ProfileScreen() {
       const err = getBirthDateError(birthDate);
       if (err) errors.birth = err;
     }
-    if (birthTime.trim() && !/^\d{1,2}:\d{2}$/.test(birthTime.trim())) {
-      errors.time = 'Please use HH:MM format';
+    if (birthTime.trim()) {
+      const tm = birthTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (!tm) {
+        errors.time = 'Please use HH:MM format';
+      } else if (parseInt(tm[1], 10) > 23 || parseInt(tm[2], 10) > 59) {
+        errors.time = 'Invalid time (hours 0-23, minutes 0-59)';
+      }
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -104,6 +121,7 @@ export default function ProfileScreen() {
       void refreshProfile();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
+      saveMessageTimer.current = setTimeout(() => setSaveMessage(null), 3000);
     },
     onError: (error: Error) => {
       if (error.message === '__validation__') return;
@@ -123,7 +141,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Profile</Text>
 
           {/* Avatar Section */}
@@ -174,11 +192,14 @@ export default function ProfileScreen() {
             <Text style={styles.fieldLabel}>Display Name</Text>
             <View style={[styles.inputWrap, focusedField === 'name' && styles.inputWrapFocused]}>
               <TextInput
+                ref={nameRef}
                 style={styles.input}
                 value={displayName}
                 onChangeText={setDisplayName}
                 placeholder="Your name"
                 placeholderTextColor={Colors.textMuted}
+                returnKeyType="next"
+                onSubmitEditing={() => birthRef.current?.focus()}
                 onFocus={() => setFocusedField('name')}
                 onBlur={() => setFocusedField(null)}
               />
@@ -188,11 +209,14 @@ export default function ProfileScreen() {
             <View style={[styles.inputWrap, focusedField === 'birth' && styles.inputWrapFocused, !!fieldErrors.birth && styles.inputWrapError]}>
               <Calendar size={16} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.purpleLight : Colors.textMuted} />
               <TextInput
+                ref={birthRef}
                 style={styles.input}
                 value={birthDate}
                 onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
+                returnKeyType="next"
+                onSubmitEditing={() => timeRef.current?.focus()}
                 onFocus={() => setFocusedField('birth')}
                 onBlur={() => setFocusedField(null)}
               />
@@ -203,11 +227,14 @@ export default function ProfileScreen() {
             <View style={[styles.inputWrap, focusedField === 'time' && styles.inputWrapFocused, !!fieldErrors.time && styles.inputWrapError]}>
               <Clock size={16} color={fieldErrors.time ? Colors.danger : focusedField === 'time' ? Colors.purpleLight : Colors.textMuted} />
               <TextInput
+                ref={timeRef}
                 style={styles.input}
                 value={birthTime}
                 onChangeText={(t) => { setBirthTime(t); if (fieldErrors.time) setFieldErrors((p) => ({ ...p, time: undefined })); }}
                 placeholder="HH:MM (24hr, e.g. 14:30)"
                 placeholderTextColor={Colors.textMuted}
+                returnKeyType="next"
+                onSubmitEditing={() => cityRef.current?.focus()}
                 onFocus={() => setFocusedField('time')}
                 onBlur={() => setFocusedField(null)}
               />
@@ -218,11 +245,13 @@ export default function ProfileScreen() {
             <View style={[styles.inputWrap, focusedField === 'city' && styles.inputWrapFocused]}>
               <MapPin size={16} color={focusedField === 'city' ? Colors.purpleLight : Colors.textMuted} />
               <TextInput
+                ref={cityRef}
                 style={styles.input}
                 value={birthCity}
                 onChangeText={setBirthCity}
                 placeholder="City, State/Country"
                 placeholderTextColor={Colors.textMuted}
+                returnKeyType="done"
                 onFocus={() => setFocusedField('city')}
                 onBlur={() => setFocusedField(null)}
               />
@@ -293,7 +322,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginTop: 8, marginBottom: 24, letterSpacing: -0.5 },
 
   avatarSection: { alignItems: 'center', marginBottom: 28 },

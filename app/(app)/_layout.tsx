@@ -1,8 +1,19 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
-import { Platform } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import Colors from '@/constants/colors';
+
+function TabBarBackground() {
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,28,0.75)' }]} />
+      <View style={tabStyles.topBorder} />
+    </View>
+  );
+}
 
 export default function AppTabLayout() {
   return (
@@ -11,22 +22,15 @@ export default function AppTabLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.purpleLight,
         tabBarInactiveTintColor: Colors.textMuted,
+        tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
-          backgroundColor: 'rgba(10,10,28,0.95)',
-          borderTopColor: 'rgba(255,255,255,0.05)',
-          borderTopWidth: 1,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 88 : 64,
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
           paddingTop: 8,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-            },
-            android: { elevation: 12 },
-          }),
+          elevation: 0,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -93,3 +97,14 @@ export default function AppTabLayout() {
     </Tabs>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  topBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(167,139,250,0.08)',
+  },
+});

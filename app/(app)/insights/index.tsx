@@ -19,19 +19,21 @@ export default function InsightsScreen() {
   const productsQuery = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts,
+    staleTime: 1000 * 60 * 60,
   });
 
   const unlockedQuery = useQuery({
     queryKey: ['unlockedSlugs', user?.email],
     queryFn: () => fetchUnlockedSlugs(user!.email!),
     enabled: !!user?.email,
+    staleTime: 1000 * 30,
   });
 
-  // Fetch premium reports generated on the web dashboard
   const reportsQuery = useQuery({
     queryKey: ['userReports', user?.email],
     queryFn: () => fetchUserReports(user!.email!),
     enabled: !!user?.email,
+    staleTime: 1000 * 60 * 2,
   });
 
   const products = productsQuery.data ?? [];
@@ -258,7 +260,7 @@ function stripHtml(html: string): string {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
 
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 24, gap: 12 },
   title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },

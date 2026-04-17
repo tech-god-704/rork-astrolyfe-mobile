@@ -22,6 +22,9 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(30)).current;
 
@@ -91,6 +94,7 @@ export default function LoginScreen() {
                 <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused, !!fieldErrors.email && styles.inputGroupError]}>
                   <Mail size={18} color={fieldErrors.email ? Colors.danger : focusedField === 'email' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
+                    ref={emailRef}
                     style={styles.input}
                     placeholder="Email"
                     placeholderTextColor={Colors.textMuted}
@@ -99,6 +103,8 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     testID="email-input"
@@ -109,12 +115,15 @@ export default function LoginScreen() {
                 <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused, !!fieldErrors.password && styles.inputGroupError]}>
                   <Lock size={18} color={fieldErrors.password ? Colors.danger : focusedField === 'password' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
+                    ref={passwordRef}
                     style={styles.input}
                     placeholder="Password"
                     placeholderTextColor={Colors.textMuted}
                     value={password}
                     onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
                     secureTextEntry={!showPassword}
+                    returnKeyType="go"
+                    onSubmitEditing={() => { if (email.trim() && password.trim()) loginMutation.mutate(); }}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     testID="password-input"

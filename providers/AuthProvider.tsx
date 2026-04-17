@@ -66,8 +66,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [skipAuth, setSkipAuth] = useState<boolean>(false);
 
-  // Guard against concurrent profile fetches
-  const fetchInFlight = useRef(false);
+  const fetchVersion = useRef(0);
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -78,14 +77,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const isAdmin = useMemo(() => skipAuth || checkIsAdmin(session), [skipAuth, session]);
 
   const fetchProfile = useCallback(async (email: string): Promise<UserProfile | null> => {
-    if (fetchInFlight.current) return null;
-    fetchInFlight.current = true;
+    const version = ++fetchVersion.current;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
     try {
       const { data, error } = await supabase
         .from('users')
         .select('email, display_name, zodiac_sign, birth_date, birth_city, birth_lat, birth_lon, quiz_data')
         .eq('email', email)
-        .single();
+        .single()
+        .abortSignal(controller.signal);
+      if (version !== fetchVersion.current) return null;
       if (error) {
         console.log('[Auth] Profile fetch error:', error.message);
         return null;
@@ -95,7 +97,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.log('[Auth] Profile fetch exception:', e);
       return null;
     } finally {
-      fetchInFlight.current = false;
+      clearTimeout(timer);
     }
   }, []);
 
@@ -184,11 +186,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // If it's a unique constraint error, the user might already exist — try upsert
       if (insertError.code === '23505') {
         console.log('[Auth] User row already exists, updating instead');
-        await supabase.from('users').update({
+        const { error: updateError } = await supabase.from('users').update({
           display_name: displayName,
           zodiac_sign: zodiacSign || null,
           birth_date: birthDate || null,
         }).eq('email', email);
+        if (updateError) {
+          console.error('[Auth] Profile update fallback failed:', updateError.message);
+        }
       } else {
         console.error('[Auth] Failed to create user profile:', insertError.message);
         throw new Error('Account created but profile setup failed. Please sign in and update your profile.');
@@ -210,10 +215,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     if (!existing) {
       console.log('[Auth] Creating missing user row on sign-in');
-      await supabase.from('users').insert({
+      const { error: rowError } = await supabase.from('users').insert({
         email,
         display_name: email.split('@')[0],
       });
+      if (rowError) console.error('[Auth] Failed to create user row:', rowError.message);
     }
 
     return data;

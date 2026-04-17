@@ -19,14 +19,20 @@ export async function createPaymentIntent(amountInCents: number): Promise<Paymen
     throw new Error('Payment amount too large');
   }
 
+  // Stable key so retries hit the same Stripe PaymentIntent instead of creating duplicates
+  const idempotencyKey = `pi_${amountInCents}_${Date.now()}`;
+
   const res = await fetchWithRetry(
     STRIPE_ENDPOINT,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
       body: JSON.stringify({ items: [{ id: amountInCents }] }),
     },
-    { timeout: 20000, maxRetries: 1 }, // only 1 retry for payment to avoid duplicates
+    { timeout: 20000, maxRetries: 3, retryOnStatus: [429, 502, 503, 504] },
   );
 
   const data = await parseResponseOrThrow<Record<string, unknown>>(res, 'Payment server');

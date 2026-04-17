@@ -14,17 +14,27 @@ export interface Product {
  * Fetch all active products from Supabase.
  */
 export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('slug, name, price, description, category, is_active, sort_order')
-    .eq('is_active', true)
-    .order('sort_order');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('slug, name, price, description, category, is_active, sort_order')
+      .eq('is_active', true)
+      .order('sort_order')
+      .abortSignal(controller.signal);
 
-  if (error) {
-    console.log('[Purchases] Products fetch error:', error.message);
+    if (error) {
+      console.log('[Purchases] Products fetch error:', error.message);
+      return [];
+    }
+    return (data ?? []) as Product[];
+  } catch (e) {
+    console.log('[Purchases] Products fetch exception:', e);
     return [];
+  } finally {
+    clearTimeout(timer);
   }
-  return (data ?? []) as Product[];
 }
 
 /**
@@ -33,15 +43,27 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function fetchUnlockedSlugs(userEmail: string): Promise<string[]> {
   if (!userEmail) return [];
 
-  const { data: rows, error } = await supabase
-    .from('purchases')
-    .select('product_id, products(slug)')
-    .eq('user_email', userEmail)
-    .eq('status', 'completed');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  let rows: Record<string, unknown>[] | null = null;
+  try {
+    const { data, error } = await supabase
+      .from('purchases')
+      .select('product_id, products(slug)')
+      .eq('user_email', userEmail)
+      .eq('status', 'completed')
+      .abortSignal(controller.signal);
 
-  if (error) {
-    console.log('[Purchases] Unlocked fetch error:', error.message);
+    if (error) {
+      console.log('[Purchases] Unlocked fetch error:', error.message);
+      return [];
+    }
+    rows = data as Record<string, unknown>[] | null;
+  } catch (e) {
+    console.log('[Purchases] Unlocked fetch exception:', e);
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 
   if (!rows || rows.length === 0) return [];
@@ -77,33 +99,41 @@ export async function recordPurchase(
     throw new Error('Missing required purchase fields');
   }
 
-  // Verify the product exists
-  const { data: product, error: lookupError } = await supabase
-    .from('products')
-    .select('slug, price')
-    .eq('slug', productSlug)
-    .single();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const [productResult, existingResult] = await Promise.all([
+      supabase
+        .from('products')
+        .select('slug, price')
+        .eq('slug', productSlug)
+        .single()
+        .abortSignal(controller.signal),
+      supabase
+        .from('purchases')
+        .select('id')
+        .eq('stripe_payment_intent_id', stripePaymentIntentId)
+        .maybeSingle()
+        .abortSignal(controller.signal),
+    ]);
 
-  if (lookupError || !product) throw new Error('Product not found');
+    if (productResult.error || !productResult.data) throw new Error('Product not found');
+    const product = productResult.data;
 
-  // Check if this payment intent was already recorded (prevent duplicates)
-  const { data: existing } = await supabase
-    .from('purchases')
-    .select('id')
-    .eq('stripe_payment_intent_id', stripePaymentIntentId)
-    .maybeSingle();
+    if (existingResult.data) {
+      console.log('[Purchases] Purchase already recorded for this payment intent');
+      return;
+    }
 
-  if (existing) {
-    console.log('[Purchases] Purchase already recorded for this payment intent');
-    return; // idempotent — don't insert again
+    const { error } = await supabase.from('purchases').insert({
+      user_email: userEmail,
+      product_id: product.slug,
+      status: 'completed',
+      stripe_payment_intent_id: stripePaymentIntentId,
+    });
+
+    if (error) throw error;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const { error } = await supabase.from('purchases').insert({
-    user_email: userEmail,
-    product_id: product.slug,
-    status: 'completed',
-    stripe_payment_intent_id: stripePaymentIntentId,
-  });
-
-  if (error) throw error;
 }
