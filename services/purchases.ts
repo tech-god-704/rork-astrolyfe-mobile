@@ -102,23 +102,25 @@ export async function recordPurchase(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const { data: product, error: lookupError } = await supabase
-      .from('products')
-      .select('slug, price')
-      .eq('slug', productSlug)
-      .single()
-      .abortSignal(controller.signal);
+    const [productResult, existingResult] = await Promise.all([
+      supabase
+        .from('products')
+        .select('slug, price')
+        .eq('slug', productSlug)
+        .single()
+        .abortSignal(controller.signal),
+      supabase
+        .from('purchases')
+        .select('id')
+        .eq('stripe_payment_intent_id', stripePaymentIntentId)
+        .maybeSingle()
+        .abortSignal(controller.signal),
+    ]);
 
-    if (lookupError || !product) throw new Error('Product not found');
+    if (productResult.error || !productResult.data) throw new Error('Product not found');
+    const product = productResult.data;
 
-    const { data: existing } = await supabase
-      .from('purchases')
-      .select('id')
-      .eq('stripe_payment_intent_id', stripePaymentIntentId)
-      .maybeSingle()
-      .abortSignal(controller.signal);
-
-    if (existing) {
+    if (existingResult.data) {
       console.log('[Purchases] Purchase already recorded for this payment intent');
       return;
     }

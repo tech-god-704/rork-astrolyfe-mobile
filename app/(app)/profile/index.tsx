@@ -27,6 +27,13 @@ export default function ProfileScreen() {
   const birthRef = useRef<TextInputType>(null);
   const timeRef = useRef<TextInputType>(null);
   const cityRef = useRef<TextInputType>(null);
+  const saveMessageTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => {
+      if (saveMessageTimer.current) clearTimeout(saveMessageTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -114,7 +121,7 @@ export default function ProfileScreen() {
       void refreshProfile();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
-      setTimeout(() => setSaveMessage(null), 3000);
+      saveMessageTimer.current = setTimeout(() => setSaveMessage(null), 3000);
     },
     onError: (error: Error) => {
       if (error.message === '__validation__') return;

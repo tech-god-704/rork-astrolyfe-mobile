@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -157,14 +157,11 @@ export default function ChatListScreen() {
   }, [startConversation]);
 
   const conversations = conversationsQuery.data ?? [];
-  const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([conversationsQuery.refetch(), astrologersQuery.refetch()]);
-    } finally {
-      setRefreshing(false);
+    await conversationsQuery.refetch();
+    if (astrologersQuery.isStale) {
+      await astrologersQuery.refetch();
     }
   }, [conversationsQuery, astrologersQuery]);
 
@@ -214,7 +211,7 @@ export default function ChatListScreen() {
             renderItem={renderConversation}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
+            refreshControl={<RefreshControl refreshing={conversationsQuery.isRefetching} onRefresh={onRefresh} tintColor={Colors.purple} />}
             ListFooterComponent={
               (astrologersQuery.data ?? []).length > 0 ? (
                 <View style={styles.newChatSection}>

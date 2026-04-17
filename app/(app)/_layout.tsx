@@ -5,6 +5,16 @@ import { Platform, View, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Colors from '@/constants/colors';
 
+function TabBarBackground() {
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,28,0.75)' }]} />
+      <View style={tabStyles.topBorder} />
+    </View>
+  );
+}
+
 export default function AppTabLayout() {
   return (
     <Tabs
@@ -12,13 +22,7 @@ export default function AppTabLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.purpleLight,
         tabBarInactiveTintColor: Colors.textMuted,
-        tabBarBackground: () => (
-          <View style={StyleSheet.absoluteFill}>
-            <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,28,0.75)' }]} />
-            <View style={tabStyles.topBorder} />
-          </View>
-        ),
+        tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',

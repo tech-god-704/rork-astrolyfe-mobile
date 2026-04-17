@@ -337,9 +337,10 @@ export default function CompatibilityScreen() {
                     onPress={() => {
                       if (activeTab === tab) return;
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      tabAnim.setValue(0);
-                      setActiveTab(tab);
-                      Animated.timing(tabAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+                      Animated.timing(tabAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
+                        setActiveTab(tab);
+                        Animated.timing(tabAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+                      });
                     }}
                   >
                     <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
