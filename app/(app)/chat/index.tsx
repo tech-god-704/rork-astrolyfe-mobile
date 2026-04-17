@@ -133,14 +133,15 @@ const DEFAULT_PROFILE: AstrologerProfile = {
   symbol: '✧',
 };
 
-function getAstrologerProfile(specialty: string): AstrologerProfile {
+function getAstrologerProfile(specialty?: string | null): AstrologerProfile {
+  if (!specialty) return DEFAULT_PROFILE;
   const lower = specialty.toLowerCase();
   for (const [key, profile] of Object.entries(SPECIALTY_PROFILES)) {
     if (lower.includes(key)) return profile;
   }
   return {
     ...DEFAULT_PROFILE,
-    title: specialty || 'Professional Astrologer',
+    title: specialty,
   };
 }
 
