@@ -339,7 +339,7 @@ export default function ChatListScreen() {
         .select('id')
         .eq('user_email', user.email)
         .eq('astrologer_id', astrologer.id)
-        .single();
+        .maybeSingle();
 
       if (existing) return existing.id;
 
@@ -354,9 +354,13 @@ export default function ChatListScreen() {
     onSuccess: (convId: string, astrologer: Astrologer) => {
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       router.push({
-        pathname: '/(app)/chat/[conversationId]',
-        params: { conversationId: convId, name: astrologer.name ?? 'Astrologer' },
+        pathname: '/chat/[conversationId]',
+        params: { conversationId: convId, name: astrologer.name ?? 'Astrologer', specialty: astrologer.specialty ?? '' },
       } as never);
+    },
+    onError: (error: Error) => {
+      console.log('[Chat] Start conversation error:', error.message);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     },
   });
 
@@ -364,8 +368,8 @@ export default function ChatListScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const astrologer = getAstrologer(conv);
     router.push({
-      pathname: '/(app)/chat/[conversationId]',
-      params: { conversationId: conv.id, name: astrologer?.name ?? 'Astrologer' },
+      pathname: '/chat/[conversationId]',
+      params: { conversationId: conv.id, name: astrologer?.name ?? 'Astrologer', specialty: astrologer?.specialty ?? '' },
     } as never);
   }, [router]);
 
