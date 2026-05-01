@@ -106,10 +106,10 @@ export default function ProfileScreen() {
       };
 
       const { error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({
           display_name: displayName.trim(),
-          birth_date: birthDate.trim() || null,
+          date_of_birth: birthDate.trim() || null,
           zodiac_sign: selectedSign || null,
           birth_city: birthCity.trim() || null,
           quiz_data: Object.keys(updatedQuiz).length > 0 ? updatedQuiz : null,

@@ -4,6 +4,8 @@ import { Home, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide
 import { Platform, View, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Colors from '@/constants/colors';
+import SubscriptionGuard from '@/components/SubscriptionGuard';
+import { useAuth } from '@/providers/AuthProvider';
 
 function TabBarBackground() {
   return (
@@ -15,7 +17,7 @@ function TabBarBackground() {
   );
 }
 
-export default function AppTabLayout() {
+function AppTabs() {
   return (
     <Tabs
       screenOptions={{
@@ -96,6 +98,18 @@ export default function AppTabLayout() {
       />
     </Tabs>
   );
+}
+
+export default function AppTabLayout() {
+  const { isSubscribed } = useAuth();
+
+  // Subscribers and admins see the full app
+  if (isSubscribed) {
+    return <AppTabs />;
+  }
+
+  // Non-subscribers see the paywall
+  return <SubscriptionGuard><AppTabs /></SubscriptionGuard>;
 }
 
 const tabStyles = StyleSheet.create({
