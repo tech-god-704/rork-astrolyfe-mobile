@@ -2,6 +2,8 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
 import { Platform, View, StyleSheet } from 'react-native';
+import { PlatformPressable } from '@react-navigation/elements';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import Colors from '@/constants/colors';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useAuth } from '@/providers/AuthProvider';
@@ -25,6 +27,10 @@ function TabIcon({ Icon, color, focused }: { Icon: typeof Home; color: string; f
   );
 }
 
+function TabButton({ style, ...props }: BottomTabBarButtonProps) {
+  return <PlatformPressable {...props} style={[style, tabStyles.tabButton]} />;
+}
+
 function AppTabs() {
   return (
     <Tabs
@@ -34,6 +40,8 @@ function AppTabs() {
         tabBarInactiveTintColor: 'rgba(218,200,242,0.54)',
         tabBarActiveBackgroundColor: 'transparent',
         tabBarInactiveBackgroundColor: 'transparent',
+        tabBarHideOnKeyboard: true,
+        tabBarButton: (props) => <TabButton {...props} />,
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
           position: 'absolute',
@@ -125,6 +133,13 @@ export default function AppTabLayout() {
 const tabStyles = StyleSheet.create({
   background: {
     backgroundColor: 'rgba(1,1,2,0.94)',
+    shadowColor: Colors.purple,
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -8 },
+  },
+  tabButton: {
+    outlineWidth: 0,
   },
   topBorder: {
     position: 'absolute',

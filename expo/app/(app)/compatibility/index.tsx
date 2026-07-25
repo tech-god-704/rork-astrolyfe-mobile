@@ -133,7 +133,7 @@ export default function CompatibilityScreen() {
         ]),
       ]).start();
     }
-  }, [result?.overallScore]);
+  }, [result, resultAnim, ringAnim, scoreAnim]);
 
   const handleSignSelect = useCallback((name: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -153,7 +153,7 @@ export default function CompatibilityScreen() {
     if (result.overallScore >= 65) return 'Great Potential';
     if (result.overallScore >= 55) return 'Growth Together';
     return 'Opposites Attract';
-  }, [result?.overallScore]);
+  }, [result]);
 
   const scoreColor = useMemo(() => {
     if (!result) return Colors.accent;
@@ -161,7 +161,7 @@ export default function CompatibilityScreen() {
     if (result.overallScore >= 65) return Colors.gold;
     if (result.overallScore >= 50) return Colors.purpleLight;
     return Colors.accent;
-  }, [result?.overallScore]);
+  }, [result]);
 
   // SVG ring circumference
   const circumference = 2 * Math.PI * RING_R;
@@ -458,7 +458,7 @@ export default function CompatibilityScreen() {
                   <GlassCard variant="glow" glowColor={Colors.indigo} style={styles.dailyTipCard}>
                     <View style={styles.dailyTipHeader}>
                       <RefreshCw size={14} color={Colors.indigoLight} />
-                      <Text style={styles.dailyTipLabel}>Today's Cosmic Tip</Text>
+                      <Text style={styles.dailyTipLabel}>Today&apos;s Cosmic Tip</Text>
                     </View>
                     <Text style={styles.dailyTipText}>
                       {getDailyCosmicTip(profile?.zodiac_sign ?? '', partnerSign)}
@@ -486,7 +486,7 @@ export default function CompatibilityScreen() {
                     <Text style={styles.recapText}>
                       Your strongest area is {best ? CATEGORY_META[best[0]].label.toLowerCase() : 'love'} at {best ? best[1].score : 0}%.
                       Focus growth energy on {weakest ? CATEGORY_META[weakest[0]].label.toLowerCase() : 'communication'} ({weakest ? weakest[1].score : 0}%)
-                      to unlock this pairing's full potential.
+                      to unlock this pairing&apos;s full potential.
                     </Text>
                   </GlassCard>
                 </Animated.View>
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
-  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
+  title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1.1 },
   subtitle: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, marginTop: 7, marginBottom: 26, maxWidth: 330 },
 
   // Signs display
@@ -574,10 +574,10 @@ const styles = StyleSheet.create({
   promptText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
 
   // Score ring card
-  scoreRingCard: { marginBottom: 16, alignItems: 'center', paddingVertical: 24 },
+  scoreRingCard: { marginBottom: 16, alignItems: 'center', paddingVertical: 28, borderRadius: 24 },
   scoreRingContainer: { position: 'relative', width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' },
   scoreRingInner: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { fontSize: 44, fontFamily: Fonts.display, fontWeight: '600', letterSpacing: -2 },
+  scoreValue: { fontSize: 46, fontFamily: Fonts.display, fontWeight: '800', letterSpacing: -2 },
   scoreTagline: { fontSize: 12, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
 
   // Quick stats
@@ -595,9 +595,9 @@ const styles = StyleSheet.create({
   elementFlavor: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21, paddingHorizontal: 8 },
 
   // Tabs
-  tabRow: { flexDirection: 'row', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 3 },
+  tabRow: { flexDirection: 'row', marginBottom: 20, backgroundColor: 'rgba(218,200,242,0.045)', borderRadius: 16, borderWidth: 1, borderColor: Colors.bgCardBorder, padding: 4 },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  tabActive: { backgroundColor: Colors.purpleDim },
+  tabActive: { backgroundColor: 'rgba(150,98,198,0.24)' },
   tabText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
   tabTextActive: { color: Colors.purpleLight },
 
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   categoryVisualScore: { fontSize: 14, fontWeight: '700', width: 36, textAlign: 'right' },
 
   // Section titles
-  sectionTitle: { fontSize: 22, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 24, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -0.55 },
 
   // Category cards (details tab)
   categoryCard: { marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },

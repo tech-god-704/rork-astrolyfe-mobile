@@ -10,7 +10,6 @@ import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
-import type { NatalAspect } from '@/services/natal';
 import AppBackground from '@/components/AppBackground';
 
 const DEG = Math.PI / 180;
@@ -94,7 +93,7 @@ export default function ChartScreen() {
     }
   }, [profile?.birth_date, profile?.birth_lat, profile?.birth_lon, profile?.quiz_data]);
 
-  const planets = chart?.planets ?? [];
+  const planets = useMemo(() => chart?.planets ?? [], [chart?.planets]);
   const hasExactBirthTime = profile?.quiz_data?.birth_hour != null;
 
   const togglePlanet = (name: string) => {
@@ -549,7 +548,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
-  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
+  title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1.1 },
   subtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 20, flexWrap: 'wrap' },
   approxBadge: { backgroundColor: Colors.goldDim, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(150,98,198,0.28)', paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, alignSelf: 'flex-start' },
   approxText: { fontSize: 10, color: Colors.gold, fontWeight: '800', letterSpacing: 0.45 },
@@ -561,18 +560,22 @@ const styles = StyleSheet.create({
   chartContainer: {
     width: CHART_SIZE, height: CHART_SIZE, marginBottom: 16,
     alignSelf: 'center', alignItems: 'center', justifyContent: 'center',
+    borderRadius: CHART_SIZE / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(192,154,235,0.20)',
+    backgroundColor: 'rgba(9,5,27,0.56)',
   },
   chartGlow: {
     position: 'absolute', width: CHART_SIZE + 20, height: CHART_SIZE + 20,
     borderRadius: (CHART_SIZE + 20) / 2, backgroundColor: 'rgba(97,56,163,0.12)',
   },
 
-  aspectToggle: { alignSelf: 'center', marginBottom: 24, paddingVertical: 6, paddingHorizontal: 16 },
+  aspectToggle: { alignSelf: 'center', marginBottom: 24, paddingVertical: 9, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)' },
   aspectToggleText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
 
   // Distribution card
   distributionCard: { marginBottom: 20, gap: 0 },
-  distributionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 16, letterSpacing: -0.3 },
+  distributionTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 16, letterSpacing: -0.4 },
   distSection: {},
   distLabel: { fontSize: 12, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   distBars: { gap: 8 },
@@ -591,7 +594,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendLabel: { fontSize: 12, color: Colors.textMuted, fontWeight: '500' },
 
-  sectionTitle: { fontSize: 23, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 24, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.55 },
 
   planetRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
