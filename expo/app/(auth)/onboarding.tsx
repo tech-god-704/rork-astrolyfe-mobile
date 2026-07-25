@@ -113,7 +113,7 @@ export default function OnboardingScreen() {
   const renderStep0 = () => (
     <View style={styles.stepContent}>
       <View style={styles.stepIconWrap}>
-        <LinearGradient colors={[Colors.purpleDim, 'rgba(197,162,100,0.04)']} style={styles.stepIcon}>
+        <LinearGradient colors={[Colors.purpleDim, 'rgba(97,56,163,0.05)']} style={styles.stepIcon}>
           <Star size={30} color={Colors.purpleLight} />
         </LinearGradient>
       </View>
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
   eyeBtn: { padding: 4, borderRadius: 12 },
-  eyeBtnActive: { backgroundColor: 'rgba(197,162,100,0.12)' },
+  eyeBtnActive: { backgroundColor: 'rgba(97,56,163,0.20)' },
   fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: -6 },
   formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
   formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },

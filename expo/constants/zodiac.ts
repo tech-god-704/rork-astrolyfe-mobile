@@ -9,9 +9,9 @@ export interface ZodiacSign {
 export const ZODIAC_SIGNS: ZodiacSign[] = [
   { name: 'Aries', symbol: '♈', dates: 'Mar 21 – Apr 19', element: 'Fire', color: '#EF4444' },
   { name: 'Taurus', symbol: '♉', dates: 'Apr 20 – May 20', element: 'Earth', color: '#22C55E' },
-  { name: 'Gemini', symbol: '♊', dates: 'May 21 – Jun 20', element: 'Air', color: '#FBBF24' },
+  { name: 'Gemini', symbol: '♊', dates: 'May 21 – Jun 20', element: 'Air', color: '#C09AEB' },
   { name: 'Cancer', symbol: '♋', dates: 'Jun 21 – Jul 22', element: 'Water', color: '#818CF8' },
-  { name: 'Leo', symbol: '♌', dates: 'Jul 23 – Aug 22', element: 'Fire', color: '#F97316' },
+  { name: 'Leo', symbol: '♌', dates: 'Jul 23 – Aug 22', element: 'Fire', color: '#D994F2' },
   { name: 'Virgo', symbol: '♍', dates: 'Aug 23 – Sep 22', element: 'Earth', color: '#84CC16' },
   { name: 'Libra', symbol: '♎', dates: 'Sep 23 – Oct 22', element: 'Air', color: '#F472B6' },
   { name: 'Scorpio', symbol: '♏', dates: 'Oct 23 – Nov 21', element: 'Water', color: '#DC2626' },

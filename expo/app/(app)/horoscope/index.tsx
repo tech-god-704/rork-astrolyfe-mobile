@@ -151,7 +151,7 @@ export default function HoroscopeScreen() {
             {/* Full reading card */}
             <GlassCard variant="elevated" style={styles.fullReadingCard}>
               <LinearGradient
-                colors={['rgba(197,162,100,0.07)', 'rgba(111,143,147,0.03)', 'transparent']}
+                colors={['rgba(97,56,163,0.16)', 'rgba(59,81,196,0.06)', 'transparent']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFillObject}
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   dateText: { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
 
-  fullReadingCard: { marginBottom: 24, padding: 22, backgroundColor: Colors.paper, borderColor: 'rgba(241,236,226,0.8)' },
+  fullReadingCard: { marginBottom: 24, padding: 22, backgroundColor: Colors.paper, borderColor: 'rgba(192,154,235,0.26)' },
   fullReadingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   fullReadingTitle: { fontSize: 12, fontWeight: '800', color: Colors.paperInk, textTransform: 'uppercase', letterSpacing: 1.1 },
   readingSignRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },

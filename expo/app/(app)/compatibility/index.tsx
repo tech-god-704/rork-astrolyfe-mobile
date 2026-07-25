@@ -23,7 +23,7 @@ const CATEGORY_META = {
   love: { label: 'Love', Icon: Heart, color: Colors.accent, emoji: '💕' },
   communication: { label: 'Communication', Icon: MessageCircle, color: Colors.purpleLight, emoji: '💬' },
   trust: { label: 'Trust', Icon: Shield, color: Colors.teal, emoji: '🛡️' },
-  emotions: { label: 'Emotions', Icon: Flame, color: '#F97316', emoji: '🔥' },
+  emotions: { label: 'Emotions', Icon: Flame, color: '#D994F2', emoji: '🔥' },
   values: { label: 'Values', Icon: Target, color: Colors.gold, emoji: '⭐' },
 } as const;
 
@@ -159,7 +159,7 @@ export default function CompatibilityScreen() {
     if (!result) return Colors.accent;
     if (result.overallScore >= 80) return '#22C55E';
     if (result.overallScore >= 65) return Colors.gold;
-    if (result.overallScore >= 50) return '#F97316';
+    if (result.overallScore >= 50) return Colors.purpleLight;
     return Colors.accent;
   }, [result?.overallScore]);
 

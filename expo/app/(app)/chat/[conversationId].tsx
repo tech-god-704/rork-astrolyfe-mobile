@@ -184,7 +184,7 @@ export default function ChatConversationScreen() {
         ]}>
           {isUser && (
             <LinearGradient
-              colors={isFailed ? ['#7f1d1d', '#991b1b'] : [Colors.indigo, '#30494C']}
+              colors={isFailed ? ['#7f1d1d', '#991b1b'] : [Colors.purple, Colors.indigo]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFillObject}
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
 
   messageBubble: { maxWidth: '84%' as unknown as number, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 14, overflow: 'hidden' },
   userBubble: { borderBottomRightRadius: 4 },
-  astrologerBubble: { backgroundColor: Colors.paper, borderWidth: 1, borderColor: 'rgba(241,236,226,0.8)', borderBottomLeftRadius: 4 },
+  astrologerBubble: { backgroundColor: Colors.paper, borderWidth: 1, borderColor: 'rgba(192,154,235,0.24)', borderBottomLeftRadius: 4 },
   optimisticBubble: { opacity: 0.7 },
   messageText: { fontSize: 15, lineHeight: 22 },
   userText: { color: '#fff' },
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16,
     paddingTop: 10, paddingBottom: 14, gap: 10,
     borderTopWidth: 1, borderTopColor: Colors.bgCardBorder,
-    backgroundColor: 'rgba(9,13,14,0.97)',
+    backgroundColor: 'rgba(2,1,6,0.98)',
   },
   textInputWrap: {
     flex: 1, backgroundColor: Colors.bgInput, borderRadius: 14,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.3 },
 
   // Character counter
-  charCountRow: { alignItems: 'flex-end', paddingHorizontal: 78, paddingBottom: 2, backgroundColor: 'rgba(9,13,14,0.97)' },
+  charCountRow: { alignItems: 'flex-end', paddingHorizontal: 78, paddingBottom: 2, backgroundColor: 'rgba(2,1,6,0.98)' },
   charCountText: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
   charCountWarn: { color: Colors.gold },
 });

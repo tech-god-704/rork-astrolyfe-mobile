@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   preview: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, marginBottom: 22 },
   previewLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, paddingVertical: 13 },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
-  featureBorder: { borderTopWidth: 1, borderTopColor: 'rgba(241,236,226,0.07)' },
+  featureBorder: { borderTopWidth: 1, borderTopColor: 'rgba(218,200,242,0.08)' },
   check: { width: 23, height: 23, borderRadius: 12, backgroundColor: Colors.gold, alignItems: 'center', justifyContent: 'center' },
   featureText: { flex: 1, color: Colors.textSecondary, fontSize: 14, lineHeight: 20 },
   cta: {
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  ctaKicker: { color: 'rgba(25,29,30,0.62)', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  ctaKicker: { color: 'rgba(254,252,255,0.68)', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
   ctaText: { color: Colors.paperInk, fontSize: 19, fontWeight: '800', marginTop: 3 },
   disclaimer: { color: Colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 10 },
   restore: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },

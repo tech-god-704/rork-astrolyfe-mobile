@@ -48,7 +48,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Birth Charts', 'Life Path', 'Planetary Aspects'],
     years: 12,
     rating: 4.9,
-    gradientColors: ['#B78D4E', '#55777B'],
+    gradientColors: ['#6138A3', '#3B51C4'],
     symbol: '♄',
   },
   'love': {
@@ -75,7 +75,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Midheaven', 'Saturn Return', 'Prosperity'],
     years: 10,
     rating: 4.7,
-    gradientColors: ['#F59E0B', '#EF4444'],
+    gradientColors: ['#753BAC', '#D994F2'],
     symbol: '♃',
   },
   'tarot': {
@@ -84,7 +84,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Tarot Spreads', 'Intuitive Reading', 'Divination'],
     years: 18,
     rating: 4.9,
-    gradientColors: ['#A96F87', '#55777B'],
+    gradientColors: ['#9C47D2', '#3B51C4'],
     symbol: '☽',
   },
   'vedic': {
@@ -93,7 +93,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Jyotish', 'Dasha System', 'Karma'],
     years: 20,
     rating: 5.0,
-    gradientColors: ['#F59E0B', '#D97706'],
+    gradientColors: ['#6138A3', '#3B51C4'],
     symbol: '☿',
   },
   'transit': {
@@ -111,7 +111,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Soul Purpose', 'Past Lives', 'Nodes'],
     years: 16,
     rating: 4.9,
-    gradientColors: ['#896F54', '#A96F87'],
+    gradientColors: ['#502688', '#A05CD1'],
     symbol: '♆',
   },
   'moon': {
@@ -120,7 +120,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Moon Phases', 'Eclipses', 'Manifestation'],
     years: 9,
     rating: 4.8,
-    gradientColors: ['#55777B', '#7FAABD'],
+    gradientColors: ['#3B51C4', '#6FB2FA'],
     symbol: '☽',
   },
 };
@@ -131,7 +131,7 @@ const DEFAULT_PROFILE: AstrologerProfile = {
   tags: ['Horoscopes', 'Readings', 'Guidance'],
   years: 10,
   rating: 4.8,
-  gradientColors: ['#B78D4E', '#55777B'],
+  gradientColors: ['#6138A3', '#3B51C4'],
   symbol: '✧',
 };
 

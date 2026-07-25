@@ -30,7 +30,7 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 const PLANET_COLORS: Record<string, string> = {
   Sun: Colors.gold, Moon: '#C4B5FD', Mercury: Colors.teal, Venus: Colors.accent,
-  Mars: '#EF4444', Jupiter: '#F97316', Saturn: '#6B7280', Uranus: '#06B6D4',
+  Mars: '#FF647C', Jupiter: '#D994F2', Saturn: '#8F89A2', Uranus: '#6FB2FA',
   Neptune: '#818CF8', Pluto: '#A855F7',
 };
 
@@ -192,9 +192,9 @@ export default function ChartScreen() {
               </Defs>
 
               <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="url(#centerGlow)" />
-              <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke="rgba(197,162,100,0.42)" strokeWidth={1.5} />
-              <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke="rgba(241,236,226,0.18)" strokeWidth={1} />
-              <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="none" stroke="rgba(197,162,100,0.14)" strokeWidth={0.5} />
+              <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke="rgba(192,154,235,0.48)" strokeWidth={1.5} />
+              <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke="rgba(218,200,242,0.20)" strokeWidth={1} />
+              <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="none" stroke="rgba(97,56,163,0.24)" strokeWidth={0.5} />
 
               {/* Zodiac sign segments */}
               {ZODIAC_SIGNS.map((sign, i) => {
@@ -209,7 +209,7 @@ export default function ChartScreen() {
                 const isUser = userSign?.name === sign.name;
                 return (
                   <G key={sign.name}>
-                    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(241,236,226,0.14)" strokeWidth={0.5} />
+                    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(218,200,242,0.16)" strokeWidth={0.5} />
                     <SvgText
                       x={sx} y={sy}
                       fill={isUser ? sign.color : 'rgba(255,255,255,0.45)'}
@@ -233,7 +233,7 @@ export default function ChartScreen() {
                     x1={CENTER} y1={CENTER}
                     x2={CENTER + Math.cos(a) * Math.round(58 * SCALE)}
                     y2={CENTER + Math.sin(a) * Math.round(58 * SCALE)}
-                    stroke={deg % 90 === 0 ? 'rgba(197,162,100,0.30)' : 'rgba(241,236,226,0.08)'}
+                    stroke={deg % 90 === 0 ? 'rgba(150,98,198,0.38)' : 'rgba(218,200,242,0.09)'}
                     strokeWidth={deg % 90 === 0 ? 1 : 0.5}
                   />
                 );
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
   title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
   subtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 20, flexWrap: 'wrap' },
-  approxBadge: { backgroundColor: Colors.goldDim, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(227,180,82,0.22)', paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, alignSelf: 'flex-start' },
+  approxBadge: { backgroundColor: Colors.goldDim, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(150,98,198,0.28)', paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, alignSelf: 'flex-start' },
   approxText: { fontSize: 10, color: Colors.gold, fontWeight: '800', letterSpacing: 0.45 },
   signSymbol: { fontSize: 20 },
   subtitle: { fontSize: 16, color: Colors.purpleLight, fontWeight: '600' },
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   },
   chartGlow: {
     position: 'absolute', width: CHART_SIZE + 20, height: CHART_SIZE + 20,
-    borderRadius: (CHART_SIZE + 20) / 2, backgroundColor: 'rgba(197,162,100,0.055)',
+    borderRadius: (CHART_SIZE + 20) / 2, backgroundColor: 'rgba(97,56,163,0.12)',
   },
 
   aspectToggle: { alignSelf: 'center', marginBottom: 24, paddingVertical: 6, paddingHorizontal: 16 },
