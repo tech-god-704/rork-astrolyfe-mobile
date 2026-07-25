@@ -17,7 +17,8 @@ function TabBarBackground() {
 
 function TabIcon({ Icon, color, focused }: { Icon: typeof Home; color: string; focused: boolean }) {
   return (
-    <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+    <View style={tabStyles.iconWrap}>
+      {focused && <View style={tabStyles.activeGlow} />}
       <Icon size={20} color={color} strokeWidth={focused ? 2 : 1.7} />
       {focused && <View style={tabStyles.bearing} />}
     </View>
@@ -29,8 +30,10 @@ function AppTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.lavenderIce,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: 'rgba(218,200,242,0.54)',
+        tabBarActiveBackgroundColor: 'transparent',
+        tabBarInactiveBackgroundColor: 'transparent',
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
           position: 'absolute',
@@ -121,7 +124,7 @@ export default function AppTabLayout() {
 
 const tabStyles = StyleSheet.create({
   background: {
-    backgroundColor: 'rgba(2,1,6,0.98)',
+    backgroundColor: 'rgba(1,1,2,0.94)',
   },
   topBorder: {
     position: 'absolute',
@@ -134,19 +137,29 @@ const tabStyles = StyleSheet.create({
   iconWrap: {
     width: 38,
     height: 27,
-    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapActive: {
-    backgroundColor: 'rgba(97,56,163,0.24)',
+  activeGlow: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(150,98,198,0.32)',
+    shadowColor: Colors.nebulaMagenta,
+    shadowOpacity: 0.72,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
   },
   bearing: {
     position: 'absolute',
-    top: -8,
-    width: 18,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: Colors.gold,
+    bottom: -4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+    shadowColor: Colors.lavender,
+    shadowOpacity: 0.95,
+    shadowRadius: 7,
   },
 });
