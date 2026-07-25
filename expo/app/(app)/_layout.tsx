@@ -2,7 +2,6 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
 import { Platform, View, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
 import Colors from '@/constants/colors';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useAuth } from '@/providers/AuthProvider';
@@ -10,9 +9,17 @@ import { useAuth } from '@/providers/AuthProvider';
 function TabBarBackground() {
   return (
     <View style={StyleSheet.absoluteFill}>
-      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,28,0.75)' }]} />
+      <View style={[StyleSheet.absoluteFill, tabStyles.background]} />
       <View style={tabStyles.topBorder} />
+    </View>
+  );
+}
+
+function TabIcon({ Icon, color, focused }: { Icon: typeof Home; color: string; focused: boolean }) {
+  return (
+    <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+      <Icon size={20} color={color} strokeWidth={focused ? 2 : 1.7} />
+      {focused && <View style={tabStyles.bearing} />}
     </View>
   );
 }
@@ -22,23 +29,23 @@ function AppTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.purpleLight,
+        tabBarActiveTintColor: Colors.paper,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',
           borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 84 : 68,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingTop: 7,
           elevation: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
-          letterSpacing: 0.2,
-          marginTop: 2,
+          fontSize: 11,
+          fontWeight: '700',
+          letterSpacing: 0.35,
+          marginTop: 1,
         },
         tabBarIconStyle: {
           marginBottom: -2,
@@ -48,52 +55,52 @@ function AppTabs() {
       <Tabs.Screen
         name="(home)"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Home size={size - 2} color={color} />,
+          title: 'Today',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Home} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="horoscope"
         options={{
-          title: 'Horoscope',
-          tabBarIcon: ({ color, size }) => <Sun size={size - 2} color={color} />,
+          title: 'Forecast',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Sun} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ color, size }) => <MessageCircle size={size - 2} color={color} />,
+          title: 'Ask',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={MessageCircle} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="compatibility"
         options={{
           title: 'Match',
-          tabBarIcon: ({ color, size }) => <Heart size={size - 2} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Heart} color={color} focused={focused} />,
           href: null,
         }}
       />
       <Tabs.Screen
         name="insights"
         options={{
-          title: 'Insights',
-          tabBarIcon: ({ color, size }) => <BookOpen size={size - 2} color={color} />,
+          title: 'Library',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={BookOpen} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="chart"
         options={{
           title: 'Chart',
-          tabBarIcon: ({ color, size }) => <Compass size={size - 2} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Compass} color={color} focused={focused} />,
           href: null,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <User size={size - 2} color={color} />,
+          title: 'You',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={User} color={color} focused={focused} />,
         }}
       />
     </Tabs>
@@ -113,12 +120,33 @@ export default function AppTabLayout() {
 }
 
 const tabStyles = StyleSheet.create({
+  background: {
+    backgroundColor: 'rgba(12,17,18,0.97)',
+  },
   topBorder: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(167,139,250,0.08)',
+    backgroundColor: 'rgba(241,236,226,0.12)',
+  },
+  iconWrap: {
+    width: 38,
+    height: 27,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWrapActive: {
+    backgroundColor: 'rgba(197,162,100,0.13)',
+  },
+  bearing: {
+    position: 'absolute',
+    top: -8,
+    width: 18,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: Colors.gold,
   },
 });

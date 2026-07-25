@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform, StyleProp } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 
 interface GlassCardProps {
@@ -36,15 +35,7 @@ export default function GlassCard({ children, style, variant = 'default', glowCo
         style,
       ]}
     >
-      <LinearGradient
-        colors={[
-          isSubtle ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
-          'rgba(255,255,255,0.02)',
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <View style={[styles.topRule, isSubtle && styles.topRuleSubtle]} />
       {children}
     </View>
   );
@@ -52,7 +43,8 @@ export default function GlassCard({ children, style, variant = 'default', glowCo
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
+    backgroundColor: Colors.bgCard,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.bgCardBorder,
     padding: 18,
@@ -61,26 +53,39 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowOpacity: 0.18,
+        shadowRadius: 14,
       },
       android: { elevation: 3 },
     }),
   },
   elevated: {
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: Colors.bgCardSolid,
+    borderColor: 'rgba(241,236,226,0.16)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
+        shadowOpacity: 0.32,
+        shadowRadius: 22,
       },
       android: { elevation: 8 },
     }),
   },
   subtle: {
-    borderColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(241,236,226,0.028)',
+    borderColor: 'rgba(241,236,226,0.08)',
     padding: 16,
+  },
+  topRule: {
+    position: 'absolute',
+    top: 0,
+    left: 18,
+    right: 18,
+    height: 1,
+    backgroundColor: 'rgba(241,236,226,0.16)',
+  },
+  topRuleSubtle: {
+    backgroundColor: 'rgba(241,236,226,0.08)',
   },
 });

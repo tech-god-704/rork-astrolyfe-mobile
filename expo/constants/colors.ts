@@ -1,61 +1,67 @@
 const Colors = {
-  // Backgrounds
-  bg: '#08081a',
-  bgCard: 'rgba(255,255,255,0.05)',
-  bgCardBorder: 'rgba(255,255,255,0.08)',
-  bgCardHover: 'rgba(255,255,255,0.08)',
-  bgInput: 'rgba(255,255,255,0.06)',
-  bgInputBorder: 'rgba(255,255,255,0.1)',
-  bgInputFocused: 'rgba(124,58,237,0.08)',
-  bgInputFocusedBorder: 'rgba(124,58,237,0.3)',
+  // Midnight Almanac foundations
+  bg: '#090D0E',
+  bgElevated: '#101617',
+  bgCard: 'rgba(241,236,226,0.055)',
+  bgCardSolid: '#151B1D',
+  bgCardBorder: 'rgba(241,236,226,0.12)',
+  bgCardHover: 'rgba(241,236,226,0.09)',
+  bgInput: 'rgba(241,236,226,0.065)',
+  bgInputBorder: 'rgba(241,236,226,0.14)',
+  bgInputFocused: 'rgba(197,162,100,0.08)',
+  bgInputFocusedBorder: 'rgba(197,162,100,0.58)',
+  paper: '#F1ECE2',
+  paperInk: '#191D1E',
 
-  // Primary Purple
-  purple: '#7C3AED',
-  purpleLight: '#A78BFA',
-  purpleSoft: '#C4B5FD',
-  purpleDim: 'rgba(124,58,237,0.15)',
-  purpleGlow: 'rgba(124,58,237,0.35)',
-  purpleDeep: '#5B21B6',
+  // Brass is the primary instrument accent. Legacy names remain so every
+  // existing feature inherits the new system without visual drift.
+  purple: '#B78D4E',
+  purpleLight: '#D9BD82',
+  purpleSoft: '#E7D7B4',
+  purpleDim: 'rgba(197,162,100,0.14)',
+  purpleGlow: 'rgba(197,162,100,0.40)',
+  purpleDeep: '#8E6938',
 
-  // Indigo
-  indigo: '#4F46E5',
-  indigoLight: '#6366F1',
+  // Oxidized metal / cool data accent
+  indigo: '#55777B',
+  indigoLight: '#7FA0A4',
 
-  // Accent Pink/Rose
-  accent: '#F472B6',
-  accentLight: '#FB7DC5',
-  accentDim: 'rgba(244,114,182,0.12)',
-  accentGlow: 'rgba(244,114,182,0.3)',
+  // Venus rose
+  accent: '#C98AA4',
+  accentLight: '#DEADC0',
+  accentDim: 'rgba(201,138,164,0.13)',
+  accentGlow: 'rgba(201,138,164,0.3)',
 
   // Status Colors
-  gold: '#FBBF24',
-  goldLight: '#FCD34D',
-  goldDim: 'rgba(251,191,36,0.12)',
-  teal: '#2DD4BF',
-  tealDim: 'rgba(45,212,191,0.12)',
-  success: '#22C55E',
-  successDim: 'rgba(34,197,94,0.12)',
-  danger: '#EF4444',
-  dangerDim: 'rgba(239,68,68,0.1)',
-  blue: '#3B82F6',
-  blueDim: 'rgba(59,130,246,0.12)',
+  gold: '#E3B452',
+  goldLight: '#EBD08B',
+  goldDim: 'rgba(227,180,82,0.13)',
+  teal: '#7FAABD',
+  tealDim: 'rgba(127,170,189,0.13)',
+  success: '#7E9C80',
+  successDim: 'rgba(126,156,128,0.14)',
+  danger: '#D76B58',
+  dangerDim: 'rgba(215,107,88,0.12)',
+  blue: '#7FAABD',
+  blueDim: 'rgba(127,170,189,0.13)',
 
   // Text
-  textPrimary: '#F8FAFC',
-  textSecondary: 'rgba(248,250,252,0.65)',
-  textMuted: 'rgba(248,250,252,0.35)',
-  textInverse: '#08081a',
+  textPrimary: '#F1ECE2',
+  textSecondary: 'rgba(241,236,226,0.72)',
+  textMuted: 'rgba(241,236,226,0.46)',
+  textFaint: 'rgba(241,236,226,0.24)',
+  textInverse: '#191D1E',
 
   // Gradients
-  gradientStart: '#1e1145',
-  gradientMid: '#130e30',
-  gradientEnd: '#08081a',
+  gradientStart: '#1A2223',
+  gradientMid: '#101718',
+  gradientEnd: '#090D0E',
 
   // Shadows & Overlays
-  shadowPurple: 'rgba(124,58,237,0.25)',
-  shadowDark: 'rgba(0,0,0,0.4)',
-  overlay: 'rgba(8,8,26,0.6)',
-  overlayLight: 'rgba(8,8,26,0.3)',
+  shadowPurple: 'rgba(197,162,100,0.18)',
+  shadowDark: 'rgba(0,0,0,0.45)',
+  overlay: 'rgba(9,13,14,0.78)',
+  overlayLight: 'rgba(9,13,14,0.38)',
 };
 
 export default Colors;

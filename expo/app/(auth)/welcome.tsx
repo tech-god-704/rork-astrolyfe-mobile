@@ -1,150 +1,109 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, Dimensions } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sparkles, Star, ArrowRight } from 'lucide-react-native';
+import { ArrowRight, LockKeyhole } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import CosmicBackground from '@/components/CosmicBackground';
-
-const { width: SCREEN_W } = Dimensions.get('window');
+import BrandMark from '@/components/BrandMark';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { setSkipAuth } = useAuth();
-
-  const logoScale = useRef(new Animated.Value(0.3)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(20)).current;
-  const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const subtitleTranslateY = useRef(new Animated.Value(15)).current;
-  const buttonsOpacity = useRef(new Animated.Value(0)).current;
-  const buttonsTranslateY = useRef(new Animated.Value(30)).current;
-  const ringScale = useRef(new Animated.Value(0.5)).current;
-  const ringOpacity = useRef(new Animated.Value(0)).current;
-  const ring2Scale = useRef(new Animated.Value(0.5)).current;
-  const ring2Opacity = useRef(new Animated.Value(0)).current;
+  const mark = useRef(new Animated.Value(0)).current;
+  const content = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      // Logo entrance with rings
-      Animated.parallel([
-        Animated.spring(logoScale, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(ringScale, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(ringOpacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-      ]),
-      // Ring 2 expands
-      Animated.parallel([
-        Animated.timing(ring2Scale, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(ring2Opacity, { toValue: 0.15, duration: 600, useNativeDriver: true }),
-      ]),
-      // Title
-      Animated.parallel([
-        Animated.timing(titleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(titleTranslateY, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
-      ]),
-      // Subtitle
-      Animated.parallel([
-        Animated.timing(subtitleOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(subtitleTranslateY, { toValue: 0, duration: 400, useNativeDriver: true }),
-      ]),
-      // Buttons
-      Animated.parallel([
-        Animated.timing(buttonsOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(buttonsTranslateY, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
-      ]),
+      Animated.spring(mark, { toValue: 1, friction: 9, tension: 52, useNativeDriver: true }),
+      Animated.timing(content, { toValue: 1, duration: 420, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [content, mark]);
+
+  const preview = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setSkipAuth(true);
+    router.replace('/(app)/(home)');
+  };
 
   return (
     <CosmicBackground>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.topSection}>
-          {/* Outer ring */}
-          <Animated.View style={[styles.ring2, { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] }]} />
-          {/* Inner ring */}
-          <Animated.View style={[styles.ring1, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
-          {/* Logo */}
-          <Animated.View style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-            <LinearGradient
-              colors={[Colors.purple, Colors.indigoLight]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.logoCircle}
-            >
-              <Text style={styles.logoEmoji}>✦</Text>
-            </LinearGradient>
+        <View style={styles.masthead}>
+          <View style={styles.brandRule} />
+          <Text style={styles.brand}>ASTROLYFE</Text>
+          <Text style={styles.edition}>A PERSONAL ALMANAC</Text>
+        </View>
+
+        <View style={styles.hero}>
+          <Animated.View
+            style={[
+              styles.markWrap,
+              {
+                opacity: mark,
+                transform: [
+                  { scale: mark },
+                  { rotate: mark.interpolate({ inputRange: [0, 1], outputRange: ['-16deg', '0deg'] }) },
+                ],
+              },
+            ]}
+          >
+            <BrandMark size={136} />
+            <View style={styles.issueBadge}>
+              <Text style={styles.issueNumber}>{String(new Date().getDate()).padStart(2, '0')}</Text>
+              <Text style={styles.issueMonth}>{new Date().toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</Text>
+            </View>
           </Animated.View>
 
-          <Animated.Text style={[styles.title, { opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] }]}>
-            AstroLyfe
-          </Animated.Text>
-          <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity, transform: [{ translateY: subtitleTranslateY }] }]}>
-            Unlock the wisdom of the stars.{'\n'}Your cosmic journey begins here.
-          </Animated.Text>
-
-          {/* Feature highlights */}
-          <Animated.View style={[styles.features, { opacity: subtitleOpacity }]}>
-            <View style={styles.featureItem}>
-              <Star size={14} color={Colors.gold} />
-              <Text style={styles.featureText}>Daily Horoscopes</Text>
-            </View>
-            <View style={styles.featureDot} />
-            <View style={styles.featureItem}>
-              <Sparkles size={14} color={Colors.purpleLight} />
-              <Text style={styles.featureText}>Natal Charts</Text>
-            </View>
-            <View style={styles.featureDot} />
-            <View style={styles.featureItem}>
-              <Star size={14} color={Colors.accent} />
-              <Text style={styles.featureText}>Compatibility</Text>
-            </View>
+          <Animated.View
+            style={{
+              opacity: content,
+              transform: [{ translateY: content.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+            }}
+          >
+            <Text style={styles.eyebrow}>YOUR SKY, MADE PERSONAL</Text>
+            <Text style={styles.title}>The sky is vast.{'\n'}Your reading shouldn&apos;t be.</Text>
+            <Text style={styles.subtitle}>
+              A thoughtful daily guide shaped by your birth chart, your questions, and the moment you&apos;re living.
+            </Text>
           </Animated.View>
         </View>
 
-        <Animated.View style={[styles.bottomSection, { opacity: buttonsOpacity, transform: [{ translateY: buttonsTranslateY }] }]}>
+        <Animated.View style={[styles.actions, { opacity: content }]}>
+          <View style={styles.trustLine}>
+            <LockKeyhole size={13} color={Colors.textMuted} />
+            <Text style={styles.trustText}>Your birth details stay private and editable.</Text>
+          </View>
+
           <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
             onPress={() => router.push('/(auth)/onboarding')}
             testID="get-started-btn"
-            accessibilityLabel="Get started with AstroLyfe"
             accessibilityRole="button"
           >
-            <LinearGradient
-              colors={[Colors.purple, Colors.indigo]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.btnGradient}
-            >
-              <Text style={styles.primaryBtnText}>Get Started</Text>
-              <ArrowRight size={20} color="#fff" />
-            </LinearGradient>
+            <Text style={styles.primaryText}>Read my sky</Text>
+            <ArrowRight size={19} color={Colors.paperInk} />
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             onPress={() => router.push('/(auth)/login')}
             testID="login-btn"
-            accessibilityLabel="Log in to existing account"
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryBtnText}>Already have an account? <Text style={styles.secondaryBtnBold}>Log in</Text></Text>
+            <Text style={styles.secondaryText}>I already have an account</Text>
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.skipBtn, pressed && styles.btnPressed]}
-            onPress={() => {
-              setSkipAuth(true);
-              router.replace('/(app)/(home)');
-            }}
+            style={({ pressed }) => [styles.previewButton, pressed && { opacity: 0.65 }]}
+            onPress={preview}
             testID="skip-btn"
-            accessibilityLabel="Skip sign up and browse"
             accessibilityRole="button"
           >
-            <Text style={styles.skipBtnText}>Skip for now</Text>
+            <Text style={styles.previewText}>Preview today&apos;s edition</Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -155,139 +114,138 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    justifyContent: 'space-between',
+    paddingHorizontal: 24,
   },
-  topSection: {
+  masthead: {
+    paddingTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandRule: {
+    width: 24,
+    height: 1,
+    backgroundColor: Colors.gold,
+    marginRight: 10,
+  },
+  brand: {
+    color: Colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 2.3,
+  },
+  edition: {
+    marginLeft: 'auto',
+    color: Colors.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  hero: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  logoContainer: {
-    marginBottom: 24,
-    zIndex: 2,
-  },
-  logoCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  logoEmoji: {
-    fontSize: 48,
-    color: '#fff',
+  markWrap: {
+    alignSelf: 'flex-end',
+    marginBottom: 28,
+    marginRight: 8,
   },
-  ring1: {
+  issueBadge: {
     position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 1.5,
-    borderColor: Colors.purpleLight,
-    alignSelf: 'center',
-    top: '50%',
-    marginTop: -120,
-    zIndex: 1,
+    left: -64,
+    bottom: 2,
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.bgCardBorder,
+    paddingLeft: 12,
   },
-  ring2: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 1,
-    borderColor: Colors.purpleLight,
-    alignSelf: 'center',
-    top: '50%',
-    marginTop: -150,
-    zIndex: 0,
+  issueNumber: {
+    color: Colors.textPrimary,
+    fontFamily: Fonts.display,
+    fontSize: 30,
+    lineHeight: 32,
+  },
+  issueMonth: {
+    color: Colors.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  eyebrow: {
+    color: Colors.gold,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginBottom: 14,
   },
   title: {
-    fontSize: 46,
-    fontWeight: '800',
     color: Colors.textPrimary,
-    letterSpacing: -1.5,
+    fontFamily: Fonts.display,
+    fontSize: 40,
+    lineHeight: 46,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
     color: Colors.textSecondary,
-    marginTop: 12,
-    textAlign: 'center',
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 23,
+    marginTop: 18,
+    maxWidth: 340,
   },
-  features: {
+  actions: {
+    paddingBottom: 20,
+    gap: 10,
+  },
+  trustLine: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 28,
-    gap: 10,
-    flexWrap: 'wrap',
-    paddingHorizontal: 10,
+    gap: 7,
+    marginBottom: 4,
   },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  featureText: {
-    fontSize: 13,
+  trustText: {
     color: Colors.textMuted,
-    fontWeight: '600',
+    fontSize: 11,
   },
-  featureDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.textMuted,
-  },
-  bottomSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 28,
-    gap: 14,
-  },
-  primaryBtn: {
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  btnGradient: {
+  primaryButton: {
+    minHeight: 56,
+    borderRadius: 14,
+    backgroundColor: Colors.gold,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
     gap: 10,
   },
-  primaryBtnText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#fff',
+  primaryText: {
+    color: Colors.paperInk,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.15,
   },
-  secondaryBtn: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    backgroundColor: Colors.bgCard,
-    borderRadius: 16,
+  secondaryButton: {
+    minHeight: 54,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.bgCardBorder,
+    backgroundColor: Colors.bgCard,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  secondaryBtnText: {
+  secondaryText: {
+    color: Colors.textPrimary,
     fontSize: 15,
-    color: Colors.textSecondary,
-  },
-  secondaryBtnBold: {
-    color: Colors.purpleLight,
     fontWeight: '700',
   },
-  btnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  skipBtn: {
-    paddingVertical: 12,
+  previewButton: {
+    minHeight: 42,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  skipBtnText: {
-    fontSize: 14,
+  previewText: {
     color: Colors.textMuted,
-    fontWeight: '500',
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
+  pressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.985 }],
   },
 });

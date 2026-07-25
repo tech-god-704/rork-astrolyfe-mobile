@@ -2,11 +2,12 @@ import { QueryClient, QueryClientProvider, focusManager, onlineManager } from "@
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, AppState, AppStateStatus, Platform, StyleSheet, View } from "react-native";
+import { Animated, AppState, AppStateStatus, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Colors from "@/constants/colors";
+import LoadingScreen from "@/components/LoadingScreen";
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -91,11 +92,7 @@ function RootLayoutNav() {
   // Don't render navigation until auth state is determined.
   // Splash screen stays visible, so user sees nothing flash.
   if (!isReady) {
-    return (
-      <View style={layoutStyles.loading}>
-        <ActivityIndicator color={Colors.purple} size="large" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (

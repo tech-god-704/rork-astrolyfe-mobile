@@ -7,9 +7,11 @@ import { ArrowRight, ArrowLeft, Calendar, MapPin, Star, Check, User, Mail, Lock,
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { ZODIAC_SIGNS } from '@/constants/zodiac';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail, getPasswordError, getBirthDateError } from '@/lib/validation';
+import AppBackground from '@/components/AppBackground';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -111,12 +113,13 @@ export default function OnboardingScreen() {
   const renderStep0 = () => (
     <View style={styles.stepContent}>
       <View style={styles.stepIconWrap}>
-        <LinearGradient colors={[Colors.purpleDim, 'rgba(124,58,237,0.05)']} style={styles.stepIcon}>
+        <LinearGradient colors={[Colors.purpleDim, 'rgba(197,162,100,0.04)']} style={styles.stepIcon}>
           <Star size={30} color={Colors.purpleLight} />
         </LinearGradient>
       </View>
-      <Text style={styles.stepTitle}>Who are you?</Text>
-      <Text style={styles.stepDesc}>Let's start with the basics</Text>
+      <Text style={styles.stepKicker}>SAVE YOUR ALMANAC</Text>
+      <Text style={styles.stepTitle}>Let&apos;s make this yours.</Text>
+      <Text style={styles.stepDesc}>Start with a few details so every reading knows who it&apos;s for.</Text>
       {formError && (
         <View style={styles.formErrorRow}>
           <Text style={styles.formErrorText}>{formError}</Text>
@@ -158,8 +161,9 @@ export default function OnboardingScreen() {
           <Calendar size={30} color={Colors.gold} />
         </LinearGradient>
       </View>
-      <Text style={styles.stepTitle}>When were you born?</Text>
-      <Text style={styles.stepDesc}>We'll calculate your natal chart</Text>
+      <Text style={styles.stepKicker}>CHART CALIBRATION</Text>
+      <Text style={styles.stepTitle}>Where did your story begin?</Text>
+      <Text style={styles.stepDesc}>Your birth date and place help us read the sky you arrived under.</Text>
       <View style={styles.form}>
         <View style={[styles.inputGroup, focusedField === 'birth' && styles.inputGroupFocused, !!fieldErrors.birth && styles.inputGroupError]}>
           <Calendar size={18} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.gold : Colors.textMuted} />
@@ -182,8 +186,9 @@ export default function OnboardingScreen() {
 
   const renderStep2 = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>What's your sign?</Text>
-      <Text style={styles.stepDesc}>Select your zodiac sign</Text>
+      <Text style={styles.stepKicker}>YOUR FIRST PLACEMENT</Text>
+      <Text style={styles.stepTitle}>Meet your sun sign.</Text>
+      <Text style={styles.stepDesc}>Confirm the sign that anchors your everyday reading.</Text>
       <ScrollView style={styles.signGrid} contentContainerStyle={styles.signGridContent} showsVerticalScrollIndicator={false}>
         {ZODIAC_SIGNS.map((sign) => {
           const isSelected = selectedSign === sign.name;
@@ -225,7 +230,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.progressRow}>
@@ -234,19 +239,22 @@ export default function OnboardingScreen() {
                 <ArrowLeft size={18} color={Colors.textSecondary} />
               </Pressable>
             )}
-            <View style={styles.progressDots}>
-              {[0, 1, 2].map((i) => (
-                <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]}>
-                  {i < step && (
-                    <View style={styles.progressDotCompleted}>
-                      <Check size={8} color="#fff" />
-                    </View>
-                  )}
-                </View>
-              ))}
+            <View style={styles.progressMeta}>
+              <Text style={styles.progressLabel}>CALIBRATION {step + 1} / 3</Text>
+              <View style={styles.progressDots}>
+                {[0, 1, 2].map((i) => (
+                  <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]}>
+                    {i < step && (
+                      <View style={styles.progressDotCompleted}>
+                        <Check size={8} color={Colors.paperInk} />
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
             </View>
             <Pressable onPress={() => { if (step < 2) { animateStep(step + 1); } else { completeMutation.mutate(); } }} style={styles.skipBtn} hitSlop={8} disabled={completeMutation.isPending}>
-              <Text style={[styles.skipBtnText, completeMutation.isPending && { opacity: 0.4 }]}>Skip</Text>
+              <Text style={[styles.skipBtnText, completeMutation.isPending && { opacity: 0.4 }]}>Later</Text>
             </Pressable>
           </View>
           <Animated.View style={[styles.flex, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
@@ -262,26 +270,29 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   flex: { flex: 1 },
-  progressRow: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 18, alignItems: 'center', paddingHorizontal: 24 },
-  progressDots: { flexDirection: 'row', justifyContent: 'center', gap: 8, flex: 1 },
-  backBtn: { position: 'absolute', left: 24, top: 14 },
-  progressDot: { width: 44, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
-  progressDotActive: { backgroundColor: Colors.purple },
-  progressDotCompleted: { width: 20, height: 5, borderRadius: 3, backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center' },
-  skipBtn: { position: 'absolute', right: 24, top: 14 },
+  progressRow: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 14, alignItems: 'center', paddingHorizontal: 24, minHeight: 64 },
+  progressMeta: { alignItems: 'center', gap: 7 },
+  progressLabel: { color: Colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1.4 },
+  progressDots: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  backBtn: { position: 'absolute', left: 24, top: 18 },
+  progressDot: { width: 34, height: 3, borderRadius: 2, backgroundColor: Colors.bgCardBorder, overflow: 'hidden' },
+  progressDotActive: { backgroundColor: Colors.gold },
+  progressDotCompleted: { width: 34, height: 3, borderRadius: 2, backgroundColor: Colors.gold, alignItems: 'center', justifyContent: 'center' },
+  skipBtn: { position: 'absolute', right: 24, top: 18 },
   skipBtnText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '600' },
-  stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 },
+  stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 20 },
   stepIconWrap: { marginBottom: 20 },
-  stepIcon: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  stepTitle: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, letterSpacing: -0.5 },
-  stepDesc: { fontSize: 16, color: Colors.textSecondary, marginBottom: 28 },
+  stepIcon: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bgCardBorder },
+  stepKicker: { color: Colors.gold, fontSize: 10, fontWeight: '800', letterSpacing: 1.7, marginBottom: 10 },
+  stepTitle: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 10, letterSpacing: -0.7 },
+  stepDesc: { fontSize: 15, lineHeight: 22, color: Colors.textSecondary, marginBottom: 28 },
   form: { gap: 14, marginBottom: 28 },
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.bgInput,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: Colors.bgInputBorder,
     paddingHorizontal: 16,
     height: 58,
@@ -296,11 +307,11 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
   eyeBtn: { padding: 4, borderRadius: 12 },
-  eyeBtnActive: { backgroundColor: 'rgba(167,139,250,0.12)' },
+  eyeBtnActive: { backgroundColor: 'rgba(197,162,100,0.12)' },
   fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: -6 },
   formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
   formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },
-  nextBtn: { borderRadius: 18, overflow: 'hidden', marginTop: 4 },
+  nextBtn: { borderRadius: 12, overflow: 'hidden', marginTop: 4 },
   nextBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, gap: 8 },
   nextBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
   btnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
@@ -310,8 +321,8 @@ const styles = StyleSheet.create({
     width: '29%' as unknown as number,
     aspectRatio: 1,
     backgroundColor: Colors.bgCard,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: Colors.bgCardBorder,
     alignItems: 'center',
     justifyContent: 'center',

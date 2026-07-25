@@ -2,17 +2,21 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Lock, Unlock, BookOpen, ShoppingCart, Sparkles, Star, ChevronRight, X } from 'lucide-react-native';
+import { Lock, Unlock, BookOpen, ShoppingCart, Sparkles, Star, ChevronRight, X, Compass, Heart } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { fetchProducts, fetchUnlockedSlugs, recordPurchase, type Product } from '@/services/purchases';
 import { createPaymentIntent } from '@/services/stripe';
 import { fetchUserReports, REPORT_META, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
+import AppBackground from '@/components/AppBackground';
 
 export default function InsightsScreen() {
+  const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [viewingReport, setViewingReport] = useState<UserReport | null>(null);
 
@@ -96,7 +100,7 @@ export default function InsightsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -106,18 +110,38 @@ export default function InsightsScreen() {
           {/* Header */}
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.title}>Cosmic Insights</Text>
-              <Text style={styles.subtitle}>Unlock deep astrological readings</Text>
+              <Text style={styles.eyebrow}>EXPLORE YOUR ALMANAC</Text>
+              <Text style={styles.title}>The Reading Room</Text>
+              <Text style={styles.subtitle}>Long-form readings for deeper reflection.</Text>
             </View>
             <View style={styles.headerIcon}>
               <Sparkles size={24} color={Colors.gold} />
             </View>
           </View>
 
+          <View style={styles.discoveryRow}>
+            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && { opacity: 0.78 }]} onPress={() => router.push('/(app)/chart')}>
+              <Compass size={20} color={Colors.gold} />
+              <View style={styles.discoveryCopy}>
+                <Text style={styles.discoveryTitle}>Birth chart</Text>
+                <Text style={styles.discoveryText}>Read your placements</Text>
+              </View>
+              <ChevronRight size={16} color={Colors.textMuted} />
+            </Pressable>
+            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && { opacity: 0.78 }]} onPress={() => router.push('/(app)/compatibility')}>
+              <Heart size={20} color={Colors.accent} />
+              <View style={styles.discoveryCopy}>
+                <Text style={styles.discoveryTitle}>Compatibility</Text>
+                <Text style={styles.discoveryText}>Compare your rhythms</Text>
+              </View>
+              <ChevronRight size={16} color={Colors.textMuted} />
+            </Pressable>
+          </View>
+
           {productsQuery.isLoading ? (
             <View style={styles.loaderWrap}>
               <ActivityIndicator color={Colors.purple} />
-              <Text style={styles.loaderText}>Loading insights...</Text>
+              <Text style={styles.loaderText}>Opening the reading room…</Text>
             </View>
           ) : products.length > 0 ? (
             <View style={styles.productList}>
@@ -213,7 +237,7 @@ export default function InsightsScreen() {
       {/* Report Viewer Modal */}
       <Modal visible={!!viewingReport} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setViewingReport(null)}>
         <View style={styles.modalContainer}>
-          <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+          <AppBackground quiet />
           <SafeAreaView style={styles.safeArea} edges={['top']}>
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleWrap}>
@@ -263,9 +287,15 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
 
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 24, gap: 12 },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
+  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },
-  headerIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
+  headerIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
+  discoveryRow: { gap: 8, marginBottom: 28 },
+  discoveryCard: { minHeight: 64, borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
+  discoveryCopy: { flex: 1 },
+  discoveryTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  discoveryText: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
 
   loaderWrap: { alignItems: 'center', gap: 12, paddingTop: 60 },
   loaderText: { fontSize: 14, color: Colors.textMuted },
@@ -278,7 +308,7 @@ const styles = StyleSheet.create({
   productIconUnlocked: { backgroundColor: Colors.successDim },
   productIconLocked: { backgroundColor: Colors.purpleDim },
   productInfo: { flex: 1 },
-  productName: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  productName: { fontSize: 18, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary },
   categoryBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 4 },
   categoryText: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   productPrice: { fontSize: 20, fontWeight: '800', color: Colors.gold },
@@ -301,9 +331,9 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, backgroundColor: Colors.bg },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.bgCardBorder, gap: 12 },
   modalTitleWrap: { flex: 1 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  modalTitle: { fontSize: 20, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary },
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
   modalScroll: { paddingHorizontal: 20, paddingVertical: 20, paddingBottom: 40 },
   reportCard: { padding: 20 },
-  reportContent: { fontSize: 15, color: Colors.textSecondary, lineHeight: 26 },
+  reportContent: { fontSize: 17, fontFamily: Fonts.display, color: Colors.textSecondary, lineHeight: 29 },
 });

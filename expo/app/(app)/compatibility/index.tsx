@@ -6,10 +6,12 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Heart, Sparkles, Star, MessageCircle, Shield, Flame, Target, Lightbulb, Check, AlertTriangle, Zap, RefreshCw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getCompatibility, type CompatibilityResult } from '@/services/compatibility';
+import AppBackground from '@/components/AppBackground';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const RING_SIZE = Math.min(200, SCREEN_W - 100);
@@ -166,11 +168,12 @@ export default function CompatibilityScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Compatibility</Text>
-          <Text style={styles.subtitle}>Discover your cosmic connection</Text>
+          <Text style={styles.eyebrow}>RELATIONSHIP ATLAS</Text>
+          <Text style={styles.title}>How your rhythms meet</Text>
+          <Text style={styles.subtitle}>A thoughtful sun-sign snapshot—not a verdict on your relationship.</Text>
 
           {/* Signs Display */}
           <View style={styles.signsRow}>
@@ -213,7 +216,7 @@ export default function CompatibilityScreen() {
 
           {/* Sign Picker Grid */}
           <GlassCard style={styles.pickerCard}>
-            <Text style={styles.fieldLabel}>Select partner's sign</Text>
+            <Text style={styles.fieldLabel}>CHOOSE A SIGN TO COMPARE</Text>
             <View style={styles.signGrid}>
               {ZODIAC_SIGNS.map((sign) => {
                 const isSelected = partnerSign === sign.name;
@@ -541,8 +544,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginTop: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4, marginBottom: 24 },
+  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
+  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
+  subtitle: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, marginTop: 7, marginBottom: 26, maxWidth: 330 },
 
   // Signs display
   signsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 24 },
@@ -554,7 +558,7 @@ const styles = StyleSheet.create({
   heartContainer: { marginTop: -16 },
 
   // Sign picker
-  pickerCard: { marginBottom: 20 },
+  pickerCard: { marginBottom: 22, borderRadius: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
   signGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   signGridItem: {
@@ -573,7 +577,7 @@ const styles = StyleSheet.create({
   scoreRingCard: { marginBottom: 16, alignItems: 'center', paddingVertical: 24 },
   scoreRingContainer: { position: 'relative', width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' },
   scoreRingInner: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { fontSize: 44, fontWeight: '800', letterSpacing: -2 },
+  scoreValue: { fontSize: 44, fontFamily: Fonts.display, fontWeight: '600', letterSpacing: -2 },
   scoreTagline: { fontSize: 12, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
 
   // Quick stats
@@ -593,7 +597,7 @@ const styles = StyleSheet.create({
   // Tabs
   tabRow: { flexDirection: 'row', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 3 },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  tabActive: { backgroundColor: 'rgba(124,58,237,0.15)' },
+  tabActive: { backgroundColor: Colors.purpleDim },
   tabText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
   tabTextActive: { color: Colors.purpleLight },
 
@@ -613,7 +617,7 @@ const styles = StyleSheet.create({
   categoryVisualScore: { fontSize: 14, fontWeight: '700', width: 36, textAlign: 'right' },
 
   // Section titles
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 22, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -0.3 },
 
   // Category cards (details tab)
   categoryCard: { marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },

@@ -7,9 +7,11 @@ import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, ChevronRight, Sparkles, Star, Clock, Award, BadgeCheck } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/GlassCard';
+import AppBackground from '@/components/AppBackground';
 
 interface Astrologer {
   id: string;
@@ -46,7 +48,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Birth Charts', 'Life Path', 'Planetary Aspects'],
     years: 12,
     rating: 4.9,
-    gradientColors: ['#7C3AED', '#4F46E5'],
+    gradientColors: ['#B78D4E', '#55777B'],
     symbol: '♄',
   },
   'love': {
@@ -82,7 +84,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Tarot Spreads', 'Intuitive Reading', 'Divination'],
     years: 18,
     rating: 4.9,
-    gradientColors: ['#8B5CF6', '#6366F1'],
+    gradientColors: ['#A96F87', '#55777B'],
     symbol: '☽',
   },
   'vedic': {
@@ -109,7 +111,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Soul Purpose', 'Past Lives', 'Nodes'],
     years: 16,
     rating: 4.9,
-    gradientColors: ['#A855F7', '#7C3AED'],
+    gradientColors: ['#896F54', '#A96F87'],
     symbol: '♆',
   },
   'moon': {
@@ -118,7 +120,7 @@ const SPECIALTY_PROFILES: Record<string, AstrologerProfile> = {
     tags: ['Moon Phases', 'Eclipses', 'Manifestation'],
     years: 9,
     rating: 4.8,
-    gradientColors: ['#6366F1', '#818CF8'],
+    gradientColors: ['#55777B', '#7FAABD'],
     symbol: '☽',
   },
 };
@@ -129,7 +131,7 @@ const DEFAULT_PROFILE: AstrologerProfile = {
   tags: ['Horoscopes', 'Readings', 'Guidance'],
   years: 10,
   rating: 4.8,
-  gradientColors: ['#7C3AED', '#6366F1'],
+  gradientColors: ['#B78D4E', '#55777B'],
   symbol: '✧',
 };
 
@@ -397,9 +399,13 @@ export default function ChatListScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <Text style={styles.title}>Messages</Text>
+        <View style={styles.pageHeader}>
+          <Text style={styles.eyebrow}>PRIVATE CONSULTATIONS</Text>
+          <Text style={styles.title}>What&apos;s moving through your life?</Text>
+          <Text style={styles.subtitle}>Continue a conversation or choose a guide whose approach feels right.</Text>
+        </View>
 
         {conversationsQuery.isLoading ? (
           <ActivityIndicator color={Colors.purple} style={styles.loader} />
@@ -416,7 +422,7 @@ export default function ChatListScreen() {
                 <View style={styles.newChatSection}>
                   <View style={styles.sectionHeaderRow}>
                     <Award size={14} color={Colors.gold} />
-                    <Text style={styles.sectionHeaderText}>Our Expert Astrologers</Text>
+                    <Text style={styles.sectionHeaderText}>Choose a guide</Text>
                   </View>
                   <Text style={styles.sectionSubtext}>Start a new consultation</Text>
                   {astrologers.map((a) => (
@@ -448,9 +454,9 @@ export default function ChatListScreen() {
                     <Sparkles size={32} color="#fff" />
                   </LinearGradient>
                 </View>
-                <Text style={styles.emptyTitle}>Your Cosmic Guides Await</Text>
+                <Text style={styles.emptyTitle}>A thoughtful answer starts with the right voice.</Text>
                 <Text style={styles.emptyDesc}>
-                  Connect with expert astrologers for personalized readings, chart interpretations, and celestial guidance.
+                  Explore experienced astrologers for chart interpretation, relationships, timing, and personal guidance.
                 </Text>
 
                 <View style={styles.trustRow}>
@@ -498,7 +504,10 @@ export default function ChatListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, marginTop: 8, marginBottom: 20, letterSpacing: -0.5 },
+  pageHeader: { paddingHorizontal: 20, marginTop: 8, marginBottom: 22 },
+  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 7 },
+  title: { fontSize: 32, lineHeight: 37, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.55 },
+  subtitle: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 9 },
   loader: { marginTop: 40 },
   listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 100 },
   emptyListContent: { paddingHorizontal: 20, paddingBottom: 100 },
@@ -517,13 +526,13 @@ const styles = StyleSheet.create({
   convTitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 3 },
 
   // Section headers
-  newChatSection: { marginTop: 28, gap: 10, marginBottom: 8 },
+  newChatSection: { marginTop: 32, gap: 10, marginBottom: 8 },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  sectionHeaderText: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, letterSpacing: -0.2 },
+  sectionHeaderText: { fontSize: 21, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.2 },
   sectionSubtext: { fontSize: 13, color: Colors.textMuted, marginBottom: 4 },
 
   // Expert card (large astrologer card)
-  expertCard: { padding: 18, gap: 14 },
+  expertCard: { padding: 17, gap: 14, borderRadius: 14 },
   expertHeader: { flexDirection: 'row', gap: 14 },
   expertAvatarWrap: { position: 'relative' },
   expertAvatar: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
@@ -566,10 +575,10 @@ const styles = StyleSheet.create({
   consultBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // Empty state
-  emptyHeader: { alignItems: 'center', paddingTop: 20, paddingBottom: 28, gap: 10 },
+  emptyHeader: { alignItems: 'center', paddingTop: 10, paddingBottom: 28, gap: 10 },
   emptyIconWrap: { marginBottom: 8 },
   emptyIconGradient: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.3 },
+  emptyTitle: { fontSize: 25, lineHeight: 30, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.3, textAlign: 'center' },
   emptyDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21, paddingHorizontal: 16 },
   trustRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, paddingHorizontal: 8 },
   trustItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },

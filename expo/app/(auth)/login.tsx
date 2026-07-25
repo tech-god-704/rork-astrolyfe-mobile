@@ -7,8 +7,10 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, KeyRound } from 'lucide-react-nativ
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail } from '@/lib/validation';
+import AppBackground from '@/components/AppBackground';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -72,7 +74,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
@@ -80,9 +82,10 @@ export default function LoginScreen() {
               <ArrowLeft size={22} color={Colors.textPrimary} />
             </Pressable>
 
-            <Animated.View style={{ opacity: fadeIn, transform: [{ translateY: slideUp }] }}>
-              <Text style={styles.title}>Welcome{'\n'}back</Text>
-              <Text style={styles.subtitle}>Sign in to continue your cosmic journey</Text>
+            <Animated.View style={[styles.sheet, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+              <Text style={styles.eyebrow}>YOUR PRIVATE ALMANAC</Text>
+              <Text style={styles.title}>Welcome back{'\n'}to your sky.</Text>
+              <Text style={styles.subtitle}>Your saved readings and chart are right where you left them.</Text>
 
               {formError && (
                 <View style={styles.formErrorRow}>
@@ -91,12 +94,13 @@ export default function LoginScreen() {
               )}
 
               <View style={styles.form}>
+                <Text style={styles.fieldLabel}>Email address</Text>
                 <View style={[styles.inputGroup, focusedField === 'email' && styles.inputGroupFocused, !!fieldErrors.email && styles.inputGroupError]}>
                   <Mail size={18} color={fieldErrors.email ? Colors.danger : focusedField === 'email' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
                     ref={emailRef}
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder="you@example.com"
                     placeholderTextColor={Colors.textMuted}
                     value={email}
                     onChangeText={(t) => { setEmail(t); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }}
@@ -112,12 +116,13 @@ export default function LoginScreen() {
                 </View>
                 {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
 
+                <Text style={styles.fieldLabel}>Password</Text>
                 <View style={[styles.inputGroup, focusedField === 'password' && styles.inputGroupFocused, !!fieldErrors.password && styles.inputGroupError]}>
                   <Lock size={18} color={fieldErrors.password ? Colors.danger : focusedField === 'password' ? Colors.purpleLight : Colors.textMuted} />
                   <TextInput
                     ref={passwordRef}
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder="Enter your password"
                     placeholderTextColor={Colors.textMuted}
                     value={password}
                     onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
@@ -156,13 +161,13 @@ export default function LoginScreen() {
             </Animated.View>
 
             {/* Dev bypass */}
-            <View style={styles.devBypassRow}>
+            {__DEV__ && <View style={styles.devBypassRow}>
               <Pressable onPress={() => setShowPinModal(true)} style={({ pressed }) => [styles.devLockBtn, pressed && { opacity: 0.6 }]} hitSlop={16}>
                 <View style={styles.devLockInner}>
                   <KeyRound size={20} color={Colors.textSecondary} />
                 </View>
               </Pressable>
-            </View>
+            </View>}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -205,30 +210,33 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
   backBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: Colors.bgCardSolid,
     borderWidth: 1,
     borderColor: Colors.bgCardBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 18,
   },
-  title: { fontSize: 36, fontWeight: '800', color: Colors.textPrimary, marginBottom: 10, letterSpacing: -1, lineHeight: 42 },
-  subtitle: { fontSize: 16, color: Colors.textSecondary, marginBottom: 36, lineHeight: 22 },
-  form: { gap: 14, marginBottom: 28 },
+  sheet: { backgroundColor: Colors.bgCardSolid, borderRadius: 24, borderWidth: 1, borderColor: Colors.bgCardBorder, padding: 22 },
+  eyebrow: { fontSize: 10, color: Colors.gold, fontWeight: '800', letterSpacing: 1.8, marginBottom: 13 },
+  title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -1, lineHeight: 43 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 28, lineHeight: 22 },
+  form: { marginBottom: 24 },
+  fieldLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 14, letterSpacing: 0.2 },
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.bgInput,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: Colors.bgInputBorder,
     paddingHorizontal: 16,
-    height: 58,
+    height: 56,
     gap: 12,
   },
   inputGroupFocused: {
@@ -240,18 +248,18 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
   eyeBtn: { padding: 4, borderRadius: 12 },
-  eyeBtnActive: { backgroundColor: 'rgba(167,139,250,0.12)' },
-  fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 16, marginTop: -6 },
+  eyeBtnActive: { backgroundColor: 'rgba(197,162,100,0.12)' },
+  fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 4, marginTop: 6 },
   formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
   formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },
-  loginBtn: { borderRadius: 18, overflow: 'hidden', marginBottom: 24 },
+  loginBtn: { borderRadius: 12, overflow: 'hidden', marginBottom: 18 },
   btnGradient: { paddingVertical: 17, alignItems: 'center', justifyContent: 'center' },
   loginBtnText: { fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
   btnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   btnDisabled: { opacity: 0.5 },
   signupLink: { alignItems: 'center', paddingVertical: 12 },
   signupText: { fontSize: 15, color: Colors.textSecondary },
-  signupTextBold: { color: Colors.purpleLight, fontWeight: '700' },
+  signupTextBold: { color: Colors.gold, fontWeight: '700' },
   devBypassRow: { alignItems: 'center', marginTop: 40, paddingBottom: 20 },
   devLockBtn: { padding: 12 },
   devLockInner: {

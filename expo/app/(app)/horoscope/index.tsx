@@ -6,10 +6,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkles, Heart, Briefcase, Activity, TrendingUp, Flame, Star, Sun } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getHoroscope, fetchCuratedHoroscope, categorizeHoroscope, type HoroscopePeriod } from '@/services/horoscope';
+import AppBackground from '@/components/AppBackground';
 
 type PeriodType = HoroscopePeriod;
 
@@ -93,7 +95,7 @@ export default function HoroscopeScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -103,7 +105,8 @@ export default function HoroscopeScreen() {
           {/* Header with zodiac info */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Horoscope</Text>
+              <Text style={styles.eyebrow}>YOUR PERSONAL FORECAST</Text>
+              <Text style={styles.title}>The sky ahead</Text>
               {zodiac && (
                 <View style={styles.signRow}>
                   <Text style={styles.signSymbol}>{zodiac.symbol}</Text>
@@ -129,12 +132,7 @@ export default function HoroscopeScreen() {
                 onPress={() => handlePeriodChange(key)}
               >
                 {period === key && (
-                  <LinearGradient
-                    colors={[Colors.purple, Colors.indigoLight]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
+                  <View style={styles.periodActiveRule} />
                 )}
                 <Text style={[styles.periodTabText, period === key && styles.periodTabTextActive]}>
                   {label}
@@ -153,7 +151,7 @@ export default function HoroscopeScreen() {
             {/* Full reading card */}
             <GlassCard variant="elevated" style={styles.fullReadingCard}>
               <LinearGradient
-                colors={['rgba(124,58,237,0.12)', 'rgba(99,102,241,0.06)', 'transparent']}
+                colors={['rgba(197,162,100,0.07)', 'rgba(111,143,147,0.03)', 'transparent']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFillObject}
@@ -210,7 +208,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
 
   header: { marginTop: 8, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
+  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
   signRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
   signSymbol: { fontSize: 20 },
   signLabel: { fontSize: 16, color: Colors.purpleLight, fontWeight: '700' },
@@ -223,36 +222,39 @@ const styles = StyleSheet.create({
 
   periodTabs: {
     flexDirection: 'row',
-    backgroundColor: Colors.bgCard,
-    borderRadius: 16,
-    padding: 4,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    padding: 0,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
+    borderColor: 'transparent',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.bgCardBorder,
   },
   periodTab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 0,
     overflow: 'hidden',
   },
+  periodActiveRule: { position: 'absolute', left: 20, right: 20, bottom: 0, height: 2, borderRadius: 1, backgroundColor: Colors.gold },
   periodTabActive: {},
   periodTabText: { fontSize: 14, fontWeight: '600', color: Colors.textMuted },
-  periodTabTextActive: { color: '#fff' },
+  periodTabTextActive: { color: Colors.textPrimary },
 
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   dateText: { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
 
-  fullReadingCard: { marginBottom: 20, padding: 18 },
+  fullReadingCard: { marginBottom: 24, padding: 22, backgroundColor: Colors.paper, borderColor: 'rgba(241,236,226,0.8)' },
   fullReadingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  fullReadingTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.6 },
+  fullReadingTitle: { fontSize: 12, fontWeight: '800', color: Colors.paperInk, textTransform: 'uppercase', letterSpacing: 1.1 },
   readingSignRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   readingSignSymbol: { fontSize: 22 },
-  readingSignName: { fontSize: 18, fontWeight: '700', color: Colors.purpleLight },
-  fullReadingText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 26 },
+  readingSignName: { fontSize: 18, fontWeight: '700', color: Colors.purpleDeep },
+  fullReadingText: { fontSize: 17, fontFamily: Fonts.display, color: Colors.paperInk, lineHeight: 29 },
 
-  sectionLabel: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.2 },
+  sectionLabel: { fontSize: 22, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.2 },
 
   entryCard: { marginBottom: 14, overflow: 'hidden' },
   entryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
