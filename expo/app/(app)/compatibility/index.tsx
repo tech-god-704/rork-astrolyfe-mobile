@@ -171,8 +171,8 @@ export default function CompatibilityScreen() {
       <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>RELATIONSHIP ATLAS</Text>
-          <Text style={styles.title}>How your rhythms meet</Text>
+          <Text style={styles.eyebrow}>COSMIC COMPATIBILITY</Text>
+          <Text style={styles.title}>How your energies connect</Text>
           <Text style={styles.subtitle}>A thoughtful sun-sign snapshot—not a verdict on your relationship.</Text>
 
           {/* Signs Display */}

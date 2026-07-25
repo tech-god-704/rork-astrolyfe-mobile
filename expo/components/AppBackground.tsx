@@ -15,13 +15,12 @@ export default function AppBackground({ quiet = false }: { quiet?: boolean }) {
       {!quiet && (
         <>
           <View style={styles.violetGlow} />
+          <View style={styles.magentaGlow} />
           <View style={styles.coolGlow} />
-          <View style={styles.orbitLarge} />
-          <View style={styles.orbitSmall} />
-          <View style={styles.meridian} />
           <View style={styles.starA} />
           <View style={styles.starB} />
           <View style={styles.starC} />
+          <View style={styles.starD} />
         </>
       )}
     </View>
@@ -34,49 +33,27 @@ const styles = StyleSheet.create({
     width: 330,
     height: 330,
     borderRadius: 165,
-    top: -180,
-    right: -120,
-    backgroundColor: 'rgba(97,56,163,0.20)',
+    top: -155,
+    right: -95,
+    backgroundColor: 'rgba(97,56,163,0.24)',
+  },
+  magentaGlow: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    top: 190,
+    left: -180,
+    backgroundColor: 'rgba(217,148,242,0.055)',
   },
   coolGlow: {
     position: 'absolute',
     width: 280,
     height: 280,
     borderRadius: 140,
-    bottom: -170,
-    left: -110,
-    backgroundColor: 'rgba(111,178,250,0.075)',
-  },
-  orbitLarge: {
-    position: 'absolute',
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    borderWidth: 1,
-    borderColor: 'rgba(218,200,242,0.07)',
-    right: -205,
-    top: 54,
-    transform: [{ scaleY: 0.62 }, { rotate: '-12deg' }],
-  },
-  orbitSmall: {
-    position: 'absolute',
-    width: 164,
-    height: 164,
-    borderRadius: 82,
-    borderWidth: 1,
-    borderColor: 'rgba(192,154,235,0.17)',
-    right: -58,
-    top: 116,
-    transform: [{ scaleY: 0.62 }, { rotate: '-12deg' }],
-  },
-  meridian: {
-    position: 'absolute',
-    width: 1,
-    height: 170,
-    right: 47,
-    top: 70,
-    backgroundColor: 'rgba(218,200,242,0.06)',
-    transform: [{ rotate: '22deg' }],
+    bottom: -185,
+    right: -145,
+    backgroundColor: 'rgba(111,178,250,0.085)',
   },
   starA: {
     position: 'absolute',
@@ -84,8 +61,8 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     backgroundColor: 'rgba(217,148,242,0.74)',
-    top: 118,
-    left: 42,
+    top: 106,
+    left: 38,
   },
   starB: {
     position: 'absolute',
@@ -93,8 +70,8 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
     backgroundColor: 'rgba(218,200,242,0.52)',
-    top: 205,
-    left: 112,
+    top: 248,
+    left: 86,
   },
   starC: {
     position: 'absolute',
@@ -102,7 +79,16 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
     backgroundColor: 'rgba(127,170,189,0.55)',
-    top: 318,
-    right: 44,
+    top: 356,
+    right: 38,
+  },
+  starD: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(111,178,250,0.7)',
+    top: 164,
+    right: 72,
   },
 });

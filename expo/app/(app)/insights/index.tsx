@@ -110,9 +110,9 @@ export default function InsightsScreen() {
           {/* Header */}
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.eyebrow}>EXPLORE YOUR ALMANAC</Text>
-              <Text style={styles.title}>The Reading Room</Text>
-              <Text style={styles.subtitle}>Long-form readings for deeper reflection.</Text>
+              <Text style={styles.eyebrow}>EXPLORE YOUR UNIVERSE</Text>
+              <Text style={styles.title}>Cosmic Insights</Text>
+              <Text style={styles.subtitle}>Deep-dive reports built from your cosmic profile.</Text>
             </View>
             <View style={styles.headerIcon}>
               <Sparkles size={24} color={Colors.gold} />
@@ -141,7 +141,7 @@ export default function InsightsScreen() {
           {productsQuery.isLoading ? (
             <View style={styles.loaderWrap}>
               <ActivityIndicator color={Colors.purple} />
-              <Text style={styles.loaderText}>Opening the reading room…</Text>
+              <Text style={styles.loaderText}>Loading your insights…</Text>
             </View>
           ) : products.length > 0 ? (
             <View style={styles.productList}>

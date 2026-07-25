@@ -2,10 +2,10 @@ import { Platform } from 'react-native';
 
 export const Fonts = {
   display: Platform.select({
-    ios: 'Georgia',
-    android: 'serif',
-    web: 'Georgia, Times New Roman, serif',
-    default: 'serif',
+    ios: 'Avenir Next',
+    android: 'sans-serif',
+    web: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    default: 'System',
   }),
   body: Platform.select({
     ios: 'System',

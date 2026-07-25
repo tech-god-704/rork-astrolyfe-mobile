@@ -21,7 +21,7 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
       <View style={styles.loading}>
         <AppBackground />
         <BrandMark size={84} />
-        <Text style={styles.loadingText}>Checking your edition…</Text>
+        <Text style={styles.loadingText}>Checking your access…</Text>
       </View>
     );
   }
@@ -41,22 +41,22 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.topline}>
-            <Text style={styles.brand}>ASTROLYFE / FULL EDITION</Text>
-            <Text style={styles.issue}>MEMBERSHIP 01</Text>
+            <Text style={styles.brand}>ASTROLYFE PREMIUM</Text>
+            <Text style={styles.issue}>FULL ACCESS</Text>
           </View>
 
           <View style={styles.mark}>
             <BrandMark size={112} />
           </View>
 
-          <Text style={styles.eyebrow}>OPEN THE FULL ALMANAC</Text>
+          <Text style={styles.eyebrow}>UNLOCK YOUR COSMIC PROFILE</Text>
           <Text style={styles.title}>Go deeper than your sun sign.</Text>
           <Text style={styles.subtitle}>
             Turn today&apos;s forecast into a personal map for love, timing, purpose, and the patterns in your birth chart.
           </Text>
 
           <View style={styles.preview}>
-            <Text style={styles.previewLabel}>IN YOUR FULL EDITION</Text>
+            <Text style={styles.previewLabel}>WHAT YOU UNLOCK</Text>
             {[
               'Your complete daily, weekly, and monthly readings',
               'Birth chart patterns explained in plain language',

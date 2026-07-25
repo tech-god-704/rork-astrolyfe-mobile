@@ -158,8 +158,8 @@ export default function ChartScreen() {
       <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>YOUR CELESTIAL ATLAS</Text>
-          <Text style={styles.title}>Your cosmic fingerprint</Text>
+          <Text style={styles.eyebrow}>YOUR BIRTH CHART</Text>
+          <Text style={styles.title}>Your cosmic blueprint</Text>
           <View style={styles.subtitleRow}>
             {userSign && <Text style={styles.signSymbol}>{userSign.symbol}</Text>}
             <Text style={styles.subtitle}>
