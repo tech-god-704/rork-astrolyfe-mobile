@@ -43,6 +43,8 @@ export default function InsightsScreen() {
   const products = productsQuery.data ?? [];
   const unlockedSlugs = unlockedQuery.data ?? [];
   const reports = reportsQuery.data ?? [];
+  const unlockedCount = isAdmin ? products.length : products.filter((product) => unlockedSlugs.includes(product.slug)).length;
+  const collectionProgress = products.length > 0 ? Math.round((unlockedCount / products.length) * 100) : 0;
 
   // Map product slugs to their web-generated report content
   const reportBySlug = new Map<string, UserReport>();
@@ -119,6 +121,35 @@ export default function InsightsScreen() {
             </View>
           </View>
 
+          <LinearGradient
+            colors={[Colors.deepViolet, 'rgba(59,33,113,0.76)', Colors.bgCardSolid]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.toolkitHero}
+          >
+            <View style={styles.toolkitTop}>
+              <View>
+                <Text style={styles.toolkitEyebrow}>YOUR COSMIC TOOLKIT</Text>
+                <Text style={styles.toolkitTitle}>{unlockedCount} insight{unlockedCount === 1 ? '' : 's'} unlocked</Text>
+              </View>
+              <View style={styles.reportCount}>
+                <BookOpen size={14} color={Colors.lavenderIce} />
+                <Text style={styles.reportCountText}>{reports.length > 0 ? `${reports.length} ready` : 'Generating'}</Text>
+              </View>
+            </View>
+            <Text style={styles.toolkitText}>Build a deeper picture of your patterns, relationships, and timing.</Text>
+            <View style={styles.progressTrack}>
+              <LinearGradient
+                colors={[Colors.nebulaMagenta, Colors.electricBlue]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${collectionProgress}%` as unknown as number }]}
+              />
+            </View>
+            <Text style={styles.progressText}>{collectionProgress}% of your available library explored</Text>
+          </LinearGradient>
+
+          <Text style={styles.sectionLabel}>Core tools</Text>
           <View style={styles.discoveryRow}>
             <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && { opacity: 0.78 }]} onPress={() => router.push('/(app)/chart')}>
               <Compass size={20} color={Colors.gold} />
@@ -138,6 +169,7 @@ export default function InsightsScreen() {
             </Pressable>
           </View>
 
+          <Text style={styles.sectionLabel}>Personal reports</Text>
           {productsQuery.isLoading ? (
             <View style={styles.loaderWrap}>
               <ActivityIndicator color={Colors.purple} />
@@ -288,13 +320,24 @@ const styles = StyleSheet.create({
 
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 24, gap: 12 },
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
-  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
+  title: { fontSize: 36, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },
   headerIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
-  discoveryRow: { gap: 8, marginBottom: 28 },
-  discoveryCard: { minHeight: 64, borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
+  toolkitHero: { borderRadius: 24, borderWidth: 1, borderColor: 'rgba(192,154,235,0.26)', padding: 20, marginBottom: 28, overflow: 'hidden' },
+  toolkitTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
+  toolkitEyebrow: { color: Colors.purpleLight, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginBottom: 6 },
+  toolkitTitle: { color: Colors.textPrimary, fontSize: 21, fontWeight: '800', letterSpacing: -0.35 },
+  reportCount: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(237,228,253,0.09)' },
+  reportCountText: { color: Colors.lavenderIce, fontSize: 10, fontWeight: '800' },
+  toolkitText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 13, maxWidth: 310 },
+  progressTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(237,228,253,0.10)', overflow: 'hidden', marginTop: 18 },
+  progressFill: { height: 5, borderRadius: 3 },
+  progressText: { color: Colors.textMuted, fontSize: 10, fontWeight: '700', marginTop: 8 },
+  sectionLabel: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 22, fontWeight: '800', letterSpacing: -0.45, marginBottom: 12 },
+  discoveryRow: { flexDirection: 'row', gap: 10, marginBottom: 28 },
+  discoveryCard: { flex: 1, minHeight: 112, borderWidth: 1, borderColor: Colors.bgCardBorder, borderRadius: 18, backgroundColor: 'rgba(218,200,242,0.035)', justifyContent: 'center', gap: 10, padding: 14 },
   discoveryCopy: { flex: 1 },
-  discoveryTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  discoveryTitle: { color: Colors.textPrimary, fontSize: 13, fontWeight: '800' },
   discoveryText: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
 
   loaderWrap: { alignItems: 'center', gap: 12, paddingTop: 60 },
@@ -308,7 +351,7 @@ const styles = StyleSheet.create({
   productIconUnlocked: { backgroundColor: Colors.successDim },
   productIconLocked: { backgroundColor: Colors.purpleDim },
   productInfo: { flex: 1 },
-  productName: { fontSize: 18, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary },
+  productName: { fontSize: 18, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary },
   categoryBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 4 },
   categoryText: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   productPrice: { fontSize: 20, fontWeight: '800', color: Colors.gold },
@@ -331,7 +374,7 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, backgroundColor: Colors.bg },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.bgCardBorder, gap: 12 },
   modalTitleWrap: { flex: 1 },
-  modalTitle: { fontSize: 20, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary },
+  modalTitle: { fontSize: 20, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary },
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
   modalScroll: { paddingHorizontal: 20, paddingVertical: 20, paddingBottom: 40 },
   reportCard: { padding: 20 },

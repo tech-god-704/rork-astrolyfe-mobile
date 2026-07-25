@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, type TextInput as TextInputType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { LogOut, Save, Shield, Calendar, Check, MapPin, Clock } from 'lucide-react-native';
+import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -15,6 +16,7 @@ import { getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { profile, user, signOut, refreshProfile, isAdmin } = useAuth();
   const [displayName, setDisplayName] = useState<string>('');
   const [birthDate, setBirthDate] = useState<string>('');
@@ -148,7 +150,19 @@ export default function ProfileScreen() {
           <Text style={styles.title}>Cosmic profile</Text>
 
           {/* Avatar Section */}
-          <View style={styles.avatarSection}>
+          <LinearGradient
+            colors={[Colors.deepViolet, 'rgba(59,33,113,0.72)', Colors.bgCardSolid]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatarSection}
+          >
+            <View style={styles.profileSignalRow}>
+              <View style={styles.profileSignalLabel}>
+                <Sparkles size={13} color={Colors.lavenderIce} />
+                <Text style={styles.profileSignalText}>PROFILE SIGNAL</Text>
+              </View>
+              <Text style={styles.profilePercent}>{completeness.percent}%</Text>
+            </View>
             <View style={styles.avatarOuter}>
               <LinearGradient
                 colors={zodiac ? [zodiac.color, Colors.purple] : [Colors.purple, Colors.indigoLight]}
@@ -184,13 +198,37 @@ export default function ProfileScreen() {
                   <LinearGradient colors={[Colors.purple, Colors.indigoLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
                 </View>
               </View>
-              <Text style={styles.completenessText}>{completeness.percent}% reading accuracy</Text>
+              <Text style={styles.completenessText}>reading accuracy</Text>
             </View>
+          </LinearGradient>
+
+          <View style={styles.profileActions}>
+            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/chart')}>
+              <View style={styles.profileActionIcon}>
+                <Compass size={18} color={Colors.lavenderIce} />
+              </View>
+              <View style={styles.profileActionCopy}>
+                <Text style={styles.profileActionTitle}>Birth chart</Text>
+                <Text style={styles.profileActionText}>View your blueprint</Text>
+              </View>
+              <ChevronRight size={16} color={Colors.textMuted} />
+            </Pressable>
+            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/compatibility')}>
+              <View style={[styles.profileActionIcon, styles.profileActionIconAccent]}>
+                <Heart size={18} color={Colors.accentLight} />
+              </View>
+              <View style={styles.profileActionCopy}>
+                <Text style={styles.profileActionTitle}>Compatibility</Text>
+                <Text style={styles.profileActionText}>Explore a connection</Text>
+              </View>
+              <ChevronRight size={16} color={Colors.textMuted} />
+            </Pressable>
           </View>
 
           {/* Form */}
           <GlassCard style={styles.formCard}>
             <Text style={styles.sectionLabel}>BIRTH PROFILE</Text>
+            <Text style={styles.sectionDescription}>Precise details unlock more accurate houses, timing, and personal guidance.</Text>
 
             <Text style={styles.fieldLabel}>Name</Text>
             <View style={[styles.inputWrap, focusedField === 'name' && styles.inputWrapFocused]}>
@@ -306,7 +344,7 @@ export default function ProfileScreen() {
               ) : (
                 <>
                   <Save size={17} color="#fff" />
-                  <Text style={styles.saveBtnText}>Save Changes</Text>
+                  <Text style={styles.saveBtnText}>Update my cosmic profile</Text>
                 </>
               )}
             </LinearGradient>
@@ -327,9 +365,13 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
-  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 24, letterSpacing: -0.6 },
+  title: { fontSize: 36, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, marginBottom: 20, letterSpacing: -1 },
 
-  avatarSection: { alignItems: 'center', marginBottom: 28 },
+  avatarSection: { alignItems: 'center', marginBottom: 12, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(192,154,235,0.24)', padding: 20, overflow: 'hidden' },
+  profileSignalRow: { width: '100%' as unknown as number, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  profileSignalLabel: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  profileSignalText: { color: Colors.purpleLight, fontSize: 9, fontWeight: '900', letterSpacing: 1.35 },
+  profilePercent: { color: Colors.textPrimary, fontSize: 18, fontWeight: '900' },
   avatarOuter: { marginBottom: 14 },
   avatarGradient: {
     width: 92,
@@ -345,7 +387,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontSize: 36, color: Colors.purpleLight },
-  displayNameHeader: { fontSize: 25, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.3, textAlign: 'center' },
+  displayNameHeader: { fontSize: 26, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.55, textAlign: 'center' },
   email: { fontSize: 14, color: Colors.textMuted, marginTop: 4, textAlign: 'center' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   adminBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: Colors.goldDim, borderRadius: 12 },
@@ -354,8 +396,17 @@ const styles = StyleSheet.create({
   signBadgeSymbol: { fontSize: 14 },
   signBadgeText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  formCard: { marginBottom: 20, gap: 4, borderRadius: 16 },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  profileActions: { gap: 10, marginBottom: 22 },
+  profileAction: { minHeight: 70, borderRadius: 18, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  profileActionPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+  profileActionIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(97,56,163,0.24)', alignItems: 'center', justifyContent: 'center' },
+  profileActionIconAccent: { backgroundColor: Colors.accentDim },
+  profileActionCopy: { flex: 1 },
+  profileActionTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  profileActionText: { color: Colors.textMuted, fontSize: 11, marginTop: 3 },
+  formCard: { marginBottom: 20, gap: 4, borderRadius: 22 },
+  sectionLabel: { fontSize: 11, fontWeight: '900', color: Colors.purpleLight, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5 },
+  sectionDescription: { color: Colors.textMuted, fontSize: 12, lineHeight: 18, marginBottom: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6, marginTop: 12 },
   inputWrap: {
     flexDirection: 'row',
@@ -390,7 +441,7 @@ const styles = StyleSheet.create({
   signChipLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 2 },
 
-  completenessRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, width: '80%' as unknown as number },
+  completenessRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, width: '88%' as unknown as number },
   completenessBar: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
   completenessFill: { height: '100%' as unknown as number, borderRadius: 3, overflow: 'hidden' },
   completenessText: { fontSize: 12, color: Colors.textMuted, fontWeight: '600' },
@@ -398,9 +449,9 @@ const styles = StyleSheet.create({
   saveMessageSuccess: { backgroundColor: Colors.successDim },
   saveMessageError: { backgroundColor: Colors.dangerDim },
   saveMessageText: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  saveBtn: { borderRadius: 12, overflow: 'hidden', marginBottom: 14 },
-  saveBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 8 },
-  saveBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  saveBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 14, shadowColor: Colors.purple, shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
+  saveBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, gap: 8 },
+  saveBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

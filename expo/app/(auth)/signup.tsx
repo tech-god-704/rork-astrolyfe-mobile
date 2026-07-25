@@ -35,7 +35,7 @@ export default function SignupScreen() {
       Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.spring(slideUp, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [fadeIn, slideUp]);
 
   const clearErrors = () => { setFormError(null); setFieldErrors({}); };
 

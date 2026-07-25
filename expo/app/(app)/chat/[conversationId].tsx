@@ -26,6 +26,12 @@ interface FailedMessage {
   text: string;
 }
 
+const STARTER_PROMPTS = [
+  'What should I pay attention to this week?',
+  'Help me understand a relationship pattern.',
+  'What does my chart say about this decision?',
+];
+
 export default function ChatConversationScreen() {
   const { conversationId, name } = useLocalSearchParams<{ conversationId: string; name: string }>();
   const { user } = useAuth();
@@ -75,7 +81,9 @@ export default function ChatConversationScreen() {
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.log('[Chat] Message subscription failed, falling back to polling');
-          const interval = setInterval(() => { void messagesQuery.refetch(); }, 10000);
+          const interval = setInterval(() => {
+            void queryClient.invalidateQueries({ queryKey: ['chatMessages', conversationId] });
+          }, 10000);
           channel.unsubscribe();
           setTimeout(() => clearInterval(interval), 300000);
         }
@@ -254,6 +262,18 @@ export default function ChatConversationScreen() {
                 </View>
                 <Text style={styles.emptyChatTitle}>Start a conversation</Text>
                 <Text style={styles.emptyChatText}>Ask about a relationship, a decision, your forecast, or a pattern in your chart.</Text>
+                <View style={styles.starterPrompts}>
+                  {STARTER_PROMPTS.map((prompt) => (
+                    <Pressable
+                      key={prompt}
+                      style={({ pressed }) => [styles.starterPrompt, pressed && { opacity: 0.75 }]}
+                      onPress={() => setMessageText(prompt)}
+                    >
+                      <Text style={styles.starterPromptText}>{prompt}</Text>
+                      <Text style={styles.starterPromptArrow}>→</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             }
           />
@@ -321,7 +341,7 @@ const styles = StyleSheet.create({
   optimisticBubble: { opacity: 0.7 },
   messageText: { fontSize: 15, lineHeight: 22 },
   userText: { color: '#fff' },
-  astrologerText: { color: Colors.paperInk, fontFamily: Fonts.display, lineHeight: 23 },
+  astrologerText: { color: Colors.paperInk, fontFamily: Fonts.body, lineHeight: 23 },
   messageTime: { fontSize: 10, color: Colors.textMuted, marginTop: 3, marginHorizontal: 8 },
   messageStatus: { fontSize: 10, color: Colors.textMuted, marginTop: 3, marginHorizontal: 8, fontStyle: 'italic' },
   userTime: { alignSelf: 'flex-end' },
@@ -331,11 +351,15 @@ const styles = StyleSheet.create({
   retryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: 3, marginHorizontal: 8, paddingVertical: 2 },
   failedStatus: { fontSize: 10, color: Colors.danger, fontWeight: '600' },
 
-  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
-  emptyChatIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 24, paddingVertical: 26 },
+  emptyChatIcon: { width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(150,98,198,0.24)', borderWidth: 1, borderColor: 'rgba(192,154,235,0.28)', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   emptyChatEmoji: { fontSize: 28 },
-  emptyChatTitle: { fontSize: 22, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary },
+  emptyChatTitle: { fontSize: 24, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
   emptyChatText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  starterPrompts: { width: '100%' as unknown as number, gap: 8, marginTop: 12 },
+  starterPrompt: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.04)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  starterPromptText: { flex: 1, color: Colors.textSecondary, fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  starterPromptArrow: { color: Colors.purpleLight, fontSize: 18 },
 
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16,
@@ -344,13 +368,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(2,1,6,0.98)',
   },
   textInputWrap: {
-    flex: 1, backgroundColor: Colors.bgInput, borderRadius: 14,
+    flex: 1, backgroundColor: Colors.bgInput, borderRadius: 18,
     borderWidth: 1, borderColor: Colors.bgInputBorder,
     paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100,
   },
   textInput: { fontSize: 15, color: Colors.textPrimary, lineHeight: 20 },
-  sendBtn: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden' },
-  sendBtnGradient: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.purpleDim },
+  sendBtn: { width: 46, height: 46, borderRadius: 16, overflow: 'hidden' },
+  sendBtnGradient: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.purpleDim },
   sendBtnDisabled: { opacity: 0.3 },
 
   // Character counter

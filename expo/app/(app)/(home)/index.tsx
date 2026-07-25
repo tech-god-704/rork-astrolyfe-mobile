@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, BookOpen, ChevronRight, Compass, Heart, MessageCircle, Sparkles, X } from 'lucide-react-native';
+import { ArrowRight, BookOpen, ChevronRight, Clock3, Compass, Heart, MessageCircle, MoonStar, Sparkles, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -27,7 +27,7 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [promptDismissed, setPromptDismissed] = useState(false);
-  const reveal = useRef(new Animated.Value(0)).current;
+  const reveal = useRef(new Animated.Value(1)).current;
 
   const signName = profile?.zodiac_sign || 'Aries';
   const zodiac = getZodiacByName(signName);
@@ -50,10 +50,6 @@ export default function HomeScreen() {
     if (!profile.birth_lat || !profile.birth_lon) missing.push('birth place');
     return missing.length ? missing : null;
   }, [profile]);
-
-  useEffect(() => {
-    Animated.timing(reveal, { toValue: 1, duration: 460, useNativeDriver: true }).start();
-  }, [reveal]);
 
   const navigate = useCallback((route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -101,6 +97,29 @@ export default function HomeScreen() {
             <View style={styles.intro}>
               <Text style={styles.greeting}>Good {date.getHours() < 12 ? 'morning' : date.getHours() < 18 ? 'afternoon' : 'evening'},</Text>
               <Text style={styles.name}>{profile?.display_name || 'Stargazer'}.</Text>
+            </View>
+
+            <View style={styles.contextStrip}>
+              <View style={styles.contextItem}>
+                <Text style={styles.contextSymbol}>{zodiac?.symbol ?? '✦'}</Text>
+                <View>
+                  <Text style={styles.contextLabel}>YOUR SIGN</Text>
+                  <Text style={styles.contextValue}>{zodiac?.name ?? signName}</Text>
+                </View>
+              </View>
+              <View style={styles.contextDivider} />
+              <View style={styles.contextItem}>
+                <MoonStar size={16} color={Colors.purpleLight} />
+                <View>
+                  <Text style={styles.contextLabel}>MOON</Text>
+                  <Text style={styles.contextValue}>{moonPhase.name}</Text>
+                </View>
+              </View>
+              <View style={styles.contextDivider} />
+              <View style={styles.contextTime}>
+                <Clock3 size={14} color={Colors.textMuted} />
+                <Text style={styles.contextTimeText}>2 min</Text>
+              </View>
             </View>
 
             <Pressable onPress={() => navigate('/(app)/horoscope')} style={({ pressed }) => [styles.leadShell, pressed && styles.pressed]}>
@@ -155,7 +174,9 @@ export default function HomeScreen() {
             </View>
 
             <Pressable style={({ pressed }) => [styles.askCard, pressed && styles.pressed]} onPress={() => navigate('/(app)/chat')}>
-              <MessageCircle size={20} color={Colors.gold} />
+              <View style={styles.askIcon}>
+                <MessageCircle size={19} color={Colors.lavenderIce} />
+              </View>
               <View style={styles.askCopy}>
                 <Text style={styles.askTitle}>What does this mean for you?</Text>
                 <Text style={styles.askText}>Ask an astrologer about today&apos;s reading.</Text>
@@ -219,9 +240,27 @@ const styles = StyleSheet.create({
   edition: { color: Colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginTop: 5 },
   profileButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
   profileGlyph: { fontSize: 20, color: Colors.gold },
-  intro: { marginTop: 28, marginBottom: 24 },
+  intro: { marginTop: 28, marginBottom: 18 },
   greeting: { color: Colors.textSecondary, fontFamily: Fonts.display, fontSize: 22 },
-  name: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 38, lineHeight: 42, letterSpacing: -0.8 },
+  name: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 40, fontWeight: '800', lineHeight: 44, letterSpacing: -1.2 },
+  contextStrip: {
+    minHeight: 64,
+    borderRadius: 18,
+    backgroundColor: 'rgba(218,200,242,0.045)',
+    borderWidth: 1,
+    borderColor: Colors.bgCardBorder,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  contextItem: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  contextSymbol: { color: Colors.lavenderIce, fontSize: 18 },
+  contextLabel: { color: Colors.textFaint, fontSize: 7, fontWeight: '900', letterSpacing: 1 },
+  contextValue: { color: Colors.textPrimary, fontSize: 11, fontWeight: '800', marginTop: 2 },
+  contextDivider: { width: 1, height: 26, backgroundColor: Colors.bgCardBorder, marginHorizontal: 8 },
+  contextTime: { alignItems: 'center', gap: 3 },
+  contextTimeText: { color: Colors.textMuted, fontSize: 9, fontWeight: '700' },
   leadShell: {
     borderRadius: 24,
     marginBottom: 32,
@@ -247,7 +286,7 @@ const styles = StyleSheet.create({
   readButtonText: { color: Colors.paperInk, fontSize: 14, fontWeight: '800' },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 },
   sectionKicker: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
-  sectionTitle: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 25, letterSpacing: -0.25 },
+  sectionTitle: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 25, fontWeight: '800', letterSpacing: -0.55 },
   signals: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, marginBottom: 22 },
   signal: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 16 },
   signalBorder: { borderTopWidth: 1, borderTopColor: 'rgba(218,200,242,0.09)' },
@@ -256,14 +295,15 @@ const styles = StyleSheet.create({
   signalTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800', marginBottom: 4 },
   signalText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19 },
   signalNumber: { color: Colors.textFaint, fontFamily: Fonts.mono, fontSize: 11 },
-  askCard: { minHeight: 76, borderRadius: 16, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 34 },
+  askCard: { minHeight: 82, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(192,154,235,0.20)', backgroundColor: 'rgba(97,56,163,0.12)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 34 },
+  askIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(150,98,198,0.22)', alignItems: 'center', justifyContent: 'center' },
   askCopy: { flex: 1 },
   askTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
   askText: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
-  library: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, marginBottom: 22 },
-  libraryRow: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 13 },
-  libraryBorder: { borderTopWidth: 1, borderTopColor: 'rgba(218,200,242,0.09)' },
-  libraryIcon: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: Colors.bgCardBorder, alignItems: 'center', justifyContent: 'center' },
+  library: { gap: 10, marginBottom: 22 },
+  libraryRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 13, borderRadius: 18, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)', paddingHorizontal: 14 },
+  libraryBorder: {},
+  libraryIcon: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(192,154,235,0.20)', backgroundColor: 'rgba(97,56,163,0.12)', alignItems: 'center', justifyContent: 'center' },
   libraryCopy: { flex: 1 },
   libraryTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
   librarySubtitle: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },

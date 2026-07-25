@@ -35,7 +35,6 @@ export default function GlassCard({ children, style, variant = 'default', glowCo
         style,
       ]}
     >
-      <View style={[styles.topRule, isSubtle && styles.topRuleSubtle]} />
       {children}
     </View>
   );
@@ -43,10 +42,10 @@ export default function GlassCard({ children, style, variant = 'default', glowCo
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: 16,
+    backgroundColor: 'rgba(9,5,27,0.76)',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
+    borderColor: 'rgba(218,200,242,0.13)',
     padding: 18,
     overflow: 'hidden',
     ...Platform.select({
@@ -60,8 +59,8 @@ const styles = StyleSheet.create({
     }),
   },
   elevated: {
-    backgroundColor: Colors.bgCardSolid,
-    borderColor: 'rgba(218,200,242,0.18)',
+    backgroundColor: 'rgba(21,12,51,0.88)',
+    borderColor: 'rgba(192,154,235,0.24)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -76,16 +75,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(218,200,242,0.035)',
     borderColor: 'rgba(218,200,242,0.09)',
     padding: 16,
-  },
-  topRule: {
-    position: 'absolute',
-    top: 0,
-    left: 18,
-    right: 18,
-    height: 1,
-    backgroundColor: 'rgba(218,200,242,0.18)',
-  },
-  topRuleSubtle: {
-    backgroundColor: 'rgba(218,200,242,0.09)',
   },
 });

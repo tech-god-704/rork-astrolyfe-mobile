@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { MessageCircle, ChevronRight, Sparkles, Star, Clock, Award, BadgeCheck } from 'lucide-react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { MessageCircle, ChevronRight, Sparkles, Star, Clock, Award, BadgeCheck, Briefcase, Compass, Heart, Timer } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -134,6 +134,14 @@ const DEFAULT_PROFILE: AstrologerProfile = {
   gradientColors: ['#6138A3', '#3B51C4'],
   symbol: '✧',
 };
+
+const FOCUS_FILTERS: { key: string; label: string; Icon: typeof Heart; terms: string[] }[] = [
+  { key: 'all', label: 'All guides', Icon: Sparkles, terms: [] },
+  { key: 'love', label: 'Love', Icon: Heart, terms: ['love', 'relationship'] },
+  { key: 'career', label: 'Career', Icon: Briefcase, terms: ['career', 'finance'] },
+  { key: 'chart', label: 'Birth chart', Icon: Compass, terms: ['natal', 'chart', 'vedic'] },
+  { key: 'timing', label: 'Timing', Icon: Timer, terms: ['transit', 'moon', 'forecast'] },
+];
 
 function getAstrologerProfile(specialty?: string | null): AstrologerProfile {
   if (!specialty) return DEFAULT_PROFILE;
@@ -269,7 +277,9 @@ function AstrologerCardLarge({ astrologer, onPress, disabled }: {
 
 export default function ChatListScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [selectedFocus, setSelectedFocus] = useState('all');
 
 
   const conversationsQuery = useQuery({
@@ -317,12 +327,14 @@ export default function ChatListScreen() {
         schema: 'public',
         table: 'chat_conversations',
       }, () => {
-        void conversationsQuery.refetch();
+        void queryClient.invalidateQueries({ queryKey: ['conversations', user.email] });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.log('[Chat] Realtime subscription failed, falling back to polling');
-          const interval = setInterval(() => { void conversationsQuery.refetch(); }, 30000);
+          const interval = setInterval(() => {
+            void queryClient.invalidateQueries({ queryKey: ['conversations', user.email] });
+          }, 30000);
           channel.unsubscribe();
           setTimeout(() => clearInterval(interval), 300000);
         }
@@ -331,7 +343,7 @@ export default function ChatListScreen() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.email]);
+  }, [queryClient, user?.email]);
 
   const openThread = useCallback((conversationId: string, astrologer: Astrologer | null) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -351,6 +363,14 @@ export default function ChatListScreen() {
 
   const conversations = conversationsQuery.data ?? [];
   const astrologers = useMemo(() => astrologersQuery.data ?? [], [astrologersQuery.data]);
+  const filteredAstrologers = useMemo(() => {
+    const filter = FOCUS_FILTERS.find((item) => item.key === selectedFocus);
+    if (!filter || filter.terms.length === 0) return astrologers;
+    return astrologers.filter((astrologer) => {
+      const specialty = astrologer.specialty?.toLowerCase() ?? '';
+      return filter.terms.some((term) => specialty.includes(term));
+    });
+  }, [astrologers, selectedFocus]);
 
   const onRefresh = useCallback(async () => {
     await conversationsQuery.refetch();
@@ -402,10 +422,34 @@ export default function ChatListScreen() {
       <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.pageHeader}>
-          <Text style={styles.eyebrow}>PRIVATE CONSULTATIONS</Text>
-          <Text style={styles.title}>What&apos;s moving through your life?</Text>
-          <Text style={styles.subtitle}>Continue a conversation or choose a guide whose approach feels right.</Text>
+          <Text style={styles.eyebrow}>PRIVATE · PERSONAL · ONE-TO-ONE</Text>
+          <Text style={styles.title}>Ask what matters.</Text>
+          <Text style={styles.subtitle}>Choose a focus, then connect with a guide whose expertise fits the moment.</Text>
         </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.focusScroll}
+          contentContainerStyle={styles.focusContent}
+        >
+          {FOCUS_FILTERS.map(({ key, label, Icon }) => {
+            const isActive = selectedFocus === key;
+            return (
+              <Pressable
+                key={key}
+                style={[styles.focusChip, isActive && styles.focusChipActive]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setSelectedFocus(key);
+                }}
+              >
+                <Icon size={14} color={isActive ? '#FFFFFF' : Colors.textMuted} />
+                <Text style={[styles.focusChipText, isActive && styles.focusChipTextActive]}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         {conversationsQuery.isLoading ? (
           <ActivityIndicator color={Colors.purple} style={styles.loader} />
@@ -418,14 +462,14 @@ export default function ChatListScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={conversationsQuery.isRefetching} onRefresh={onRefresh} tintColor={Colors.purple} />}
             ListFooterComponent={
-              astrologers.length > 0 ? (
+              filteredAstrologers.length > 0 ? (
                 <View style={styles.newChatSection}>
                   <View style={styles.sectionHeaderRow}>
                     <Award size={14} color={Colors.gold} />
                     <Text style={styles.sectionHeaderText}>Choose a guide</Text>
                   </View>
                   <Text style={styles.sectionSubtext}>Start a new consultation</Text>
-                  {astrologers.map((a) => (
+                  {filteredAstrologers.map((a) => (
                     <AstrologerCardLarge
                       key={a.id}
                       astrologer={a}
@@ -439,7 +483,7 @@ export default function ChatListScreen() {
           />
         ) : (
           <FlatList
-            data={astrologers}
+            data={filteredAstrologers}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.emptyListContent}
             showsVerticalScrollIndicator={false}
@@ -504,10 +548,16 @@ export default function ChatListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  pageHeader: { paddingHorizontal: 20, marginTop: 8, marginBottom: 22 },
+  pageHeader: { paddingHorizontal: 20, marginTop: 8, marginBottom: 18 },
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 7 },
-  title: { fontSize: 32, lineHeight: 37, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.55 },
-  subtitle: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 9 },
+  title: { fontSize: 38, lineHeight: 42, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1.1 },
+  subtitle: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 9, maxWidth: 340 },
+  focusScroll: { flexGrow: 0, marginBottom: 18 },
+  focusContent: { paddingHorizontal: 20, gap: 8 },
+  focusChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)' },
+  focusChipActive: { backgroundColor: 'rgba(150,98,198,0.34)', borderColor: 'rgba(218,200,242,0.34)' },
+  focusChipText: { color: Colors.textMuted, fontSize: 12, fontWeight: '700' },
+  focusChipTextActive: { color: '#FFFFFF' },
   loader: { marginTop: 40 },
   listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 100 },
   emptyListContent: { paddingHorizontal: 20, paddingBottom: 100 },
@@ -528,11 +578,11 @@ const styles = StyleSheet.create({
   // Section headers
   newChatSection: { marginTop: 32, gap: 10, marginBottom: 8 },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  sectionHeaderText: { fontSize: 21, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.2 },
+  sectionHeaderText: { fontSize: 21, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.45 },
   sectionSubtext: { fontSize: 13, color: Colors.textMuted, marginBottom: 4 },
 
   // Expert card (large astrologer card)
-  expertCard: { padding: 17, gap: 14, borderRadius: 14 },
+  expertCard: { padding: 18, gap: 14, borderRadius: 22 },
   expertHeader: { flexDirection: 'row', gap: 14 },
   expertAvatarWrap: { position: 'relative' },
   expertAvatar: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
@@ -577,8 +627,8 @@ const styles = StyleSheet.create({
   // Empty state
   emptyHeader: { alignItems: 'center', paddingTop: 10, paddingBottom: 28, gap: 10 },
   emptyIconWrap: { marginBottom: 8 },
-  emptyIconGradient: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 25, lineHeight: 30, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.3, textAlign: 'center' },
+  emptyIconGradient: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle: { fontSize: 26, lineHeight: 31, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.6, textAlign: 'center' },
   emptyDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21, paddingHorizontal: 16 },
   trustRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, paddingHorizontal: 8 },
   trustItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
