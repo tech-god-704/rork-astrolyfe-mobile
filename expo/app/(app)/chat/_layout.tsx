@@ -10,9 +10,10 @@ export default function ChatStackLayout() {
         name="[conversationId]"
         options={{
           headerShown: true,
-          headerStyle: { backgroundColor: '#0d0d22' },
+          headerStyle: { backgroundColor: Colors.bgElevated },
           headerTintColor: Colors.textPrimary,
-          headerTitle: 'Chat',
+          headerTitle: 'Consultation',
+          headerShadowVisible: false,
         }}
       />
     </Stack>

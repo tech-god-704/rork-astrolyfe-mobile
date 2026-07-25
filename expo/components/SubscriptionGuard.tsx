@@ -1,143 +1,135 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowUpRight, Check, RotateCcw } from 'lucide-react-native';
 import { useAuth } from '@/providers/AuthProvider';
+import AppBackground from '@/components/AppBackground';
+import BrandMark from '@/components/BrandMark';
+import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 
 const WEB_CHECKOUT_URL = 'https://soulmate.astrolyfe.co';
 
-interface SubscriptionGuardProps {
-  children: React.ReactNode;
-}
+export default function SubscriptionGuard({ children }: { children: React.ReactNode }) {
+  const { isSubscribed, isLoading, refreshProfile } = useAuth();
+  const [restoring, setRestoring] = useState(false);
 
-/**
- * SubscriptionGuard — gates premium content behind an active subscription.
- *
- * Checks profile.subscription_status from the profiles table (synced by Stripe webhook).
- * Active statuses: 'active', 'trialing', 'trial', 'lifetime'
- * Admin users always pass through.
- *
- * If not subscribed, shows a paywall that links to the web checkout.
- */
-export default function SubscriptionGuard({ children }: SubscriptionGuardProps) {
-  const { isSubscribed, isLoading, profile } = useAuth();
+  if (isSubscribed) return <>{children}</>;
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={styles.loading}>
+        <AppBackground />
+        <BrandMark size={84} />
+        <Text style={styles.loadingText}>Checking your edition…</Text>
       </View>
     );
   }
 
-  if (isSubscribed) {
-    return <>{children}</>;
-  }
+  const restore = async () => {
+    setRestoring(true);
+    try {
+      await refreshProfile();
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#1a1a2e', '#2d1b69']} style={styles.gradient}>
-        <View style={styles.content}>
-          <Text style={styles.lockIcon}>🔒</Text>
-          <Text style={styles.title}>Unlock Your Soulmate Reading</Text>
-          <Text style={styles.subtitle}>
-            Get full access to your personalized soulmate sketch, karmic love guide, and astrology insights.
-          </Text>
-
-          <View style={styles.features}>
-            <Text style={styles.featureItem}>✓  Hand-drawn soulmate portrait</Text>
-            <Text style={styles.featureItem}>✓  Personality trait analysis</Text>
-            <Text style={styles.featureItem}>✓  Astrological compatibility report</Text>
-            <Text style={styles.featureItem}>✓  Karmic love guide</Text>
+      <AppBackground />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.topline}>
+            <Text style={styles.brand}>ASTROLYFE / FULL EDITION</Text>
+            <Text style={styles.issue}>MEMBERSHIP 01</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.ctaButton}
-            onPress={() => Linking.openURL(WEB_CHECKOUT_URL)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.ctaText}>Start 7-Day Trial — $1</Text>
-          </TouchableOpacity>
+          <View style={styles.mark}>
+            <BrandMark size={112} />
+          </View>
 
-          <Text style={styles.disclaimer}>Cancel anytime. No risk.</Text>
-        </View>
-      </LinearGradient>
+          <Text style={styles.eyebrow}>OPEN THE FULL ALMANAC</Text>
+          <Text style={styles.title}>Go deeper than your sun sign.</Text>
+          <Text style={styles.subtitle}>
+            Turn today&apos;s forecast into a personal map for love, timing, purpose, and the patterns in your birth chart.
+          </Text>
+
+          <View style={styles.preview}>
+            <Text style={styles.previewLabel}>IN YOUR FULL EDITION</Text>
+            {[
+              'Your complete daily, weekly, and monthly readings',
+              'Birth chart patterns explained in plain language',
+              'Compatibility guidance and deeper personal reports',
+            ].map((feature, index) => (
+              <View key={feature} style={[styles.feature, index > 0 && styles.featureBorder]}>
+                <View style={styles.check}>
+                  <Check size={12} color={Colors.paperInk} strokeWidth={3} />
+                </View>
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+            onPress={() => Linking.openURL(WEB_CHECKOUT_URL)}
+            accessibilityRole="link"
+          >
+            <View>
+              <Text style={styles.ctaKicker}>7-DAY INTRODUCTORY ACCESS</Text>
+              <Text style={styles.ctaText}>Begin for $1</Text>
+            </View>
+            <ArrowUpRight size={22} color={Colors.paperInk} />
+          </Pressable>
+          <Text style={styles.disclaimer}>Secure checkout opens in your browser. Cancel anytime.</Text>
+
+          <Pressable style={styles.restore} onPress={restore} disabled={restoring}>
+            {restoring ? (
+              <ActivityIndicator color={Colors.textMuted} size="small" />
+            ) : (
+              <RotateCcw size={14} color={Colors.textMuted} />
+            )}
+            <Text style={styles.restoreText}>I already have access</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e',
-  },
-  loadingText: {
-    color: '#A78BFA',
-    fontSize: 16,
-  },
-  gradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  content: {
-    alignItems: 'center',
-    maxWidth: 340,
-  },
-  lockIcon: {
-    fontSize: 48,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#D1D5DB',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-  features: {
-    alignSelf: 'stretch',
-    marginBottom: 28,
-  },
-  featureItem: {
-    fontSize: 15,
-    color: '#E5E7EB',
-    marginBottom: 10,
-    paddingLeft: 4,
-  },
-  ctaButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 18,
-    paddingHorizontal: 48,
+  container: { flex: 1, backgroundColor: Colors.bg },
+  safeArea: { flex: 1 },
+  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 30 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.bg, gap: 18 },
+  loadingText: { color: Colors.textMuted, fontSize: 13, letterSpacing: 0.5 },
+  topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  brand: { color: Colors.textPrimary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  issue: { color: Colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
+  mark: { alignItems: 'center', marginTop: 32, marginBottom: 28 },
+  eyebrow: { color: Colors.gold, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 12 },
+  title: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 38, lineHeight: 43, letterSpacing: -0.8 },
+  subtitle: { color: Colors.textSecondary, fontSize: 15, lineHeight: 23, marginTop: 14, marginBottom: 24 },
+  preview: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, marginBottom: 22 },
+  previewLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, paddingVertical: 13 },
+  feature: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
+  featureBorder: { borderTopWidth: 1, borderTopColor: 'rgba(241,236,226,0.07)' },
+  check: { width: 23, height: 23, borderRadius: 12, backgroundColor: Colors.gold, alignItems: 'center', justifyContent: 'center' },
+  featureText: { flex: 1, color: Colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  cta: {
+    minHeight: 64,
     borderRadius: 14,
-    width: '100%',
+    paddingHorizontal: 18,
+    backgroundColor: Colors.gold,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
   },
-  ctaText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  disclaimer: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    marginTop: 12,
-  },
+  ctaKicker: { color: 'rgba(25,29,30,0.62)', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  ctaText: { color: Colors.paperInk, fontSize: 19, fontWeight: '800', marginTop: 3 },
+  disclaimer: { color: Colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 10 },
+  restore: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
+  restoreText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
 });

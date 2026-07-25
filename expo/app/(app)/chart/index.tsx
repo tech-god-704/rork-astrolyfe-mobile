@@ -1,16 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Text as SvgText, G, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { ChevronDown, ChevronUp, Flame, Droplets, Wind, Mountain, Zap, Anchor, Shuffle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
 import type { NatalAspect } from '@/services/natal';
+import AppBackground from '@/components/AppBackground';
 
 const DEG = Math.PI / 180;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -154,10 +155,11 @@ export default function ChartScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Natal Chart</Text>
+          <Text style={styles.eyebrow}>YOUR CELESTIAL ATLAS</Text>
+          <Text style={styles.title}>Your cosmic fingerprint</Text>
           <View style={styles.subtitleRow}>
             {userSign && <Text style={styles.signSymbol}>{userSign.symbol}</Text>}
             <Text style={styles.subtitle}>
@@ -174,7 +176,7 @@ export default function ChartScreen() {
 
           {chart && !hasExactBirthTime && (
             <View style={styles.approxBadge}>
-              <Text style={styles.approxText}>⏱ Approximate — using noon as default birth time</Text>
+              <Text style={styles.approxText}>ESTIMATED · Add your birth time to sharpen houses and angles.</Text>
             </View>
           )}
 
@@ -190,9 +192,9 @@ export default function ChartScreen() {
               </Defs>
 
               <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="url(#centerGlow)" />
-              <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke="rgba(167,139,250,0.25)" strokeWidth={1.5} />
-              <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke="rgba(167,139,250,0.15)" strokeWidth={1} />
-              <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="none" stroke="rgba(167,139,250,0.1)" strokeWidth={0.5} />
+              <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke="rgba(197,162,100,0.42)" strokeWidth={1.5} />
+              <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke="rgba(241,236,226,0.18)" strokeWidth={1} />
+              <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="none" stroke="rgba(197,162,100,0.14)" strokeWidth={0.5} />
 
               {/* Zodiac sign segments */}
               {ZODIAC_SIGNS.map((sign, i) => {
@@ -207,7 +209,7 @@ export default function ChartScreen() {
                 const isUser = userSign?.name === sign.name;
                 return (
                   <G key={sign.name}>
-                    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(167,139,250,0.15)" strokeWidth={0.5} />
+                    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(241,236,226,0.14)" strokeWidth={0.5} />
                     <SvgText
                       x={sx} y={sy}
                       fill={isUser ? sign.color : 'rgba(255,255,255,0.45)'}
@@ -231,7 +233,7 @@ export default function ChartScreen() {
                     x1={CENTER} y1={CENTER}
                     x2={CENTER + Math.cos(a) * Math.round(58 * SCALE)}
                     y2={CENTER + Math.sin(a) * Math.round(58 * SCALE)}
-                    stroke={deg % 90 === 0 ? 'rgba(167,139,250,0.2)' : 'rgba(167,139,250,0.08)'}
+                    stroke={deg % 90 === 0 ? 'rgba(197,162,100,0.30)' : 'rgba(241,236,226,0.08)'}
                     strokeWidth={deg % 90 === 0 ? 1 : 0.5}
                   />
                 );
@@ -546,10 +548,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginTop: 8, letterSpacing: -0.5 },
+  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
+  title: { fontSize: 34, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, letterSpacing: -0.6 },
   subtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 20, flexWrap: 'wrap' },
-  approxBadge: { backgroundColor: Colors.goldDim, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 16, alignSelf: 'flex-start' },
-  approxText: { fontSize: 11, color: Colors.gold, fontWeight: '600' },
+  approxBadge: { backgroundColor: Colors.goldDim, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(227,180,82,0.22)', paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16, alignSelf: 'flex-start' },
+  approxText: { fontSize: 10, color: Colors.gold, fontWeight: '800', letterSpacing: 0.45 },
   signSymbol: { fontSize: 20 },
   subtitle: { fontSize: 16, color: Colors.purpleLight, fontWeight: '600' },
   ascBadge: { backgroundColor: Colors.goldDim, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
@@ -561,7 +564,7 @@ const styles = StyleSheet.create({
   },
   chartGlow: {
     position: 'absolute', width: CHART_SIZE + 20, height: CHART_SIZE + 20,
-    borderRadius: (CHART_SIZE + 20) / 2, backgroundColor: 'rgba(124,58,237,0.06)',
+    borderRadius: (CHART_SIZE + 20) / 2, backgroundColor: 'rgba(197,162,100,0.055)',
   },
 
   aspectToggle: { alignSelf: 'center', marginBottom: 24, paddingVertical: 6, paddingHorizontal: 16 },
@@ -588,7 +591,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendLabel: { fontSize: 12, color: Colors.textMuted, fontWeight: '500' },
 
-  sectionTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 23, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.3 },
 
   planetRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,

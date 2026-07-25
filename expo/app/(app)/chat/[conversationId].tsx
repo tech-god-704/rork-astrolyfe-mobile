@@ -6,8 +6,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, RotateCcw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
+import AppBackground from '@/components/AppBackground';
 
 interface ChatMessage {
   id: string;
@@ -182,7 +184,7 @@ export default function ChatConversationScreen() {
         ]}>
           {isUser && (
             <LinearGradient
-              colors={isFailed ? ['#7f1d1d', '#991b1b'] : [Colors.purple, Colors.indigoLight]}
+              colors={isFailed ? ['#7f1d1d', '#991b1b'] : [Colors.indigo, '#30494C']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFillObject}
@@ -218,11 +220,11 @@ export default function ChatConversationScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground quiet />
       <Stack.Screen
         options={{
-          headerTitle: name || 'Chat',
-          headerStyle: { backgroundColor: Colors.gradientStart },
+          headerTitle: name || 'Consultation',
+          headerStyle: { backgroundColor: Colors.bgElevated },
           headerTintColor: Colors.textPrimary,
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerShadowVisible: false,
@@ -248,10 +250,10 @@ export default function ChatConversationScreen() {
             ListEmptyComponent={
               <View style={styles.emptyChat}>
                 <View style={styles.emptyChatIcon}>
-                  <Text style={styles.emptyChatEmoji}>✨</Text>
+                  <Text style={styles.emptyChatEmoji}>✦</Text>
                 </View>
                 <Text style={styles.emptyChatTitle}>Start a conversation</Text>
-                <Text style={styles.emptyChatText}>Ask about your horoscope, natal chart, or cosmic guidance</Text>
+                <Text style={styles.emptyChatText}>Ask about a relationship, a decision, your forecast, or a pattern in your chart.</Text>
               </View>
             }
           />
@@ -260,7 +262,7 @@ export default function ChatConversationScreen() {
           <View style={styles.textInputWrap}>
             <TextInput
               style={styles.textInput}
-              placeholder="Type a message..."
+              placeholder="Ask what you want to understand…"
               placeholderTextColor={Colors.textMuted}
               value={messageText}
               onChangeText={setMessageText}
@@ -313,13 +315,13 @@ const styles = StyleSheet.create({
   astrologerDotText: { fontSize: 10, fontWeight: '700', color: Colors.purpleLight },
   astrologerNameText: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
 
-  messageBubble: { maxWidth: '80%' as unknown as number, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, overflow: 'hidden' },
-  userBubble: { borderBottomRightRadius: 6 },
-  astrologerBubble: { backgroundColor: Colors.bgCard, borderWidth: 1, borderColor: Colors.bgCardBorder, borderBottomLeftRadius: 6 },
+  messageBubble: { maxWidth: '84%' as unknown as number, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 14, overflow: 'hidden' },
+  userBubble: { borderBottomRightRadius: 4 },
+  astrologerBubble: { backgroundColor: Colors.paper, borderWidth: 1, borderColor: 'rgba(241,236,226,0.8)', borderBottomLeftRadius: 4 },
   optimisticBubble: { opacity: 0.7 },
   messageText: { fontSize: 15, lineHeight: 22 },
   userText: { color: '#fff' },
-  astrologerText: { color: Colors.textPrimary },
+  astrologerText: { color: Colors.paperInk, fontFamily: Fonts.display, lineHeight: 23 },
   messageTime: { fontSize: 10, color: Colors.textMuted, marginTop: 3, marginHorizontal: 8 },
   messageStatus: { fontSize: 10, color: Colors.textMuted, marginTop: 3, marginHorizontal: 8, fontStyle: 'italic' },
   userTime: { alignSelf: 'flex-end' },
@@ -332,17 +334,17 @@ const styles = StyleSheet.create({
   emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
   emptyChatIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.purpleDim, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   emptyChatEmoji: { fontSize: 28 },
-  emptyChatTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  emptyChatTitle: { fontSize: 22, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary },
   emptyChatText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22 },
 
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16,
     paddingTop: 10, paddingBottom: 14, gap: 10,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
-    backgroundColor: 'rgba(13,13,34,0.95)',
+    borderTopWidth: 1, borderTopColor: Colors.bgCardBorder,
+    backgroundColor: 'rgba(9,13,14,0.97)',
   },
   textInputWrap: {
-    flex: 1, backgroundColor: Colors.bgInput, borderRadius: 22,
+    flex: 1, backgroundColor: Colors.bgInput, borderRadius: 14,
     borderWidth: 1, borderColor: Colors.bgInputBorder,
     paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100,
   },
@@ -352,7 +354,7 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.3 },
 
   // Character counter
-  charCountRow: { alignItems: 'flex-end', paddingHorizontal: 78, paddingBottom: 2, backgroundColor: 'rgba(13,13,34,0.95)' },
+  charCountRow: { alignItems: 'flex-end', paddingHorizontal: 78, paddingBottom: 2, backgroundColor: 'rgba(9,13,14,0.97)' },
   charCountText: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
   charCountWarn: { color: Colors.gold },
 });

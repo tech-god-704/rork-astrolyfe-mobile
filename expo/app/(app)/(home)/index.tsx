@@ -1,71 +1,63 @@
-import React, { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Animated, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Sun, MessageCircle, Heart, Sparkles, BookOpen, Compass, ChevronRight, Star, TrendingUp, AlertCircle, X } from 'lucide-react-native';
+import { ArrowRight, BookOpen, ChevronRight, Compass, Heart, MessageCircle, Sparkles, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
-import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
+import { getMoonPhase, getZodiacByName } from '@/constants/zodiac';
+import { categorizeHoroscope, fetchCuratedHoroscope, getHoroscope } from '@/services/horoscope';
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
-import { getHoroscope, fetchCuratedHoroscope, categorizeHoroscope } from '@/services/horoscope';
+
+const SIGNAL_COLORS: Record<string, string> = {
+  general: Colors.gold,
+  love: Colors.accent,
+  career: Colors.teal,
+  health: Colors.success,
+};
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const moonPhase = getMoonPhase();
-  const zodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
+  const { profile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [promptDismissed, setPromptDismissed] = useState(false);
+  const reveal = useRef(new Animated.Value(0)).current;
 
-  // Try curated horoscope from Supabase, fall back to instant local generation
   const signName = profile?.zodiac_sign || 'Aries';
-  const todayKey = new Date().toDateString(); // auto-invalidate at midnight
+  const zodiac = getZodiacByName(signName);
+  const moonPhase = getMoonPhase();
+  const todayKey = new Date().toDateString();
   const localReading = useMemo(() => getHoroscope(signName, 'daily'), [signName]);
-
   const curatedQuery = useQuery({
     queryKey: ['curatedHoroscope', signName, 'daily', todayKey],
     queryFn: () => fetchCuratedHoroscope(signName, 'daily'),
     staleTime: 1000 * 60 * 30,
   });
-
   const activeReading = curatedQuery.data ?? localReading;
   const categories = useMemo(() => categorizeHoroscope(activeReading), [activeReading]);
 
-  const firstCategory = categories[0];
-  const remainingCount = categories.length - 1;
-
-  // Profile completeness check
   const profileMissing = useMemo(() => {
     if (!profile) return null;
     const missing: string[] = [];
     if (!profile.birth_date) missing.push('birth date');
     if (profile.quiz_data?.birth_hour == null) missing.push('birth time');
-    if (!profile.birth_lat || !profile.birth_lon) missing.push('birth location');
-    return missing.length > 0 ? missing : null;
+    if (!profile.birth_lat || !profile.birth_lon) missing.push('birth place');
+    return missing.length ? missing : null;
   }, [profile]);
 
-  // Animations
-  const heroOpacity = useRef(new Animated.Value(0)).current;
-  const heroTranslateY = useRef(new Animated.Value(20)).current;
-  const cardsOpacity = useRef(new Animated.Value(0)).current;
-  const cardsTranslateY = useRef(new Animated.Value(15)).current;
-
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(heroTranslateY, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
-      ]),
-      Animated.parallel([
-        Animated.timing(cardsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.spring(cardsTranslateY, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
-      ]),
-    ]).start();
-  }, []);
+    Animated.timing(reveal, { toValue: 1, duration: 460, useNativeDriver: true }).start();
+  }, [reveal]);
+
+  const navigate = useCallback((route: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    router.push(route as never);
+  }, [router]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -76,208 +68,133 @@ export default function HomeScreen() {
     }
   }, [queryClient]);
 
-  const handlePress = useCallback((route: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.push(route as never);
-  }, [router]);
-
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
+  const date = new Date();
+  const dateLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const lead = categories[0]?.content ?? activeReading.horoscope;
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]} style={StyleSheet.absoluteFillObject} />
+      <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}
         >
-          {/* Header */}
-          <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]}>
-            <View style={styles.headerText}>
-              <Text style={styles.greeting}>{greeting()}</Text>
-              <Text style={styles.userName} numberOfLines={1}>{profile?.display_name || 'Stargazer'}</Text>
+          <Animated.View
+            style={{
+              opacity: reveal,
+              transform: [{ translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+            }}
+          >
+            <View style={styles.masthead}>
+              <View>
+                <Text style={styles.date}>{dateLabel.toUpperCase()}</Text>
+                <Text style={styles.edition}>TODAY&apos;S PERSONAL EDITION</Text>
+              </View>
+              <Pressable style={styles.profileButton} onPress={() => navigate('/(app)/profile')} accessibilityLabel="Open your profile">
+                <Text style={styles.profileGlyph}>{zodiac?.symbol ?? '✦'}</Text>
+              </Pressable>
             </View>
-            <Pressable
-              onPress={() => handlePress('/(app)/profile')}
-              style={({ pressed }) => [styles.avatarBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }]}
-              accessibilityLabel="View profile"
-              accessibilityRole="button"
-            >
-              {zodiac ? (
-                <LinearGradient colors={[Colors.purple, Colors.indigoLight]} style={styles.signBadge}>
-                  <Text style={styles.signSymbol}>{zodiac.symbol}</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.signBadgePlain}>
-                  <Text style={styles.signSymbol}>?</Text>
+
+            <View style={styles.intro}>
+              <Text style={styles.greeting}>Good {date.getHours() < 12 ? 'morning' : date.getHours() < 18 ? 'afternoon' : 'evening'},</Text>
+              <Text style={styles.name}>{profile?.display_name || 'Stargazer'}.</Text>
+            </View>
+
+            <Pressable onPress={() => navigate('/(app)/horoscope')} style={({ pressed }) => [styles.leadCard, pressed && styles.pressed]}>
+              <View style={styles.leadTop}>
+                <View>
+                  <Text style={styles.leadKicker}>THE DAY AHEAD</Text>
+                  <Text style={styles.leadMeta}>{zodiac?.name ?? signName} · {moonPhase.name}</Text>
+                </View>
+                <Text style={styles.moon}>{moonPhase.emoji}</Text>
+              </View>
+              {curatedQuery.isLoading && (
+                <View style={styles.loading}>
+                  <ActivityIndicator size="small" color={Colors.paperInk} />
+                  <Text style={styles.loadingText}>Refining today&apos;s note…</Text>
                 </View>
               )}
-            </Pressable>
-          </Animated.View>
-
-          {/* Hero Horoscope Card */}
-          <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }}>
-            <Pressable onPress={() => handlePress('/(app)/horoscope')} style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-              <GlassCard variant="elevated" style={styles.heroCard}>
-                <LinearGradient
-                  colors={['rgba(124,58,237,0.15)', 'rgba(99,102,241,0.08)', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-                <View style={styles.heroTop}>
-                  <View style={styles.heroLabel}>
-                    <Sparkles size={14} color={Colors.gold} />
-                    <Text style={styles.heroLabelText}>Today's Horoscope</Text>
-                  </View>
-                  <View style={styles.moonBadge}>
-                    <Text style={styles.moonEmoji}>{moonPhase.emoji}</Text>
-                    <Text style={styles.moonText}>{moonPhase.name}</Text>
-                  </View>
+              <Text style={styles.leadQuote}>“{lead}”</Text>
+              <View style={styles.leadFooter}>
+                <Text style={styles.readTime}>2 MIN READ · {activeReading.source === 'curated' ? 'CURATED' : 'PERSONAL BASELINE'}</Text>
+                <View style={styles.readButton}>
+                  <Text style={styles.readButtonText}>Read the full forecast</Text>
+                  <ArrowRight size={15} color={Colors.paperInk} />
                 </View>
-
-                {zodiac && (
-                  <View style={styles.heroSignRow}>
-                    <Text style={styles.heroSignSymbol}>{zodiac.symbol}</Text>
-                    <Text style={styles.heroSignName}>{zodiac.name}</Text>
-                    <View style={[styles.heroElementBadge, { backgroundColor: `${zodiac.color}20` }]}>
-                      <Text style={[styles.heroElementText, { color: zodiac.color }]}>{zodiac.element}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {curatedQuery.isLoading && (
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color={Colors.purpleLight} />
-                    <Text style={styles.loadingText}>Fetching today's reading…</Text>
-                  </View>
-                )}
-
-                {firstCategory ? (
-                  <View style={styles.heroContent}>
-                    <Text style={styles.heroText} numberOfLines={4}>{firstCategory.content}</Text>
-                    {remainingCount > 0 && (
-                      <View style={styles.moreBadge}>
-                        <TrendingUp size={12} color={Colors.purpleLight} />
-                        <Text style={styles.moreCategories}>+{remainingCount} more insights</Text>
-                      </View>
-                    )}
-                  </View>
-                ) : (
-                  <View style={styles.heroContent}>
-                    <Text style={styles.heroPlaceholder}>
-                      Set your zodiac sign in your profile to receive daily readings.
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.heroFooter}>
-                  <Text style={styles.readMoreText}>Read Full Horoscope</Text>
-                  <ChevronRight size={16} color={Colors.purpleLight} />
-                </View>
-              </GlassCard>
+              </View>
             </Pressable>
-          </Animated.View>
 
-          {/* Quick Actions */}
-          <Animated.View style={{ opacity: cardsOpacity, transform: [{ translateY: cardsTranslateY }] }}>
-            <Text style={styles.sectionTitle}>Explore</Text>
-            <View style={styles.quickActions}>
-              <Pressable style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]} onPress={() => handlePress('/(app)/horoscope')}>
-                <LinearGradient colors={['rgba(251,191,36,0.12)', 'rgba(251,191,36,0.03)']} style={styles.actionGradient}>
-                  <View style={[styles.actionIconCircle, { backgroundColor: Colors.goldDim }]}>
-                    <Sun size={22} color={Colors.gold} />
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionKicker}>YOUR SKY IN 60 SECONDS</Text>
+                <Text style={styles.sectionTitle}>Signals to notice</Text>
+              </View>
+              <Sparkles size={19} color={Colors.gold} />
+            </View>
+            <View style={styles.signals}>
+              {categories.slice(0, 3).map((entry, index) => (
+                <View key={`${entry.category}-${index}`} style={[styles.signal, index > 0 && styles.signalBorder]}>
+                  <View style={[styles.signalDot, { backgroundColor: SIGNAL_COLORS[entry.category] ?? Colors.gold }]} />
+                  <View style={styles.signalCopy}>
+                    <Text style={styles.signalTitle}>{entry.title}</Text>
+                    <Text style={styles.signalText} numberOfLines={2}>{entry.content}</Text>
                   </View>
-                  <Text style={styles.actionLabel}>Daily{'\n'}Reading</Text>
-                </LinearGradient>
-              </Pressable>
-              <Pressable style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]} onPress={() => handlePress('/(app)/compatibility')}>
-                <LinearGradient colors={['rgba(244,114,182,0.12)', 'rgba(244,114,182,0.03)']} style={styles.actionGradient}>
-                  <View style={[styles.actionIconCircle, { backgroundColor: Colors.accentDim }]}>
-                    <Heart size={22} color={Colors.accent} />
-                  </View>
-                  <Text style={styles.actionLabel}>Love{'\n'}Match</Text>
-                </LinearGradient>
-              </Pressable>
-              <Pressable style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]} onPress={() => handlePress('/(app)/chat')}>
-                <LinearGradient colors={['rgba(167,139,250,0.12)', 'rgba(167,139,250,0.03)']} style={styles.actionGradient}>
-                  <View style={[styles.actionIconCircle, { backgroundColor: Colors.purpleDim }]}>
-                    <MessageCircle size={22} color={Colors.purpleLight} />
-                  </View>
-                  <Text style={styles.actionLabel}>Ask an{'\n'}Astrologer</Text>
-                </LinearGradient>
-              </Pressable>
+                  <Text style={styles.signalNumber}>0{index + 1}</Text>
+                </View>
+              ))}
             </View>
 
-            {/* Secondary row */}
-            <View style={styles.secondaryActions}>
-              <Pressable style={({ pressed }) => [styles.secondaryCard, pressed && { opacity: 0.85 }]} onPress={() => handlePress('/(app)/chart')}>
-                <GlassCard variant="subtle" style={styles.secondaryInner}>
-                  <View style={[styles.secondaryIcon, { backgroundColor: Colors.tealDim }]}>
-                    <Compass size={20} color={Colors.teal} />
-                  </View>
-                  <View style={styles.secondaryText}>
-                    <Text style={styles.secondaryTitle}>Natal Chart</Text>
-                    <Text style={styles.secondaryDesc}>View your cosmic blueprint</Text>
-                  </View>
-                  <ChevronRight size={16} color={Colors.textMuted} />
-                </GlassCard>
-              </Pressable>
+            <Pressable style={({ pressed }) => [styles.askCard, pressed && styles.pressed]} onPress={() => navigate('/(app)/chat')}>
+              <MessageCircle size={20} color={Colors.gold} />
+              <View style={styles.askCopy}>
+                <Text style={styles.askTitle}>What does this mean for you?</Text>
+                <Text style={styles.askText}>Ask an astrologer about today&apos;s reading.</Text>
+              </View>
+              <ChevronRight size={18} color={Colors.textMuted} />
+            </Pressable>
 
-              <Pressable style={({ pressed }) => [styles.secondaryCard, pressed && { opacity: 0.85 }]} onPress={() => handlePress('/(app)/insights')}>
-                <GlassCard variant="subtle" style={styles.secondaryInner}>
-                  <View style={[styles.secondaryIcon, { backgroundColor: Colors.blueDim }]}>
-                    <BookOpen size={20} color={Colors.blue} />
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionKicker}>CONTINUE EXPLORING</Text>
+                <Text style={styles.sectionTitle}>Your almanac</Text>
+              </View>
+            </View>
+            <View style={styles.library}>
+              {[
+                { title: 'Birth chart', subtitle: 'Your cosmic fingerprint', Icon: Compass, route: '/(app)/chart' },
+                { title: 'Compatibility', subtitle: 'A sun-sign relationship snapshot', Icon: Heart, route: '/(app)/compatibility' },
+                { title: 'Reading room', subtitle: 'Reports saved for deeper reflection', Icon: BookOpen, route: '/(app)/insights' },
+              ].map(({ title, subtitle, Icon, route }, index) => (
+                <Pressable key={title} style={[styles.libraryRow, index > 0 && styles.libraryBorder]} onPress={() => navigate(route)}>
+                  <View style={styles.libraryIcon}><Icon size={19} color={Colors.gold} strokeWidth={1.7} /></View>
+                  <View style={styles.libraryCopy}>
+                    <Text style={styles.libraryTitle}>{title}</Text>
+                    <Text style={styles.librarySubtitle}>{subtitle}</Text>
                   </View>
-                  <View style={styles.secondaryText}>
-                    <Text style={styles.secondaryTitle}>Cosmic Insights</Text>
-                    <Text style={styles.secondaryDesc}>Unlock deep astrological analysis</Text>
-                  </View>
-                  <ChevronRight size={16} color={Colors.textMuted} />
-                </GlassCard>
-              </Pressable>
+                  <ChevronRight size={17} color={Colors.textMuted} />
+                </Pressable>
+              ))}
             </View>
 
-            {/* Profile Completion Prompt */}
             {profileMissing && !promptDismissed && (
-              <GlassCard style={styles.profilePromptCard}>
-                <View style={styles.profilePromptRow}>
-                  <Pressable onPress={() => handlePress('/(app)/profile')} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }]}>
-                    <View style={styles.profilePromptIcon}>
-                      <AlertCircle size={18} color={Colors.gold} />
-                    </View>
-                    <View style={styles.profilePromptText}>
-                      <Text style={styles.profilePromptTitle}>Complete your profile</Text>
-                      <Text style={styles.profilePromptDesc}>
-                        Add your {profileMissing.join(', ')} for more accurate readings and charts.
-                      </Text>
-                    </View>
-                  </Pressable>
-                  <Pressable onPress={() => setPromptDismissed(true)} hitSlop={8} style={styles.dismissBtn}>
-                    <X size={14} color={Colors.textMuted} />
+              <GlassCard variant="subtle" style={styles.accuracyNote}>
+                <View style={styles.accuracyRule} />
+                <View style={styles.accuracyCopy}>
+                  <Text style={styles.accuracyLabel}>CALIBRATION NOTE</Text>
+                  <Text style={styles.accuracyText}>
+                    Adding your {profileMissing.join(', ')} will sharpen the readings that depend on houses and timing.
+                  </Text>
+                  <Pressable onPress={() => navigate('/(app)/profile')}>
+                    <Text style={styles.accuracyAction}>Improve reading accuracy</Text>
                   </Pressable>
                 </View>
+                <Pressable onPress={() => setPromptDismissed(true)} hitSlop={10}>
+                  <X size={15} color={Colors.textMuted} />
+                </Pressable>
               </GlassCard>
             )}
-
-            {/* Cosmic Tip */}
-            <GlassCard variant="glow" glowColor={Colors.gold} style={styles.tipCard}>
-              <View style={styles.tipHeader}>
-                <Star size={16} color={Colors.gold} />
-                <Text style={styles.tipTitle}>Cosmic Tip</Text>
-              </View>
-              <Text style={styles.tipContent}>
-                {zodiac
-                  ? `As a ${zodiac.name}, today's ${moonPhase.name.toLowerCase()} enhances your ${zodiac.element.toLowerCase()} energy. Stay open to new possibilities and trust your intuition.`
-                  : 'Connect with the stars by setting your zodiac sign in your profile.'}
-              </Text>
-            </GlassCard>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
@@ -288,87 +205,54 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
-
-  // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8, gap: 12 },
-  headerText: { flex: 1 },
-  greeting: { fontSize: 15, color: Colors.textMuted, fontWeight: '500' },
-  userName: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginTop: 2, letterSpacing: -0.5 },
-  avatarBtn: {},
-  signBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  signBadgePlain: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: Colors.purpleDim,
-    borderWidth: 1.5,
-    borderColor: Colors.purpleGlow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  signSymbol: { fontSize: 24, color: '#fff' },
-
-  // Hero Card
-  heroCard: { marginBottom: 24, padding: 20 },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 },
-  heroLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroLabelText: { fontSize: 13, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.8 },
-  moonBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  moonEmoji: { fontSize: 16 },
-  moonText: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
-  heroSignRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  heroSignSymbol: { fontSize: 22 },
-  heroSignName: { fontSize: 18, fontWeight: '700', color: Colors.purpleLight },
-  heroElementBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
-  heroElementText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  heroContent: {},
-  heroText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
-  heroPlaceholder: { fontSize: 15, color: Colors.textMuted, lineHeight: 22, fontStyle: 'italic' },
-  moreBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
-  moreCategories: { fontSize: 12, color: Colors.purpleLight, fontWeight: '600' },
-  heroFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 16, alignSelf: 'flex-end' },
-  readMoreText: { fontSize: 13, fontWeight: '600', color: Colors.purpleLight },
-
-  // Quick Actions
-  sectionTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.3 },
-  quickActions: { flexDirection: 'row', gap: 10, marginBottom: 12, justifyContent: 'center' },
-  actionCard: { flex: 1, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: Colors.bgCardBorder },
-  actionGradient: { paddingVertical: 18, paddingHorizontal: 14, alignItems: 'flex-start', gap: 12, minHeight: 115 },
-  actionIconCircle: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  actionLabel: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, lineHeight: 19 },
-
-  // Secondary Actions
-  secondaryActions: { gap: 10, marginBottom: 16 },
-  secondaryCard: {},
-  secondaryInner: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
-  secondaryIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  secondaryText: { flex: 1 },
-  secondaryTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  secondaryDesc: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-
-  // Loading
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  loadingText: { fontSize: 12, color: Colors.textMuted, fontWeight: '500' },
-
-  // Profile prompt
-  profilePromptCard: { marginBottom: 16 },
-  profilePromptRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  profilePromptIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
-  profilePromptText: { flex: 1 },
-  profilePromptTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold },
-  profilePromptDesc: { fontSize: 12, color: Colors.textMuted, marginTop: 2, lineHeight: 18 },
-  dismissBtn: { padding: 6, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)' },
-
-  // Cosmic Tip
-  tipCard: { marginBottom: 20 },
-  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  tipTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tipContent: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },
+  masthead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  date: { color: Colors.textPrimary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  edition: { color: Colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginTop: 5 },
+  profileButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
+  profileGlyph: { fontSize: 20, color: Colors.gold },
+  intro: { marginTop: 28, marginBottom: 24 },
+  greeting: { color: Colors.textSecondary, fontFamily: Fonts.display, fontSize: 22 },
+  name: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 38, lineHeight: 42, letterSpacing: -0.8 },
+  leadCard: { backgroundColor: Colors.paper, borderRadius: 24, padding: 22, marginBottom: 32, overflow: 'hidden' },
+  leadTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(25,29,30,0.14)' },
+  leadKicker: { color: Colors.paperInk, fontSize: 10, fontWeight: '900', letterSpacing: 1.7 },
+  leadMeta: { color: 'rgba(25,29,30,0.58)', fontSize: 12, fontWeight: '600', marginTop: 5 },
+  moon: { fontSize: 27 },
+  loading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
+  loadingText: { color: 'rgba(25,29,30,0.58)', fontSize: 11 },
+  leadQuote: { color: Colors.paperInk, fontFamily: Fonts.display, fontSize: 23, lineHeight: 33, marginVertical: 22, letterSpacing: -0.3 },
+  leadFooter: { gap: 14 },
+  readTime: { color: 'rgba(25,29,30,0.5)', fontSize: 9, fontWeight: '800', letterSpacing: 1.15 },
+  readButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  readButtonText: { color: Colors.paperInk, fontSize: 14, fontWeight: '800' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 },
+  sectionKicker: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
+  sectionTitle: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 25, letterSpacing: -0.25 },
+  signals: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, marginBottom: 22 },
+  signal: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 16 },
+  signalBorder: { borderTopWidth: 1, borderTopColor: 'rgba(241,236,226,0.08)' },
+  signalDot: { width: 7, height: 7, borderRadius: 4, marginTop: 6 },
+  signalCopy: { flex: 1 },
+  signalTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800', marginBottom: 4 },
+  signalText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  signalNumber: { color: Colors.textFaint, fontFamily: Fonts.mono, fontSize: 11 },
+  askCard: { minHeight: 76, borderRadius: 16, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 34 },
+  askCopy: { flex: 1 },
+  askTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  askText: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
+  library: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.bgCardBorder, marginBottom: 22 },
+  libraryRow: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 13 },
+  libraryBorder: { borderTopWidth: 1, borderTopColor: 'rgba(241,236,226,0.08)' },
+  libraryIcon: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: Colors.bgCardBorder, alignItems: 'center', justifyContent: 'center' },
+  libraryCopy: { flex: 1 },
+  libraryTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  librarySubtitle: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
+  accuracyNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 22 },
+  accuracyRule: { width: 2, alignSelf: 'stretch', backgroundColor: Colors.gold, borderRadius: 1 },
+  accuracyCopy: { flex: 1 },
+  accuracyLabel: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.4, marginBottom: 6 },
+  accuracyText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  accuracyAction: { color: Colors.goldLight, fontSize: 12, fontWeight: '800', marginTop: 10 },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
 });

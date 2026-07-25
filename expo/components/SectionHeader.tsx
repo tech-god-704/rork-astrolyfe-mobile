@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/theme';
 
 interface SectionHeaderProps {
   title: string;
@@ -36,10 +37,11 @@ const styles = StyleSheet.create({
   },
   left: { flex: 1 },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: Fonts.display,
+    fontWeight: '600',
     color: Colors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 13,
@@ -55,6 +57,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.purpleLight,
+    color: Colors.gold,
   },
 });
