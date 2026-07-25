@@ -2,7 +2,7 @@
   "apps": [
     {
       "name": "AstroLyfe",
-      "path": ".",
+      "path": "expo",
       "framework": "react-native"
     }
   ]
