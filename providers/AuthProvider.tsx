@@ -3,6 +3,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
+import { normalizeBirthDate } from '@/lib/validation';
 
 const ADMIN_UUID = '48355a3b-3a15-414b-9bf4-f344e98a7c19';
 
@@ -14,6 +15,8 @@ export interface QuizData {
   birth_minute?: number;
   birth_place?: string;
   country_code?: string;
+  /** Written by the web funnel as MM/DD/YYYY — normalize before use. */
+  birth_date?: string;
   [key: string]: unknown;
 }
 
@@ -103,8 +106,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         .from('profiles')
         .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, quiz_data, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
         .eq('email', email)
-        .single()
-        .abortSignal(controller.signal);
+        .abortSignal(controller.signal)
+        .maybeSingle();
 
       if (version !== fetchVersion.current) return null;
 
@@ -126,37 +129,41 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         };
       }
 
-      // Fallback: try users table (web quiz writes here before auth signup)
-      if (profileError) {
-        console.log('[Auth] No profiles row, falling back to users table');
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('email, display_name, zodiac_sign, birth_date, birth_city, birth_lat, birth_lon, quiz_data, subscription_status')
-          .eq('email', email)
-          .single()
-          .abortSignal(controller.signal);
+      // Fallback: the web quiz funnel writes public.users before auth signup, so a
+      // customer who came through the funnel may have no profiles row yet.
+      //
+      // Only select columns that actually exist on public.users. display_name,
+      // zodiac_sign, birth_city, birth_lat and birth_lon live on profiles only —
+      // asking users for them fails the whole request with Postgres 42703.
+      console.log('[Auth] No profiles row, falling back to users table');
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email, birth_date, quiz_data, subscription_status')
+        .eq('email', email)
+        .abortSignal(controller.signal)
+        .maybeSingle();
 
-        if (version !== fetchVersion.current) return null;
-        if (userError || !userData) return null;
+      if (version !== fetchVersion.current) return null;
+      if (userError || !userData) return null;
 
-        return {
-          email: userData.email,
-          display_name: userData.display_name ?? null,
-          zodiac_sign: userData.zodiac_sign ?? null,
-          birth_date: userData.birth_date ?? null,
-          birth_city: userData.birth_city ?? null,
-          birth_lat: userData.birth_lat ?? null,
-          birth_lon: userData.birth_lon ?? null,
-          quiz_data: userData.quiz_data ?? null,
-          subscription_status: userData.subscription_status ?? 'free',
-          subscription_product: null,
-          subscription_period_end: null,
-          trial_end_date: null,
-          is_admin: false,
-        };
-      }
+      const quiz = userData.quiz_data as QuizData | null;
 
-      return null;
+      return {
+        email: userData.email,
+        display_name: null,
+        zodiac_sign: null,
+        // The funnel stores the real birth date inside quiz_data as MM/DD/YYYY.
+        birth_date: normalizeBirthDate(userData.birth_date) ?? normalizeBirthDate(quiz?.birth_date),
+        birth_city: null,
+        birth_lat: null,
+        birth_lon: null,
+        quiz_data: quiz,
+        subscription_status: userData.subscription_status ?? 'free',
+        subscription_product: null,
+        subscription_period_end: null,
+        trial_end_date: null,
+        is_admin: false,
+      };
     } catch (e) {
       console.log('[Auth] Profile fetch exception:', e);
       return null;

@@ -42,6 +42,25 @@ export function parseAndValidateBirthDate(
 }
 
 /**
+ * Normalize a birth date to canonical YYYY-MM-DD.
+ *
+ * The web quiz funnel stores MM/DD/YYYY (e.g. "07/28/1997") while the app and the
+ * natal chart parser both assume YYYY-MM-DD, so funnel dates must be converted on
+ * the way in. Returns null if the value isn't a real calendar date.
+ */
+export function normalizeBirthDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+
+  const slashed = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const canonical = slashed
+    ? `${slashed[3]}-${slashed[1].padStart(2, '0')}-${slashed[2].padStart(2, '0')}`
+    : trimmed;
+
+  return parseAndValidateBirthDate(canonical) ? canonical : null;
+}
+
+/**
  * Validate geographic coordinates.
  */
 export function isValidCoordinates(lat: number, lon: number): boolean {

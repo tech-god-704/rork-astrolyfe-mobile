@@ -104,8 +104,8 @@ export async function fetchAstroReport(userEmail: string): Promise<AstroReport |
       .eq('user_email', userEmail)
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle()
-      .abortSignal(controller.signal);
+      .abortSignal(controller.signal)
+      .maybeSingle();
 
     if (error) {
       console.log('[Reports] astro_reports fetch error:', error.message);

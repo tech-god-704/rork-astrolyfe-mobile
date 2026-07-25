@@ -331,18 +331,21 @@ export default function ChatListScreen() {
     };
   }, [user?.email]);
 
-  const handleStartChat = useCallback((astrologer: Astrologer) => {
+  const openThread = useCallback((conversationId: string, astrologer: Astrologer | null) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    const id = astrologer.id || `astro-${Date.now()}`;
     router.push({
       pathname: '/chat/[conversationId]',
       params: {
-        conversationId: id,
-        name: astrologer.name ?? 'Astrologer',
-        specialty: astrologer.specialty ?? '',
+        conversationId,
+        name: astrologer?.name ?? 'Astrologer',
+        specialty: astrologer?.specialty ?? '',
       },
     } as never);
   }, [router]);
+
+  const handleStartChat = useCallback((astrologer: Astrologer) => {
+    openThread(astrologer.id || `astro-${Date.now()}`, astrologer);
+  }, [openThread]);
 
   const conversations = conversationsQuery.data ?? [];
   const astrologers = useMemo(() => astrologersQuery.data ?? [], [astrologersQuery.data]);
@@ -362,7 +365,7 @@ export default function ChatListScreen() {
     return (
       <Pressable
         style={({ pressed }) => [pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
-        onPress={() => handleOpenConversation(item)}
+        onPress={() => openThread(item.id, astrologer)}
       >
         <GlassCard variant="subtle" style={styles.convCard}>
           <View style={styles.avatarWrap}>

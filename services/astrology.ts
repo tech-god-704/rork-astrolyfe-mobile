@@ -52,7 +52,7 @@ function validateBirthData(data: BirthData): void {
 /**
  * POST to the Astrology API with retry and timeout.
  */
-async function apiPost<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
+async function apiPost<T>(endpoint: string, body: object): Promise<T> {
   const res = await fetchWithRetry(
     `${API_URL}${endpoint}`,
     {

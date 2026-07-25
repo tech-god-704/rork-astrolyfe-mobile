@@ -4,7 +4,7 @@ const STRIPE_ENDPOINT = process.env.EXPO_PUBLIC_STRIPE_ENDPOINT || 'https://astr
 
 interface PaymentIntentResponse {
   clientSecret: string;
-  paymentIntentId?: string;
+  paymentIntentId: string;
 }
 
 /**

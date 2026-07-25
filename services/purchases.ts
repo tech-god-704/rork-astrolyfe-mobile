@@ -107,14 +107,14 @@ export async function recordPurchase(
         .from('products')
         .select('slug, price')
         .eq('slug', productSlug)
-        .single()
-        .abortSignal(controller.signal),
+        .abortSignal(controller.signal)
+        .single(),
       supabase
         .from('purchases')
         .select('id')
         .eq('stripe_payment_intent_id', stripePaymentIntentId)
-        .maybeSingle()
-        .abortSignal(controller.signal),
+        .abortSignal(controller.signal)
+        .maybeSingle(),
     ]);
 
     if (productResult.error || !productResult.data) throw new Error('Product not found');

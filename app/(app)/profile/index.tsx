@@ -27,7 +27,7 @@ export default function ProfileScreen() {
   const birthRef = useRef<TextInputType>(null);
   const timeRef = useRef<TextInputType>(null);
   const cityRef = useRef<TextInputType>(null);
-  const saveMessageTimer = useRef<ReturnType<typeof setTimeout>>();
+  const saveMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     return () => {
