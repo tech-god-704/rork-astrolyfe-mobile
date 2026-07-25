@@ -144,8 +144,8 @@ export default function ProfileScreen() {
       <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">
-          <Text style={styles.eyebrow}>YOUR PERSONAL SETTINGS</Text>
-          <Text style={styles.title}>Chart calibration</Text>
+          <Text style={styles.eyebrow}>YOUR ASTROLYFE</Text>
+          <Text style={styles.title}>Cosmic profile</Text>
 
           {/* Avatar Section */}
           <View style={styles.avatarSection}>

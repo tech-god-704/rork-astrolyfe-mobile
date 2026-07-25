@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Modal } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Modal, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, KeyRound } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, KeyRound, Sparkles } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -11,7 +11,6 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
-import BrandMark from '@/components/BrandMark';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -84,12 +83,17 @@ export default function LoginScreen() {
             </Pressable>
 
             <Animated.View style={[styles.sheet, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
-              <View style={styles.brandMark}>
-                <BrandMark size={76} />
+              <View style={styles.authHero}>
+                <Image source={require('../../assets/images/icon.png')} style={styles.authHeroImage} resizeMode="cover" />
+                <LinearGradient colors={['rgba(9,5,27,0.02)', Colors.bgCardSolid]} style={StyleSheet.absoluteFillObject} />
+                <View style={styles.authBrand}>
+                  <Sparkles size={13} color={Colors.lavenderIce} />
+                  <Text style={styles.authBrandText}>ASTROLYFE</Text>
+                </View>
               </View>
-              <Text style={styles.eyebrow}>YOUR PRIVATE ALMANAC</Text>
-              <Text style={styles.title}>Welcome back{'\n'}to your sky.</Text>
-              <Text style={styles.subtitle}>Your saved readings and chart are right where you left them.</Text>
+              <Text style={styles.eyebrow}>WELCOME BACK</Text>
+              <Text style={styles.title}>Step back into{'\n'}your universe.</Text>
+              <Text style={styles.subtitle}>Your chart, conversations, and daily guidance are right where you left them.</Text>
 
               {formError && (
                 <View style={styles.formErrorRow}>
@@ -226,10 +230,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 18,
   },
-  sheet: { backgroundColor: Colors.bgCardSolid, borderRadius: 24, borderWidth: 1, borderColor: Colors.bgCardBorder, padding: 22 },
-  brandMark: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 20 },
+  sheet: {
+    backgroundColor: Colors.bgCardSolid,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(192,154,235,0.20)',
+    padding: 22,
+    overflow: 'hidden',
+  },
+  authHero: { height: 128, marginHorizontal: -22, marginTop: -22, marginBottom: 22, overflow: 'hidden' },
+  authHeroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: 180, top: -26 },
+  authBrand: { position: 'absolute', left: 22, bottom: 16, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  authBrandText: { color: Colors.lavenderIce, fontSize: 10, fontWeight: '900', letterSpacing: 2 },
   eyebrow: { fontSize: 10, color: Colors.gold, fontWeight: '800', letterSpacing: 1.8, marginBottom: 13 },
-  title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -1, lineHeight: 43 },
+  title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -1.2, lineHeight: 41 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 28, lineHeight: 22 },
   form: { marginBottom: 24 },
   fieldLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 14, letterSpacing: 0.2 },

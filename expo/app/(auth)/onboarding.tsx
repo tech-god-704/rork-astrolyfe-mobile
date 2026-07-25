@@ -117,9 +117,9 @@ export default function OnboardingScreen() {
           <Star size={30} color={Colors.purpleLight} />
         </LinearGradient>
       </View>
-      <Text style={styles.stepKicker}>SAVE YOUR ALMANAC</Text>
-      <Text style={styles.stepTitle}>Let&apos;s make this yours.</Text>
-      <Text style={styles.stepDesc}>Start with a few details so every reading knows who it&apos;s for.</Text>
+      <Text style={styles.stepKicker}>CREATE YOUR PROFILE</Text>
+      <Text style={styles.stepTitle}>First, tell us about you.</Text>
+      <Text style={styles.stepDesc}>Create the private account that will hold your chart, guidance, and conversations.</Text>
       {formError && (
         <View style={styles.formErrorRow}>
           <Text style={styles.formErrorText}>{formError}</Text>
@@ -157,13 +157,13 @@ export default function OnboardingScreen() {
   const renderStep1 = () => (
     <View style={styles.stepContent}>
       <View style={styles.stepIconWrap}>
-        <LinearGradient colors={[Colors.goldDim, 'rgba(251,191,36,0.02)']} style={styles.stepIcon}>
+        <LinearGradient colors={[Colors.goldDim, 'rgba(111,178,250,0.03)']} style={styles.stepIcon}>
           <Calendar size={30} color={Colors.gold} />
         </LinearGradient>
       </View>
-      <Text style={styles.stepKicker}>CHART CALIBRATION</Text>
-      <Text style={styles.stepTitle}>Where did your story begin?</Text>
-      <Text style={styles.stepDesc}>Your birth date and place help us read the sky you arrived under.</Text>
+      <Text style={styles.stepKicker}>BIRTH DATA</Text>
+      <Text style={styles.stepTitle}>Map your starting point.</Text>
+      <Text style={styles.stepDesc}>Your birth date and place turn a generic horoscope into something personal.</Text>
       <View style={styles.form}>
         <View style={[styles.inputGroup, focusedField === 'birth' && styles.inputGroupFocused, !!fieldErrors.birth && styles.inputGroupError]}>
           <Calendar size={18} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.gold : Colors.textMuted} />
@@ -186,9 +186,9 @@ export default function OnboardingScreen() {
 
   const renderStep2 = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepKicker}>YOUR FIRST PLACEMENT</Text>
-      <Text style={styles.stepTitle}>Meet your sun sign.</Text>
-      <Text style={styles.stepDesc}>Confirm the sign that anchors your everyday reading.</Text>
+      <Text style={styles.stepKicker}>YOUR SUN SIGN</Text>
+      <Text style={styles.stepTitle}>Your cosmic signature starts here.</Text>
+      <Text style={styles.stepDesc}>Confirm the sign that anchors your daily guidance.</Text>
       <ScrollView style={styles.signGrid} contentContainerStyle={styles.signGridContent} showsVerticalScrollIndicator={false}>
         {ZODIAC_SIGNS.map((sign) => {
           const isSelected = selectedSign === sign.name;
@@ -240,7 +240,7 @@ export default function OnboardingScreen() {
               </Pressable>
             )}
             <View style={styles.progressMeta}>
-              <Text style={styles.progressLabel}>CALIBRATION {step + 1} / 3</Text>
+              <Text style={styles.progressLabel}>PROFILE {step + 1} / 3</Text>
               <View style={styles.progressDots}>
                 {[0, 1, 2].map((i) => (
                   <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]}>

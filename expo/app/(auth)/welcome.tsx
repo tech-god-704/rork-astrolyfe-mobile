@@ -1,27 +1,27 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, LockKeyhole } from 'lucide-react-native';
+import { ArrowRight, LockKeyhole, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import CosmicBackground from '@/components/CosmicBackground';
-import BrandMark from '@/components/BrandMark';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { setSkipAuth } = useAuth();
-  const mark = useRef(new Animated.Value(0)).current;
+  const artwork = useRef(new Animated.Value(0)).current;
   const content = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.spring(mark, { toValue: 1, friction: 9, tension: 52, useNativeDriver: true }),
-      Animated.timing(content, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.spring(artwork, { toValue: 1, friction: 10, tension: 48, useNativeDriver: true }),
+      Animated.timing(content, { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
-  }, [content, mark]);
+  }, [artwork, content]);
 
   const preview = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -32,60 +32,76 @@ export default function WelcomeScreen() {
   return (
     <CosmicBackground>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.masthead}>
-          <View style={styles.brandRule} />
-          <Text style={styles.brand}>ASTROLYFE</Text>
-          <Text style={styles.edition}>A PERSONAL ALMANAC</Text>
+        <View style={styles.header}>
+          <View style={styles.wordmarkRow}>
+            <View style={styles.brandPulse} />
+            <Text style={styles.wordmark}>ASTROLYFE</Text>
+          </View>
+          <View style={styles.privatePill}>
+            <LockKeyhole size={10} color={Colors.purpleLight} />
+            <Text style={styles.privateText}>PRIVATE BY DESIGN</Text>
+          </View>
         </View>
 
-        <View style={styles.hero}>
-          <Animated.View
-            style={[
-              styles.markWrap,
-              {
-                opacity: mark,
-                transform: [
-                  { scale: mark },
-                  { rotate: mark.interpolate({ inputRange: [0, 1], outputRange: ['-16deg', '0deg'] }) },
-                ],
-              },
-            ]}
-          >
-            <BrandMark size={136} />
-            <View style={styles.issueBadge}>
-              <Text style={styles.issueNumber}>{String(new Date().getDate()).padStart(2, '0')}</Text>
-              <Text style={styles.issueMonth}>{new Date().toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</Text>
-            </View>
-          </Animated.View>
+        <Animated.View
+          style={[
+            styles.visual,
+            {
+              opacity: artwork,
+              transform: [
+                { scale: artwork.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) },
+                { translateY: artwork.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.outerGlow} />
+          <View style={styles.imageFrame}>
+            <Image source={require('../../assets/images/icon.png')} style={styles.eyeImage} resizeMode="cover" />
+            <LinearGradient
+              colors={['rgba(1,1,2,0)', 'rgba(1,1,2,0.08)', Colors.bg]}
+              locations={[0, 0.68, 1]}
+              style={StyleSheet.absoluteFillObject}
+            />
+          </View>
+          <View style={styles.signal}>
+            <Sparkles size={13} color={Colors.lavenderIce} />
+            <Text style={styles.signalText}>YOUR COSMIC PROFILE IS UNIQUE</Text>
+          </View>
+        </Animated.View>
 
-          <Animated.View
-            style={{
+        <Animated.View
+          style={[
+            styles.content,
+            {
               opacity: content,
               transform: [{ translateY: content.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-            }}
-          >
-            <Text style={styles.eyebrow}>YOUR SKY, MADE PERSONAL</Text>
-            <Text style={styles.title}>The sky is vast.{'\n'}Your reading shouldn&apos;t be.</Text>
-            <Text style={styles.subtitle}>
-              A thoughtful daily guide shaped by your birth chart, your questions, and the moment you&apos;re living.
-            </Text>
-          </Animated.View>
-        </View>
+            },
+          ]}
+        >
+          <Text style={styles.eyebrow}>PERSONAL ASTROLOGY, REIMAGINED</Text>
+          <Text style={styles.title}>Your universe.{'\n'}Decoded.</Text>
+          <Text style={styles.subtitle}>
+            Daily guidance, relationship insight, and your complete birth chart—built around you, not a generic horoscope.
+          </Text>
+        </Animated.View>
 
         <Animated.View style={[styles.actions, { opacity: content }]}>
-          <View style={styles.trustLine}>
-            <LockKeyhole size={13} color={Colors.textMuted} />
-            <Text style={styles.trustText}>Your birth details stay private and editable.</Text>
-          </View>
-
           <Pressable
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
             onPress={() => router.push('/(auth)/onboarding')}
             testID="get-started-btn"
             accessibilityRole="button"
           >
-            <Text style={styles.primaryText}>Read my sky</Text>
-            <ArrowRight size={19} color={Colors.paperInk} />
+            <LinearGradient
+              colors={[Colors.purple, '#9C47D2']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.primaryGradient}
+            >
+              <Text style={styles.primaryText}>Build my cosmic profile</Text>
+              <ArrowRight size={19} color="#FFFFFF" />
+            </LinearGradient>
           </Pressable>
 
           <Pressable
@@ -94,7 +110,7 @@ export default function WelcomeScreen() {
             testID="login-btn"
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryText}>I already have an account</Text>
+            <Text style={styles.secondaryText}>Sign in</Text>
           </Pressable>
 
           <Pressable
@@ -103,7 +119,7 @@ export default function WelcomeScreen() {
             testID="skip-btn"
             accessibilityRole="button"
           >
-            <Text style={styles.previewText}>Preview today&apos;s edition</Text>
+            <Text style={styles.previewText}>Explore as a guest</Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -114,135 +130,175 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
-  masthead: {
-    paddingTop: 14,
+  header: {
+    minHeight: 52,
+    paddingTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  brandRule: {
-    width: 24,
-    height: 1,
-    backgroundColor: Colors.gold,
-    marginRight: 10,
+  wordmarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
   },
-  brand: {
+  brandPulse: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+  },
+  wordmark: {
     color: Colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2.3,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 2.4,
   },
-  edition: {
-    marginLeft: 'auto',
+  privatePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.bgCardBorder,
+    backgroundColor: Colors.bgCard,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  privateText: {
     color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
-  hero: {
-    flex: 1,
+  visual: {
+    height: 238,
+    alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
+    marginHorizontal: -20,
   },
-  markWrap: {
-    alignSelf: 'flex-end',
-    marginBottom: 28,
-    marginRight: 8,
-  },
-  issueBadge: {
+  outerGlow: {
     position: 'absolute',
-    left: -64,
-    bottom: 2,
-    borderLeftWidth: 1,
-    borderLeftColor: Colors.bgCardBorder,
-    paddingLeft: 12,
+    width: 260,
+    height: 160,
+    borderRadius: 130,
+    backgroundColor: 'rgba(121,76,185,0.20)',
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.38,
+    shadowRadius: 44,
   },
-  issueNumber: {
-    color: Colors.textPrimary,
-    fontFamily: Fonts.display,
-    fontSize: 30,
-    lineHeight: 32,
+  imageFrame: {
+    width: '100%',
+    height: 238,
+    overflow: 'hidden',
   },
-  issueMonth: {
-    color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+  eyeImage: {
+    width: '100%',
+    height: 238,
+    transform: [{ scale: 1.05 }],
+  },
+  signal: {
+    position: 'absolute',
+    bottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(192,154,235,0.26)',
+    backgroundColor: 'rgba(9,5,27,0.88)',
+  },
+  signalText: {
+    color: Colors.purpleSoft,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.1,
+  },
+  content: {
+    paddingTop: 16,
   },
   eyebrow: {
-    color: Colors.gold,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 14,
+    color: Colors.purpleLight,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.8,
+    marginBottom: 10,
   },
   title: {
     color: Colors.textPrimary,
     fontFamily: Fonts.display,
-    fontSize: 40,
-    lineHeight: 46,
-    letterSpacing: -1,
+    fontSize: 43,
+    fontWeight: '800',
+    lineHeight: 45,
+    letterSpacing: -1.6,
   },
   subtitle: {
     color: Colors.textSecondary,
-    fontSize: 15,
-    lineHeight: 23,
-    marginTop: 18,
-    maxWidth: 340,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 13,
+    maxWidth: 350,
   },
   actions: {
-    paddingBottom: 20,
-    gap: 10,
-  },
-  trustLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    marginBottom: 4,
-  },
-  trustText: {
-    color: Colors.textMuted,
-    fontSize: 11,
+    marginTop: 'auto',
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 9,
   },
   primaryButton: {
     minHeight: 56,
-    borderRadius: 14,
-    backgroundColor: Colors.gold,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: Colors.purple,
+    shadowOpacity: 0.38,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  primaryGradient: {
+    minHeight: 56,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
   },
   primaryText: {
-    color: Colors.paperInk,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.15,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.1,
   },
   secondaryButton: {
-    minHeight: 54,
-    borderRadius: 14,
+    minHeight: 52,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: 'rgba(192,154,235,0.22)',
+    backgroundColor: 'rgba(16,9,39,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryText: {
     color: Colors.textPrimary,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   previewButton: {
-    minHeight: 42,
+    minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   previewText: {
     color: Colors.textMuted,
-    fontSize: 13,
-    textDecorationLine: 'underline',
+    fontSize: 12,
+    fontWeight: '600',
   },
   pressed: {
     opacity: 0.88,

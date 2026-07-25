@@ -31,9 +31,9 @@ export default function LoadingScreen() {
       <Animated.View style={[styles.content, { opacity, transform: [{ scale }, { rotate }] }]}>
         <BrandMark size={108} />
         <Text style={styles.wordmark}>AstroLyfe</Text>
-        <Text style={styles.status}>Opening today&apos;s almanac</Text>
+        <Text style={styles.status}>Aligning your universe</Text>
       </Animated.View>
-      <Text style={styles.meta}>YOUR SKY · YOUR MOMENT</Text>
+      <Text style={styles.meta}>PERSONAL · PRIVATE · COSMIC</Text>
     </View>
   );
 }

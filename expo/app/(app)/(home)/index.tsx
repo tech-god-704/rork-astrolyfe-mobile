@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, BookOpen, ChevronRight, Compass, Heart, MessageCircle, Sparkles, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -90,7 +91,7 @@ export default function HomeScreen() {
             <View style={styles.masthead}>
               <View>
                 <Text style={styles.date}>{dateLabel.toUpperCase()}</Text>
-                <Text style={styles.edition}>TODAY&apos;S PERSONAL EDITION</Text>
+                <Text style={styles.edition}>YOUR COSMIC WEATHER</Text>
               </View>
               <Pressable style={styles.profileButton} onPress={() => navigate('/(app)/profile')} accessibilityLabel="Open your profile">
                 <Text style={styles.profileGlyph}>{zodiac?.symbol ?? '✦'}</Text>
@@ -102,34 +103,41 @@ export default function HomeScreen() {
               <Text style={styles.name}>{profile?.display_name || 'Stargazer'}.</Text>
             </View>
 
-            <Pressable onPress={() => navigate('/(app)/horoscope')} style={({ pressed }) => [styles.leadCard, pressed && styles.pressed]}>
-              <View style={styles.leadTop}>
-                <View>
-                  <Text style={styles.leadKicker}>THE DAY AHEAD</Text>
-                  <Text style={styles.leadMeta}>{zodiac?.name ?? signName} · {moonPhase.name}</Text>
+            <Pressable onPress={() => navigate('/(app)/horoscope')} style={({ pressed }) => [styles.leadShell, pressed && styles.pressed]}>
+              <LinearGradient
+                colors={[Colors.deepViolet, Colors.bgCardSolid]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.leadCard}
+              >
+                <View style={styles.leadTop}>
+                  <View>
+                    <Text style={styles.leadKicker}>TODAY&apos;S ENERGY</Text>
+                    <Text style={styles.leadMeta}>{zodiac?.name ?? signName} · {moonPhase.name}</Text>
+                  </View>
+                  <Text style={styles.moon}>{moonPhase.emoji}</Text>
                 </View>
-                <Text style={styles.moon}>{moonPhase.emoji}</Text>
-              </View>
-              {curatedQuery.isLoading && (
-                <View style={styles.loading}>
-                  <ActivityIndicator size="small" color={Colors.paperInk} />
-                  <Text style={styles.loadingText}>Refining today&apos;s note…</Text>
+                {curatedQuery.isLoading && (
+                  <View style={styles.loading}>
+                    <ActivityIndicator size="small" color={Colors.paperInk} />
+                    <Text style={styles.loadingText}>Refining today&apos;s guidance…</Text>
+                  </View>
+                )}
+                <Text style={styles.leadQuote}>{lead}</Text>
+                <View style={styles.leadFooter}>
+                  <Text style={styles.readTime}>2 MIN READ · {activeReading.source === 'curated' ? 'CURATED' : 'PERSONAL BASELINE'}</Text>
+                  <View style={styles.readButton}>
+                    <Text style={styles.readButtonText}>Open your full forecast</Text>
+                    <ArrowRight size={15} color={Colors.paperInk} />
+                  </View>
                 </View>
-              )}
-              <Text style={styles.leadQuote}>“{lead}”</Text>
-              <View style={styles.leadFooter}>
-                <Text style={styles.readTime}>2 MIN READ · {activeReading.source === 'curated' ? 'CURATED' : 'PERSONAL BASELINE'}</Text>
-                <View style={styles.readButton}>
-                  <Text style={styles.readButtonText}>Read the full forecast</Text>
-                  <ArrowRight size={15} color={Colors.paperInk} />
-                </View>
-              </View>
+              </LinearGradient>
             </Pressable>
 
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionKicker}>YOUR SKY IN 60 SECONDS</Text>
-                <Text style={styles.sectionTitle}>Signals to notice</Text>
+                <Text style={styles.sectionKicker}>QUICK READ</Text>
+                <Text style={styles.sectionTitle}>What&apos;s active now</Text>
               </View>
               <Sparkles size={19} color={Colors.gold} />
             </View>
@@ -157,15 +165,15 @@ export default function HomeScreen() {
 
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionKicker}>CONTINUE EXPLORING</Text>
-                <Text style={styles.sectionTitle}>Your almanac</Text>
+                <Text style={styles.sectionKicker}>GO DEEPER</Text>
+                <Text style={styles.sectionTitle}>Explore your universe</Text>
               </View>
             </View>
             <View style={styles.library}>
               {[
                 { title: 'Birth chart', subtitle: 'Your cosmic fingerprint', Icon: Compass, route: '/(app)/chart' },
                 { title: 'Compatibility', subtitle: 'A sun-sign relationship snapshot', Icon: Heart, route: '/(app)/compatibility' },
-                { title: 'Reading room', subtitle: 'Reports saved for deeper reflection', Icon: BookOpen, route: '/(app)/insights' },
+                { title: 'Cosmic insights', subtitle: 'Deep-dive reports made for you', Icon: BookOpen, route: '/(app)/insights' },
               ].map(({ title, subtitle, Icon, route }, index) => (
                 <Pressable key={title} style={[styles.libraryRow, index > 0 && styles.libraryBorder]} onPress={() => navigate(route)}>
                   <View style={styles.libraryIcon}><Icon size={19} color={Colors.gold} strokeWidth={1.7} /></View>
@@ -182,7 +190,7 @@ export default function HomeScreen() {
               <GlassCard variant="subtle" style={styles.accuracyNote}>
                 <View style={styles.accuracyRule} />
                 <View style={styles.accuracyCopy}>
-                  <Text style={styles.accuracyLabel}>CALIBRATION NOTE</Text>
+                  <Text style={styles.accuracyLabel}>PROFILE ACCURACY</Text>
                   <Text style={styles.accuracyText}>
                     Adding your {profileMissing.join(', ')} will sharpen the readings that depend on houses and timing.
                   </Text>
@@ -214,7 +222,18 @@ const styles = StyleSheet.create({
   intro: { marginTop: 28, marginBottom: 24 },
   greeting: { color: Colors.textSecondary, fontFamily: Fonts.display, fontSize: 22 },
   name: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 38, lineHeight: 42, letterSpacing: -0.8 },
-  leadCard: { backgroundColor: Colors.paper, borderRadius: 24, padding: 22, marginBottom: 32, overflow: 'hidden' },
+  leadShell: {
+    borderRadius: 24,
+    marginBottom: 32,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(192,154,235,0.24)',
+    shadowColor: Colors.purple,
+    shadowOpacity: 0.24,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  leadCard: { padding: 22 },
   leadTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(218,200,242,0.16)' },
   leadKicker: { color: Colors.paperInk, fontSize: 10, fontWeight: '900', letterSpacing: 1.7 },
   leadMeta: { color: 'rgba(218,200,242,0.58)', fontSize: 12, fontWeight: '600', marginTop: 5 },

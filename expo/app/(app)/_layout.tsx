@@ -29,7 +29,7 @@ function AppTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.paper,
+        tabBarActiveTintColor: Colors.lavenderIce,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
@@ -84,7 +84,7 @@ function AppTabs() {
       <Tabs.Screen
         name="insights"
         options={{
-          title: 'Library',
+          title: 'Insights',
           tabBarIcon: ({ color, focused }) => <TabIcon Icon={BookOpen} color={color} focused={focused} />,
         }}
       />
