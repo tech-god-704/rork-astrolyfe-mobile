@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   },
   elevated: {
     backgroundColor: Colors.bgCardSolid,
-    borderColor: 'rgba(241,236,226,0.16)',
+    borderColor: 'rgba(218,200,242,0.18)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -73,8 +73,8 @@ const styles = StyleSheet.create({
     }),
   },
   subtle: {
-    backgroundColor: 'rgba(241,236,226,0.028)',
-    borderColor: 'rgba(241,236,226,0.08)',
+    backgroundColor: 'rgba(218,200,242,0.035)',
+    borderColor: 'rgba(218,200,242,0.09)',
     padding: 16,
   },
   topRule: {
@@ -83,9 +83,9 @@ const styles = StyleSheet.create({
     left: 18,
     right: 18,
     height: 1,
-    backgroundColor: 'rgba(241,236,226,0.16)',
+    backgroundColor: 'rgba(218,200,242,0.18)',
   },
   topRuleSubtle: {
-    backgroundColor: 'rgba(241,236,226,0.08)',
+    backgroundColor: 'rgba(218,200,242,0.09)',
   },
 });

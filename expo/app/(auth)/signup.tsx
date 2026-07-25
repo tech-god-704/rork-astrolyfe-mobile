@@ -11,6 +11,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail, getPasswordError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
+import BrandMark from '@/components/BrandMark';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -87,6 +88,9 @@ export default function SignupScreen() {
             </Pressable>
 
             <Animated.View style={[styles.sheet, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+              <View style={styles.brandMark}>
+                <BrandMark size={72} />
+              </View>
               <Text style={styles.eyebrow}>SAVE YOUR EDITION</Text>
               <Text style={styles.title}>Make this sky{'\n'}your own.</Text>
               <Text style={styles.subtitle}>Create a private place for your chart and personal readings.</Text>
@@ -207,6 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   sheet: { backgroundColor: Colors.bgCardSolid, borderRadius: 24, borderWidth: 1, borderColor: Colors.bgCardBorder, padding: 22 },
+  brandMark: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 18 },
   eyebrow: { fontSize: 10, color: Colors.gold, fontWeight: '800', letterSpacing: 1.8, marginBottom: 13 },
   title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '600', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -1, lineHeight: 43 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 22, lineHeight: 22 },
@@ -232,7 +237,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary },
   eyeBtn: { padding: 4, borderRadius: 12 },
-  eyeBtnActive: { backgroundColor: 'rgba(197,162,100,0.12)' },
+  eyeBtnActive: { backgroundColor: 'rgba(97,56,163,0.20)' },
   fieldError: { fontSize: 12, color: Colors.danger, marginLeft: 4, marginTop: 6 },
   formErrorRow: { backgroundColor: Colors.dangerDim, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
   formErrorText: { fontSize: 13, color: Colors.danger, fontWeight: '600' },

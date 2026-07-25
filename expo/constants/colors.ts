@@ -1,67 +1,78 @@
 const Colors = {
-  // Midnight Almanac foundations
-  bg: '#090D0E',
-  bgElevated: '#101617',
-  bgCard: 'rgba(241,236,226,0.055)',
-  bgCardSolid: '#151B1D',
-  bgCardBorder: 'rgba(241,236,226,0.12)',
-  bgCardHover: 'rgba(241,236,226,0.09)',
-  bgInput: 'rgba(241,236,226,0.065)',
-  bgInputBorder: 'rgba(241,236,226,0.14)',
-  bgInputFocused: 'rgba(197,162,100,0.08)',
-  bgInputFocusedBorder: 'rgba(197,162,100,0.58)',
-  paper: '#F1ECE2',
-  paperInk: '#191D1E',
+  // Palette sampled from the AstroLyfe galaxy-eye artwork.
+  black: '#010102',
+  blackViolet: '#050311',
+  deepViolet: '#150C33',
+  ultraviolet: '#6138A3',
+  violetBright: '#9662C6',
+  lavender: '#C09AEB',
+  lavenderIce: '#EDE4FD',
+  electricBlue: '#6FB2FA',
+  nebulaMagenta: '#D994F2',
 
-  // Brass is the primary instrument accent. Legacy names remain so every
-  // existing feature inherits the new system without visual drift.
-  purple: '#B78D4E',
-  purpleLight: '#D9BD82',
-  purpleSoft: '#E7D7B4',
-  purpleDim: 'rgba(197,162,100,0.14)',
-  purpleGlow: 'rgba(197,162,100,0.40)',
-  purpleDeep: '#8E6938',
+  bg: '#010102',
+  bgElevated: '#050311',
+  bgCard: 'rgba(218,200,242,0.055)',
+  bgCardSolid: '#09051B',
+  bgCardBorder: 'rgba(218,200,242,0.14)',
+  bgCardHover: 'rgba(218,200,242,0.10)',
+  bgInput: 'rgba(218,200,242,0.07)',
+  bgInputBorder: 'rgba(218,200,242,0.16)',
+  bgInputFocused: 'rgba(97,56,163,0.16)',
+  bgInputFocusedBorder: 'rgba(192,154,235,0.68)',
+  paper: '#100927',
+  paperInk: '#FEFCFF',
 
-  // Oxidized metal / cool data accent
-  indigo: '#55777B',
-  indigoLight: '#7FA0A4',
+  // Primary ultraviolet family.
+  purple: '#6138A3',
+  purpleLight: '#B993E1',
+  purpleSoft: '#DAC8F2',
+  purpleDim: 'rgba(97,56,163,0.19)',
+  purpleGlow: 'rgba(150,98,198,0.48)',
+  purpleDeep: '#3B2171',
 
-  // Venus rose
-  accent: '#C98AA4',
-  accentLight: '#DEADC0',
-  accentDim: 'rgba(201,138,164,0.13)',
-  accentGlow: 'rgba(201,138,164,0.3)',
+  // Electric blue from the galaxy highlights.
+  indigo: '#3B51C4',
+  indigoLight: '#6FB2FA',
+
+  // Magenta nebula accent.
+  accent: '#D994F2',
+  accentLight: '#EDC6FB',
+  accentDim: 'rgba(217,148,242,0.14)',
+  accentGlow: 'rgba(217,148,242,0.32)',
 
   // Status Colors
-  gold: '#E3B452',
-  goldLight: '#EBD08B',
-  goldDim: 'rgba(227,180,82,0.13)',
-  teal: '#7FAABD',
-  tealDim: 'rgba(127,170,189,0.13)',
-  success: '#7E9C80',
-  successDim: 'rgba(126,156,128,0.14)',
-  danger: '#D76B58',
-  dangerDim: 'rgba(215,107,88,0.12)',
-  blue: '#7FAABD',
-  blueDim: 'rgba(127,170,189,0.13)',
+  // Legacy aliases retained for compatibility with category components.
+  // They intentionally resolve to violet—there is no yellow/gold UI accent.
+  gold: '#9662C6',
+  goldLight: '#C09AEB',
+  goldDim: 'rgba(150,98,198,0.15)',
+  teal: '#6FB2FA',
+  tealDim: 'rgba(111,178,250,0.14)',
+  success: '#61D1B7',
+  successDim: 'rgba(97,209,183,0.14)',
+  danger: '#FF647C',
+  dangerDim: 'rgba(255,100,124,0.12)',
+  blue: '#6FB2FA',
+  blueDim: 'rgba(111,178,250,0.14)',
 
   // Text
-  textPrimary: '#F1ECE2',
-  textSecondary: 'rgba(241,236,226,0.72)',
-  textMuted: 'rgba(241,236,226,0.46)',
-  textFaint: 'rgba(241,236,226,0.24)',
-  textInverse: '#191D1E',
+  textPrimary: '#FEFCFF',
+  textSecondary: 'rgba(237,228,253,0.76)',
+  textMuted: 'rgba(218,200,242,0.50)',
+  textFaint: 'rgba(218,200,242,0.27)',
+  textInverse: '#05020C',
 
   // Gradients
-  gradientStart: '#1A2223',
-  gradientMid: '#101718',
-  gradientEnd: '#090D0E',
+  gradientStart: '#150C33',
+  gradientMid: '#09051B',
+  gradientEnd: '#010102',
 
   // Shadows & Overlays
-  shadowPurple: 'rgba(197,162,100,0.18)',
-  shadowDark: 'rgba(0,0,0,0.45)',
-  overlay: 'rgba(9,13,14,0.78)',
-  overlayLight: 'rgba(9,13,14,0.38)',
+  shadowPurple: 'rgba(121,76,185,0.30)',
+  shadowDark: 'rgba(0,0,0,0.62)',
+  overlay: 'rgba(1,1,2,0.82)',
+  overlayLight: 'rgba(1,1,2,0.42)',
 };
 
 export default Colors;

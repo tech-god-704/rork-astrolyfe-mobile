@@ -121,7 +121,7 @@ export default function AppTabLayout() {
 
 const tabStyles = StyleSheet.create({
   background: {
-    backgroundColor: 'rgba(12,17,18,0.97)',
+    backgroundColor: 'rgba(2,1,6,0.98)',
   },
   topBorder: {
     position: 'absolute',
@@ -129,7 +129,7 @@ const tabStyles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(241,236,226,0.12)',
+    backgroundColor: 'rgba(218,200,242,0.15)',
   },
   iconWrap: {
     width: 38,
@@ -139,7 +139,7 @@ const tabStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWrapActive: {
-    backgroundColor: 'rgba(197,162,100,0.13)',
+    backgroundColor: 'rgba(97,56,163,0.24)',
   },
   bearing: {
     position: 'absolute',

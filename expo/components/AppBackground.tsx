@@ -14,7 +14,7 @@ export default function AppBackground({ quiet = false }: { quiet?: boolean }) {
       />
       {!quiet && (
         <>
-          <View style={styles.brassGlow} />
+          <View style={styles.violetGlow} />
           <View style={styles.coolGlow} />
           <View style={styles.orbitLarge} />
           <View style={styles.orbitSmall} />
@@ -29,14 +29,14 @@ export default function AppBackground({ quiet = false }: { quiet?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  brassGlow: {
+  violetGlow: {
     position: 'absolute',
     width: 330,
     height: 330,
     borderRadius: 165,
     top: -180,
     right: -120,
-    backgroundColor: 'rgba(197,162,100,0.08)',
+    backgroundColor: 'rgba(97,56,163,0.20)',
   },
   coolGlow: {
     position: 'absolute',
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     bottom: -170,
     left: -110,
-    backgroundColor: 'rgba(111,143,147,0.055)',
+    backgroundColor: 'rgba(111,178,250,0.075)',
   },
   orbitLarge: {
     position: 'absolute',
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     height: 360,
     borderRadius: 180,
     borderWidth: 1,
-    borderColor: 'rgba(241,236,226,0.055)',
+    borderColor: 'rgba(218,200,242,0.07)',
     right: -205,
     top: 54,
     transform: [{ scaleY: 0.62 }, { rotate: '-12deg' }],
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     height: 164,
     borderRadius: 82,
     borderWidth: 1,
-    borderColor: 'rgba(197,162,100,0.11)',
+    borderColor: 'rgba(192,154,235,0.17)',
     right: -58,
     top: 116,
     transform: [{ scaleY: 0.62 }, { rotate: '-12deg' }],
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     height: 170,
     right: 47,
     top: 70,
-    backgroundColor: 'rgba(241,236,226,0.045)',
+    backgroundColor: 'rgba(218,200,242,0.06)',
     transform: [{ rotate: '22deg' }],
   },
   starA: {
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 2,
-    backgroundColor: 'rgba(227,180,82,0.62)',
+    backgroundColor: 'rgba(217,148,242,0.74)',
     top: 118,
     left: 42,
   },
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: 'rgba(241,236,226,0.48)',
+    backgroundColor: 'rgba(218,200,242,0.52)',
     top: 205,
     left: 112,
   },
