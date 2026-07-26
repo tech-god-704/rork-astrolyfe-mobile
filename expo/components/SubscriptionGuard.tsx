@@ -75,6 +75,7 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
             style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
             onPress={() => Linking.openURL(WEB_CHECKOUT_URL)}
             accessibilityRole="link"
+            accessibilityLabel="Begin seven-day introductory access for one dollar"
           >
             <View>
               <Text style={styles.ctaKicker}>7-DAY INTRODUCTORY ACCESS</Text>
@@ -84,7 +85,14 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
           </Pressable>
           <Text style={styles.disclaimer}>Secure checkout opens in your browser. Cancel anytime.</Text>
 
-          <Pressable style={styles.restore} onPress={restore} disabled={restoring}>
+          <Pressable
+            style={({ pressed }) => [styles.restore, pressed && !restoring && styles.restorePressed]}
+            onPress={restore}
+            disabled={restoring}
+            accessibilityRole="button"
+            accessibilityLabel="Restore existing access"
+            accessibilityState={{ disabled: restoring, busy: restoring }}
+          >
             {restoring ? (
               <ActivityIndicator color={Colors.textMuted} size="small" />
             ) : (
@@ -131,5 +139,6 @@ const styles = StyleSheet.create({
   disclaimer: { color: Colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 10 },
   restore: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
   restoreText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
+  restorePressed: { opacity: 0.7 },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
 });

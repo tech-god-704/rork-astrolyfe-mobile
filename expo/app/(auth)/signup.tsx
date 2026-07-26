@@ -74,15 +74,15 @@ export default function SignupScreen() {
     },
   });
 
-  const isValid = email.trim() && password.trim() && displayName.trim();
+  const isValid = Boolean(email.trim() && password.trim() && displayName.trim());
 
   return (
     <View style={styles.container}>
       <AppBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]} testID="back-btn" hitSlop={8}>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]} testID="back-btn" hitSlop={8} accessibilityRole="button" accessibilityLabel="Back">
               <ArrowLeft size={22} color={Colors.textPrimary} />
             </Pressable>
 
@@ -100,7 +100,7 @@ export default function SignupScreen() {
               <Text style={styles.subtitle}>One private space for your chart, daily guidance, and cosmic conversations.</Text>
 
               {formError && (
-                <View style={styles.formErrorRow}>
+                <View style={styles.formErrorRow} accessibilityLiveRegion="polite">
                   <Text style={styles.formErrorText}>{formError}</Text>
                 </View>
               )}
@@ -117,11 +117,14 @@ export default function SignupScreen() {
                     value={displayName}
                     onChangeText={(t) => { setDisplayName(t); if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined })); }}
                     autoCapitalize="words"
+                    autoComplete="name"
+                    textContentType="name"
                     returnKeyType="next"
                     onSubmitEditing={() => emailRef.current?.focus()}
                     onFocus={() => setFocusedField('name')}
                     onBlur={() => setFocusedField(null)}
                     testID="name-input"
+                    accessibilityLabel="Your name"
                   />
                 </View>
                 {fieldErrors.name && <Text style={styles.fieldError}>{fieldErrors.name}</Text>}
@@ -139,11 +142,14 @@ export default function SignupScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     testID="email-input"
+                    accessibilityLabel="Email address"
                   />
                 </View>
                 {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
@@ -159,13 +165,16 @@ export default function SignupScreen() {
                     value={password}
                     onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
                     secureTextEntry={!showPassword}
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                     returnKeyType="go"
                     onSubmitEditing={() => { if (isValid) signupMutation.mutate(); }}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     testID="password-input"
+                    accessibilityLabel="Password"
                   />
-                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={[styles.eyeBtn, showPassword && styles.eyeBtnActive]}>
+                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10} style={[styles.eyeBtn, showPassword && styles.eyeBtnActive]} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
                     {showPassword ? <EyeOff size={18} color={Colors.purpleLight} /> : <Eye size={18} color={Colors.textMuted} />}
                   </Pressable>
                 </View>
@@ -177,17 +186,19 @@ export default function SignupScreen() {
                 onPress={() => signupMutation.mutate()}
                 disabled={signupMutation.isPending || !isValid}
                 testID="signup-submit-btn"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: signupMutation.isPending || !isValid, busy: signupMutation.isPending }}
               >
                 <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGradient}>
                   {signupMutation.isPending ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.signupBtnText}>Create Account</Text>
+                    <Text style={styles.signupBtnText}>Create my account</Text>
                   )}
                 </LinearGradient>
               </Pressable>
 
-              <Pressable onPress={() => router.push('/(auth)/login')} style={styles.loginLink}>
+              <Pressable onPress={() => router.push('/(auth)/login')} style={styles.loginLink} accessibilityRole="link">
                 <Text style={styles.loginText}>Already have an account? <Text style={styles.loginTextBold}>Log in</Text></Text>
               </Pressable>
             </Animated.View>

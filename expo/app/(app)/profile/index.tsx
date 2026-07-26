@@ -203,7 +203,7 @@ export default function ProfileScreen() {
           </LinearGradient>
 
           <View style={styles.profileActions}>
-            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/chart')}>
+            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/chart')} accessibilityRole="button" accessibilityLabel="Open your birth chart">
               <View style={styles.profileActionIcon}>
                 <Compass size={18} color={Colors.lavenderIce} />
               </View>
@@ -213,7 +213,7 @@ export default function ProfileScreen() {
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/compatibility')}>
+            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/compatibility')} accessibilityRole="button" accessibilityLabel="Open compatibility">
               <View style={[styles.profileActionIcon, styles.profileActionIconAccent]}>
                 <Heart size={18} color={Colors.accentLight} />
               </View>
@@ -239,10 +239,13 @@ export default function ProfileScreen() {
                 onChangeText={setDisplayName}
                 placeholder="Your name"
                 placeholderTextColor={Colors.textMuted}
+                autoComplete="name"
+                textContentType="name"
                 returnKeyType="next"
                 onSubmitEditing={() => birthRef.current?.focus()}
                 onFocus={() => setFocusedField('name')}
                 onBlur={() => setFocusedField(null)}
+                accessibilityLabel="Name"
               />
             </View>
 
@@ -256,10 +259,13 @@ export default function ProfileScreen() {
                 onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+                autoComplete="birthdate-full"
                 returnKeyType="next"
                 onSubmitEditing={() => timeRef.current?.focus()}
                 onFocus={() => setFocusedField('birth')}
                 onBlur={() => setFocusedField(null)}
+                accessibilityLabel="Birth date"
               />
             </View>
             {fieldErrors.birth && <Text style={styles.fieldError}>{fieldErrors.birth}</Text>}
@@ -274,10 +280,12 @@ export default function ProfileScreen() {
                 onChangeText={(t) => { setBirthTime(t); if (fieldErrors.time) setFieldErrors((p) => ({ ...p, time: undefined })); }}
                 placeholder="HH:MM (24hr, e.g. 14:30)"
                 placeholderTextColor={Colors.textMuted}
+                keyboardType="numbers-and-punctuation"
                 returnKeyType="next"
                 onSubmitEditing={() => cityRef.current?.focus()}
                 onFocus={() => setFocusedField('time')}
                 onBlur={() => setFocusedField(null)}
+                accessibilityLabel="Birth time"
               />
             </View>
             {fieldErrors.time && <Text style={styles.fieldError}>{fieldErrors.time}</Text>}
@@ -292,9 +300,11 @@ export default function ProfileScreen() {
                 onChangeText={setBirthCity}
                 placeholder="City, State/Country"
                 placeholderTextColor={Colors.textMuted}
+                autoCapitalize="words"
                 returnKeyType="done"
                 onFocus={() => setFocusedField('city')}
                 onBlur={() => setFocusedField(null)}
+                accessibilityLabel="Birth city"
               />
             </View>
 
@@ -305,11 +315,14 @@ export default function ProfileScreen() {
                 return (
                   <Pressable
                     key={sign.name}
-                    style={[styles.signChip, isSelected && { backgroundColor: `${sign.color}15`, borderColor: sign.color }]}
+                    style={({ pressed }) => [styles.signChip, isSelected && { backgroundColor: `${sign.color}15`, borderColor: sign.color }, pressed && styles.signChipPressed]}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                       setSelectedSign(sign.name);
                     }}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${sign.name} zodiac sign`}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[styles.signChipSymbol, isSelected && { fontSize: 18 }]}>{sign.symbol}</Text>
                     <Text style={[styles.signChipLabel, isSelected && { color: sign.color }]}>{sign.name}</Text>
@@ -325,7 +338,7 @@ export default function ProfileScreen() {
           </GlassCard>
 
           {saveMessage && (
-            <View style={[styles.saveMessageRow, saveMessage.type === 'success' ? styles.saveMessageSuccess : styles.saveMessageError]}>
+            <View style={[styles.saveMessageRow, saveMessage.type === 'success' ? styles.saveMessageSuccess : styles.saveMessageError]} accessibilityLiveRegion="polite">
               <Text style={[styles.saveMessageText, { color: saveMessage.type === 'success' ? Colors.success : Colors.danger }]}>{saveMessage.text}</Text>
             </View>
           )}
@@ -337,6 +350,9 @@ export default function ProfileScreen() {
               updateMutation.mutate();
             }}
             disabled={updateMutation.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Update my cosmic profile"
+            accessibilityState={{ disabled: updateMutation.isPending, busy: updateMutation.isPending }}
           >
             <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnInner}>
               {updateMutation.isPending ? (
@@ -350,7 +366,7 @@ export default function ProfileScreen() {
             </LinearGradient>
           </Pressable>
 
-          <Pressable style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.8 }]} onPress={handleSignOut}>
+          <Pressable style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.8 }]} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out of AstroLyfe">
             <LogOut size={17} color={Colors.danger} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </Pressable>
@@ -437,6 +453,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.bgInputBorder,
   },
+  signChipPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
   signChipSymbol: { fontSize: 15 },
   signChipLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 2 },

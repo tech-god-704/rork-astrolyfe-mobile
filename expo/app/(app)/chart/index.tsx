@@ -429,7 +429,13 @@ export default function ChartScreen() {
                 const color = PLANET_COLORS[p.name] ?? Colors.purpleLight;
                 const isExpanded = expandedPlanet === p.name;
                 return (
-                  <Pressable key={p.name} onPress={() => togglePlanet(p.name)}>
+                  <Pressable
+                    key={p.name}
+                    onPress={() => togglePlanet(p.name)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${p.name} in ${p.sign}, ${ordinal(p.house)} house`}
+                    accessibilityState={{ expanded: isExpanded }}
+                  >
                     <GlassCard style={[styles.planetRow, isExpanded && { borderColor: `${color}30` }]}>
                       <View style={[styles.planetIconCircle, { backgroundColor: `${color}18` }]}>
                         <Text style={[styles.planetSymbol, { color }]}>{PLANET_SYMBOLS[p.name] ?? ''}</Text>
@@ -474,7 +480,13 @@ export default function ChartScreen() {
                     const c1 = PLANET_COLORS[asp.planet1] ?? Colors.purpleLight;
                     const c2 = PLANET_COLORS[asp.planet2] ?? Colors.purpleLight;
                     return (
-                      <Pressable key={i} onPress={() => toggleAspect(i)}>
+                      <Pressable
+                        key={i}
+                        onPress={() => toggleAspect(i)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${asp.planet1} ${style.label} ${asp.planet2}`}
+                        accessibilityState={{ expanded: isExpanded }}
+                      >
                         <GlassCard style={[styles.aspectRow, isExpanded && { borderColor: `${style.color}30` }]}>
                           <View style={styles.aspectPlanets}>
                             <Text style={[styles.aspectPlanetSymbol, { color: c1 }]}>

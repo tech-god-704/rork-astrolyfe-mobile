@@ -57,7 +57,7 @@ export default function WelcomeScreen() {
         >
           <View style={styles.outerGlow} />
           <View style={styles.imageFrame}>
-            <Image source={require('../../assets/images/icon.png')} style={styles.eyeImage} resizeMode="cover" />
+            <Image source={require('../../assets/images/icon.png')} style={styles.eyeImage} resizeMode="cover" accessible accessibilityLabel="AstroLyfe cosmic eye" />
             <LinearGradient
               colors={['rgba(1,1,2,0)', 'rgba(1,1,2,0.08)', Colors.bg]}
               locations={[0, 0.68, 1]}
@@ -92,6 +92,7 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/(auth)/onboarding')}
             testID="get-started-btn"
             accessibilityRole="button"
+            accessibilityLabel="Build my cosmic profile"
           >
             <LinearGradient
               colors={[Colors.purple, '#9C47D2']}
@@ -109,6 +110,7 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/(auth)/login')}
             testID="login-btn"
             accessibilityRole="button"
+            accessibilityLabel="Sign in to AstroLyfe"
           >
             <Text style={styles.secondaryText}>Sign in</Text>
           </Pressable>
@@ -118,6 +120,7 @@ export default function WelcomeScreen() {
             onPress={preview}
             testID="skip-btn"
             accessibilityRole="button"
+            accessibilityLabel="Explore AstroLyfe as a guest"
           >
             <Text style={styles.previewText}>Explore as a guest</Text>
           </Pressable>
