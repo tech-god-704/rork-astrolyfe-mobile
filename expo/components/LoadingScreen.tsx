@@ -9,9 +9,10 @@ export default function LoadingScreen() {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
   const rotation = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const entrance = Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 320, useNativeDriver: true }),
       Animated.spring(scale, { toValue: 1, friction: 10, tension: 55, useNativeDriver: true }),
       Animated.timing(rotation, {
@@ -20,18 +21,37 @@ export default function LoadingScreen() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start();
-  }, [opacity, rotation, scale]);
+    ]);
+    const breathing = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 760, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.45, duration: 760, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    entrance.start();
+    breathing.start();
+    return () => {
+      entrance.stop();
+      breathing.stop();
+    };
+  }, [opacity, pulse, rotation, scale]);
 
   const rotate = rotation.interpolate({ inputRange: [0, 1], outputRange: ['-18deg', '0deg'] });
 
   return (
     <View style={styles.container}>
       <AppBackground />
-      <Animated.View style={[styles.content, { opacity, transform: [{ scale }, { rotate }] }]}>
+      <Animated.View
+        style={[styles.content, { opacity, transform: [{ scale }, { rotate }] }]}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Loading AstroLyfe"
+      >
         <BrandMark size={108} />
         <Text style={styles.wordmark}>AstroLyfe</Text>
-        <Text style={styles.status}>Aligning your universe</Text>
+        <View style={styles.statusRow}>
+          <Animated.View style={[styles.statusDot, { opacity: pulse, transform: [{ scale: pulse }] }]} />
+          <Text style={styles.status}>Aligning your universe</Text>
+        </View>
       </Animated.View>
       <Text style={styles.meta}>PERSONAL · PRIVATE · COSMIC</Text>
     </View>
@@ -55,11 +75,25 @@ const styles = StyleSheet.create({
     marginTop: 24,
     letterSpacing: -0.8,
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+  },
   status: {
     color: Colors.textMuted,
     fontSize: 13,
     letterSpacing: 0.5,
-    marginTop: 10,
   },
   meta: {
     position: 'absolute',

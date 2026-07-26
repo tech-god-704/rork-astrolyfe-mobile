@@ -19,7 +19,7 @@ export default function SectionHeader({ title, subtitle, action, onAction }: Sec
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
       {action && onAction && (
-        <Pressable onPress={onAction} style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}>
+        <Pressable onPress={onAction} style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel={action}>
           <Text style={styles.actionText}>{action}</Text>
           <ChevronRight size={14} color={Colors.purpleLight} />
         </Pressable>

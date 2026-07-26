@@ -229,6 +229,9 @@ export default function CompatibilityScreen() {
                       pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
                     ]}
                     onPress={() => handleSignSelect(sign.name)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Compare with ${sign.name}`}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[styles.signGridSymbol, isSelected && { fontSize: 24 }]}>{sign.symbol}</Text>
                     <Text style={[styles.signGridLabel, isSelected && { color: sign.color, fontWeight: '700' }]}>{sign.name}</Text>
@@ -336,7 +339,7 @@ export default function CompatibilityScreen() {
                 {(['overview', 'details', 'advice'] as const).map((tab) => (
                   <Pressable
                     key={tab}
-                    style={[styles.tab, activeTab === tab && styles.tabActive]}
+                    style={({ pressed }) => [styles.tab, activeTab === tab && styles.tabActive, pressed && { opacity: 0.75 }]}
                     onPress={() => {
                       if (activeTab === tab) return;
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -345,6 +348,8 @@ export default function CompatibilityScreen() {
                         Animated.timing(tabAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
                       });
                     }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: activeTab === tab }}
                   >
                     <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                       {tab === 'overview' ? 'Overview' : tab === 'details' ? 'Breakdown' : 'Advice'}
@@ -424,7 +429,13 @@ export default function CompatibilityScreen() {
                     const IconComp = meta.Icon;
 
                     return (
-                      <Pressable key={key} onPress={() => toggleCategory(key)}>
+                      <Pressable
+                        key={key}
+                        onPress={() => toggleCategory(key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${meta.label} compatibility, ${cat.score} percent`}
+                        accessibilityState={{ expanded: isExpanded }}
+                      >
                         <GlassCard style={[styles.categoryCard, isExpanded && { borderColor: `${meta.color}30` }]}>
                           <View style={styles.categoryHeader}>
                             <View style={[styles.categoryIconCircle, { backgroundColor: `${meta.color}15` }]}>

@@ -203,6 +203,9 @@ function AstrologerCardLarge({ astrologer, onPress, disabled }: {
       style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={`Consult ${astrologer.name ?? 'astrologer'}, ${profile.title}, ${astrologer.is_online ? 'available now' : 'away'}`}
+      accessibilityState={{ disabled }}
     >
       <GlassCard variant="elevated" style={styles.expertCard}>
         <View style={styles.expertHeader}>
@@ -388,6 +391,8 @@ export default function ChatListScreen() {
       <Pressable
         style={({ pressed }) => [pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
         onPress={() => openThread(item.id, astrologer)}
+        accessibilityRole="button"
+        accessibilityLabel={`Open conversation with ${astrologer?.name ?? 'your astrologer'}`}
       >
         <GlassCard variant="subtle" style={styles.convCard}>
           <View style={styles.avatarWrap}>
@@ -438,11 +443,14 @@ export default function ChatListScreen() {
             return (
               <Pressable
                 key={key}
-                style={[styles.focusChip, isActive && styles.focusChipActive]}
+                style={({ pressed }) => [styles.focusChip, isActive && styles.focusChipActive, pressed && styles.focusChipPressed]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   setSelectedFocus(key);
                 }}
+                accessibilityRole="tab"
+                accessibilityLabel={`${label} focus`}
+                accessibilityState={{ selected: isActive }}
               >
                 <Icon size={14} color={isActive ? '#FFFFFF' : Colors.textMuted} />
                 <Text style={[styles.focusChipText, isActive && styles.focusChipTextActive]}>{label}</Text>
@@ -452,7 +460,10 @@ export default function ChatListScreen() {
         </ScrollView>
 
         {conversationsQuery.isLoading ? (
-          <ActivityIndicator color={Colors.purple} style={styles.loader} />
+          <View style={styles.loadingState} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={Colors.purpleLight} />
+            <Text style={styles.loadingStateText}>Opening your conversations…</Text>
+          </View>
         ) : conversations.length > 0 ? (
           <FlatList
             data={conversations}
@@ -556,9 +567,12 @@ const styles = StyleSheet.create({
   focusContent: { paddingHorizontal: 20, gap: 8 },
   focusChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)' },
   focusChipActive: { backgroundColor: 'rgba(150,98,198,0.34)', borderColor: 'rgba(218,200,242,0.34)' },
+  focusChipPressed: { opacity: 0.76 },
   focusChipText: { color: Colors.textMuted, fontSize: 12, fontWeight: '700' },
   focusChipTextActive: { color: '#FFFFFF' },
   loader: { marginTop: 40 },
+  loadingState: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 52 },
+  loadingStateText: { color: Colors.textMuted, fontSize: 12 },
   listContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 100 },
   emptyListContent: { paddingHorizontal: 20, paddingBottom: 100 },
 

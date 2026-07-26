@@ -151,7 +151,7 @@ export default function InsightsScreen() {
 
           <Text style={styles.sectionLabel}>Core tools</Text>
           <View style={styles.discoveryRow}>
-            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && { opacity: 0.78 }]} onPress={() => router.push('/(app)/chart')}>
+            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && styles.cardPressed]} onPress={() => router.push('/(app)/chart')} accessibilityRole="button" accessibilityLabel="Open your birth chart">
               <Compass size={20} color={Colors.gold} />
               <View style={styles.discoveryCopy}>
                 <Text style={styles.discoveryTitle}>Birth chart</Text>
@@ -159,7 +159,7 @@ export default function InsightsScreen() {
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && { opacity: 0.78 }]} onPress={() => router.push('/(app)/compatibility')}>
+            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && styles.cardPressed]} onPress={() => router.push('/(app)/compatibility')} accessibilityRole="button" accessibilityLabel="Open compatibility">
               <Heart size={20} color={Colors.accent} />
               <View style={styles.discoveryCopy}>
                 <Text style={styles.discoveryTitle}>Compatibility</Text>
@@ -171,7 +171,7 @@ export default function InsightsScreen() {
 
           <Text style={styles.sectionLabel}>Personal reports</Text>
           {productsQuery.isLoading ? (
-            <View style={styles.loaderWrap}>
+            <View style={styles.loaderWrap} accessibilityLiveRegion="polite">
               <ActivityIndicator color={Colors.purple} />
               <Text style={styles.loaderText}>Loading your insights…</Text>
             </View>
@@ -232,6 +232,8 @@ export default function InsightsScreen() {
                             );
                           }
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${reportBySlug.has(product.slug) ? 'Read' : 'View'} ${product.name}`}
                       >
                         <BookOpen size={14} color={Colors.success} />
                         <Text style={styles.viewBtnText}>
@@ -243,6 +245,8 @@ export default function InsightsScreen() {
                       <Pressable
                         style={({ pressed }) => [styles.purchaseBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
                         onPress={() => handlePurchase(product)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Unlock ${product.name} for ${product.price} dollars`}
                       >
                         <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.purchaseBtnInner}>
                           <ShoppingCart size={15} color="#fff" />
@@ -277,7 +281,7 @@ export default function InsightsScreen() {
                   {viewingReport ? (REPORT_META[viewingReport.report_type]?.title ?? 'Report') : ''}
                 </Text>
               </View>
-              <Pressable style={styles.modalClose} onPress={() => setViewingReport(null)}>
+              <Pressable style={({ pressed }) => [styles.modalClose, pressed && styles.cardPressed]} onPress={() => setViewingReport(null)} accessibilityRole="button" accessibilityLabel="Close report">
                 <X size={20} color={Colors.textPrimary} />
               </Pressable>
             </View>
@@ -315,6 +319,7 @@ function stripHtml(html: string): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
+  cardPressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
 

@@ -89,7 +89,7 @@ export default function HomeScreen() {
                 <Text style={styles.date}>{dateLabel.toUpperCase()}</Text>
                 <Text style={styles.edition}>YOUR COSMIC WEATHER</Text>
               </View>
-              <Pressable style={styles.profileButton} onPress={() => navigate('/(app)/profile')} accessibilityLabel="Open your profile">
+              <Pressable style={({ pressed }) => [styles.profileButton, pressed && styles.profileButtonPressed]} onPress={() => navigate('/(app)/profile')} accessibilityRole="button" accessibilityLabel="Open your profile">
                 <Text style={styles.profileGlyph}>{zodiac?.symbol ?? '✦'}</Text>
               </Pressable>
             </View>
@@ -122,7 +122,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <Pressable onPress={() => navigate('/(app)/horoscope')} style={({ pressed }) => [styles.leadShell, pressed && styles.pressed]}>
+            <Pressable onPress={() => navigate('/(app)/horoscope')} style={({ pressed }) => [styles.leadShell, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Open your full forecast">
               <LinearGradient
                 colors={[Colors.deepViolet, Colors.bgCardSolid]}
                 start={{ x: 0, y: 0 }}
@@ -137,7 +137,7 @@ export default function HomeScreen() {
                   <Text style={styles.moon}>{moonPhase.emoji}</Text>
                 </View>
                 {curatedQuery.isLoading && (
-                  <View style={styles.loading}>
+                  <View style={styles.loading} accessibilityLiveRegion="polite">
                     <ActivityIndicator size="small" color={Colors.paperInk} />
                     <Text style={styles.loadingText}>Refining today&apos;s guidance…</Text>
                   </View>
@@ -173,7 +173,7 @@ export default function HomeScreen() {
               ))}
             </View>
 
-            <Pressable style={({ pressed }) => [styles.askCard, pressed && styles.pressed]} onPress={() => navigate('/(app)/chat')}>
+            <Pressable style={({ pressed }) => [styles.askCard, pressed && styles.pressed]} onPress={() => navigate('/(app)/chat')} accessibilityRole="button" accessibilityLabel="Ask an astrologer about today's reading">
               <View style={styles.askIcon}>
                 <MessageCircle size={19} color={Colors.lavenderIce} />
               </View>
@@ -196,7 +196,7 @@ export default function HomeScreen() {
                 { title: 'Compatibility', subtitle: 'A sun-sign relationship snapshot', Icon: Heart, route: '/(app)/compatibility' },
                 { title: 'Cosmic insights', subtitle: 'Deep-dive reports made for you', Icon: BookOpen, route: '/(app)/insights' },
               ].map(({ title, subtitle, Icon, route }, index) => (
-                <Pressable key={title} style={[styles.libraryRow, index > 0 && styles.libraryBorder]} onPress={() => navigate(route)}>
+                <Pressable key={title} style={({ pressed }) => [styles.libraryRow, index > 0 && styles.libraryBorder, pressed && styles.libraryRowPressed]} onPress={() => navigate(route)} accessibilityRole="button" accessibilityLabel={`${title}. ${subtitle}`}>
                   <View style={styles.libraryIcon}><Icon size={19} color={Colors.gold} strokeWidth={1.7} /></View>
                   <View style={styles.libraryCopy}>
                     <Text style={styles.libraryTitle}>{title}</Text>
@@ -215,11 +215,11 @@ export default function HomeScreen() {
                   <Text style={styles.accuracyText}>
                     Adding your {profileMissing.join(', ')} will sharpen the readings that depend on houses and timing.
                   </Text>
-                  <Pressable onPress={() => navigate('/(app)/profile')}>
+                  <Pressable onPress={() => navigate('/(app)/profile')} accessibilityRole="button" accessibilityLabel="Improve reading accuracy">
                     <Text style={styles.accuracyAction}>Improve reading accuracy</Text>
                   </Pressable>
                 </View>
-                <Pressable onPress={() => setPromptDismissed(true)} hitSlop={10}>
+                <Pressable onPress={() => setPromptDismissed(true)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Dismiss profile accuracy reminder">
                   <X size={15} color={Colors.textMuted} />
                 </Pressable>
               </GlassCard>
@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   date: { color: Colors.textPrimary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
   edition: { color: Colors.textMuted, fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginTop: 5 },
   profileButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
+  profileButtonPressed: { backgroundColor: Colors.bgCardHover, transform: [{ scale: 0.96 }] },
   profileGlyph: { fontSize: 20, color: Colors.gold },
   intro: { marginTop: 28, marginBottom: 18 },
   greeting: { color: Colors.textSecondary, fontFamily: Fonts.display, fontSize: 22 },
@@ -302,6 +303,7 @@ const styles = StyleSheet.create({
   askText: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
   library: { gap: 10, marginBottom: 22 },
   libraryRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 13, borderRadius: 18, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)', paddingHorizontal: 14 },
+  libraryRowPressed: { backgroundColor: Colors.bgCardHover, transform: [{ scale: 0.99 }] },
   libraryBorder: {},
   libraryIcon: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(192,154,235,0.20)', backgroundColor: 'rgba(97,56,163,0.12)', alignItems: 'center', justifyContent: 'center' },
   libraryCopy: { flex: 1 },

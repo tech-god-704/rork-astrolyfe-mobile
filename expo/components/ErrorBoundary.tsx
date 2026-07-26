@@ -1,7 +1,9 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
+import AppBackground from '@/components/AppBackground';
+import BrandMark from '@/components/BrandMark';
+import { Fonts } from '@/constants/theme';
 
 interface Props {
   children: ReactNode;
@@ -35,15 +37,13 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <LinearGradient
-            colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]}
-            style={StyleSheet.absoluteFillObject}
-          />
+          <AppBackground />
           <View style={styles.content}>
-            <Text style={styles.emoji}>✦</Text>
-            <Text style={styles.title}>Something went wrong</Text>
+            <BrandMark size={86} />
+            <Text style={styles.eyebrow}>A TEMPORARY ECLIPSE</Text>
+            <Text style={styles.title}>Something drifted out of alignment.</Text>
             <Text style={styles.message}>
-              {this.props.fallbackMessage ?? 'The stars seem to be misaligned. Please try again.'}
+              {this.props.fallbackMessage ?? 'Your profile is safe. Try this screen again to continue where you left off.'}
             </Text>
             {__DEV__ && this.state.error && (
               <Text style={styles.errorDetail}>{this.state.error.message}</Text>
@@ -51,8 +51,10 @@ export default class ErrorBoundary extends Component<Props, State> {
             <Pressable
               style={({ pressed }) => [styles.retryBtn, pressed && { opacity: 0.8 }]}
               onPress={this.handleRetry}
+              accessibilityRole="button"
+              accessibilityLabel="Try this screen again"
             >
-              <Text style={styles.retryText}>Try Again</Text>
+              <Text style={styles.retryText}>Try this screen again</Text>
             </Pressable>
           </View>
         </View>
@@ -75,8 +77,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 14,
   },
-  emoji: { fontSize: 48, color: Colors.purpleLight, marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
+  eyebrow: { color: Colors.purpleLight, fontSize: 9, fontWeight: '900', letterSpacing: 1.7, marginTop: 8 },
+  title: { fontSize: 29, lineHeight: 35, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', letterSpacing: -0.6 },
   message: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   errorDetail: { fontSize: 12, color: Colors.danger, textAlign: 'center', marginTop: 8 },
   retryBtn: {
@@ -84,7 +86,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.purple,
     paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 14,
   },
   retryText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

@@ -130,8 +130,11 @@ export default function HoroscopeScreen() {
             {PERIOD_LABELS.map(({ key, label }) => (
               <Pressable
                 key={key}
-                style={[styles.periodTab, period === key && styles.periodTabActive]}
+                style={({ pressed }) => [styles.periodTab, period === key && styles.periodTabActive, pressed && styles.periodTabPressed]}
                 onPress={() => handlePeriodChange(key)}
+                accessibilityRole="tab"
+                accessibilityLabel={`${label} forecast`}
+                accessibilityState={{ selected: period === key }}
               >
                 {period === key && (
                   <View style={styles.periodActiveRule} />
@@ -220,6 +223,8 @@ export default function HoroscopeScreen() {
             <Pressable
               style={({ pressed }) => [styles.askCta, pressed && { opacity: 0.86, transform: [{ scale: 0.99 }] }]}
               onPress={() => router.push('/(app)/chat')}
+              accessibilityRole="button"
+              accessibilityLabel="Talk through this forecast with an astrologer"
             >
               <View style={styles.askCtaIcon}>
                 <MessageCircle size={19} color={Colors.lavenderIce} />
@@ -271,6 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  periodTabPressed: { backgroundColor: Colors.bgCardHover },
   periodActiveRule: { position: 'absolute', left: 12, right: 12, bottom: 4, height: 2, borderRadius: 1, backgroundColor: Colors.lavenderIce, opacity: 0.82 },
   periodTabActive: { backgroundColor: 'rgba(150,98,198,0.22)' },
   periodTabText: { fontSize: 14, fontWeight: '600', color: Colors.textMuted },

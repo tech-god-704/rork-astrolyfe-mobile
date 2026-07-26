@@ -77,8 +77,8 @@ export default function LoginScreen() {
       <AppBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]} testID="back-btn" hitSlop={8}>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]} testID="back-btn" hitSlop={8} accessibilityRole="button" accessibilityLabel="Back to welcome">
               <ArrowLeft size={22} color={Colors.textPrimary} />
             </Pressable>
 
@@ -96,7 +96,7 @@ export default function LoginScreen() {
               <Text style={styles.subtitle}>Your chart, conversations, and daily guidance are right where you left them.</Text>
 
               {formError && (
-                <View style={styles.formErrorRow}>
+                <View style={styles.formErrorRow} accessibilityLiveRegion="polite">
                   <Text style={styles.formErrorText}>{formError}</Text>
                 </View>
               )}
@@ -115,11 +115,14 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     testID="email-input"
+                    accessibilityLabel="Email address"
                   />
                 </View>
                 {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
@@ -135,13 +138,16 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={(t) => { setPassword(t); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
                     secureTextEntry={!showPassword}
+                    autoComplete="current-password"
+                    textContentType="password"
                     returnKeyType="go"
                     onSubmitEditing={() => { if (email.trim() && password.trim()) loginMutation.mutate(); }}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     testID="password-input"
+                    accessibilityLabel="Password"
                   />
-                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={[styles.eyeBtn, showPassword && styles.eyeBtnActive]}>
+                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10} style={[styles.eyeBtn, showPassword && styles.eyeBtnActive]} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
                     {showPassword ? <EyeOff size={18} color={Colors.purpleLight} /> : <Eye size={18} color={Colors.textMuted} />}
                   </Pressable>
                 </View>
@@ -153,17 +159,19 @@ export default function LoginScreen() {
                 onPress={() => loginMutation.mutate()}
                 disabled={loginMutation.isPending || !email.trim() || !password.trim()}
                 testID="login-submit-btn"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: loginMutation.isPending || !email.trim() || !password.trim(), busy: loginMutation.isPending }}
               >
                 <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGradient}>
                   {loginMutation.isPending ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.loginBtnText}>Sign In</Text>
+                    <Text style={styles.loginBtnText}>Sign in securely</Text>
                   )}
                 </LinearGradient>
               </Pressable>
 
-              <Pressable onPress={() => router.push('/(auth)/signup')} style={styles.signupLink}>
+              <Pressable onPress={() => router.push('/(auth)/onboarding')} style={styles.signupLink} accessibilityRole="link">
                 <Text style={styles.signupText}>Don&apos;t have an account? <Text style={styles.signupTextBold}>Sign up</Text></Text>
               </Pressable>
             </Animated.View>

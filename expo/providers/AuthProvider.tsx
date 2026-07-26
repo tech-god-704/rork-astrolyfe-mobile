@@ -238,7 +238,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     return () => sub.remove();
   }, [user, fetchProfile]);
 
-  const signUp = useCallback(async (email: string, password: string, displayName: string, zodiacSign: string, birthDate: string) => {
+  const signUp = useCallback(async (
+    email: string,
+    password: string,
+    displayName: string,
+    zodiacSign: string,
+    birthDate: string,
+    birthCity = '',
+  ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -256,6 +263,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       display_name: displayName,
       zodiac_sign: zodiacSign || null,
       date_of_birth: birthDate || null,
+      birth_city: birthCity || null,
     }).eq('email', email);
 
     if (updateError) {
@@ -266,6 +274,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         display_name: displayName,
         zodiac_sign: zodiacSign || null,
         date_of_birth: birthDate || null,
+        birth_city: birthCity || null,
       }).eq('email', email);
       if (retryError) {
         console.error('[Auth] Profile update retry failed:', retryError.message);

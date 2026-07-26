@@ -207,7 +207,7 @@ export default function ChatConversationScreen() {
           <Text style={[styles.messageStatus, styles.userTime]}>Sending…</Text>
         )}
         {isUser && isFailed && (
-          <Pressable onPress={() => handleRetry(item.message)} hitSlop={8} style={styles.retryRow}>
+          <Pressable onPress={() => handleRetry(item.message)} hitSlop={10} style={styles.retryRow} accessibilityRole="button" accessibilityLabel="Retry sending message">
             <RotateCcw size={10} color={Colors.danger} />
             <Text style={styles.failedStatus}>Failed · Tap to retry</Text>
           </Pressable>
@@ -268,6 +268,8 @@ export default function ChatConversationScreen() {
                       key={prompt}
                       style={({ pressed }) => [styles.starterPrompt, pressed && { opacity: 0.75 }]}
                       onPress={() => setMessageText(prompt)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Use prompt: ${prompt}`}
                     >
                       <Text style={styles.starterPromptText}>{prompt}</Text>
                       <Text style={styles.starterPromptArrow}>→</Text>
@@ -289,12 +291,16 @@ export default function ChatConversationScreen() {
               multiline
               maxLength={500}
               blurOnSubmit={false}
+              accessibilityLabel="Message"
             />
           </View>
           <Pressable
             style={({ pressed }) => [styles.sendBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }, !messageText.trim() && styles.sendBtnDisabled]}
             onPress={handleSend}
             disabled={!messageText.trim() || sendMutation.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+            accessibilityState={{ disabled: !messageText.trim() || sendMutation.isPending, busy: sendMutation.isPending }}
           >
             {sendMutation.isPending ? (
               <View style={styles.sendBtnGradient}>
