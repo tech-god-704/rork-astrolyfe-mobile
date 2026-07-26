@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 // ── Types ────────────────────────────────────────────────
 
 export type ReportType =
+  | 'soulmate_portrait'
   | 'full_map'
   | 'venus_love'
   | 'sun_career'
@@ -28,6 +29,14 @@ export interface AstroReport {
 
 // Display metadata for each report type
 export const REPORT_META: Record<ReportType, { title: string; description: string; icon: string }> = {
+  // The portrait is an image, not prose. Without an entry here it fell through to the
+  // 'Report' fallback title, and because the row's content_html is a single <img> tag
+  // the text renderer stripped it to nothing — so it showed as a blank, untitled card.
+  soulmate_portrait: {
+    title: 'Your Soulmate Portrait',
+    description: 'The face the stars drew for you, based on everything you told us.',
+    icon: 'image',
+  },
   full_map: {
     title: 'Full Birth Map',
     description: 'Your complete natal chart analysis covering all planetary placements and house positions.',

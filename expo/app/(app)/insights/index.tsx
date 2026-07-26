@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -288,9 +288,30 @@ export default function InsightsScreen() {
             <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
               {viewingReport && (
                 <GlassCard style={styles.reportCard}>
-                  <Text style={styles.reportContent}>
-                    {stripHtml(viewingReport.content_html)}
-                  </Text>
+                  {viewingReport.report_type === 'soulmate_portrait' ? (
+                    // The portrait row carries a single <img> tag, so the text
+                    // renderer below strips it to an empty string. Pull the src out
+                    // and show the image itself.
+                    (() => {
+                      const src = extractImageSrc(viewingReport.content_html);
+                      return src ? (
+                        <Image
+                          source={{ uri: src }}
+                          style={styles.portraitImage}
+                          resizeMode="contain"
+                          accessibilityLabel="Your soulmate portrait"
+                        />
+                      ) : (
+                        <Text style={styles.reportContent}>
+                          Your portrait is still being created. Check back in a moment.
+                        </Text>
+                      );
+                    })()
+                  ) : (
+                    <Text style={styles.reportContent}>
+                      {stripHtml(viewingReport.content_html)}
+                    </Text>
+                  )}
                 </GlassCard>
               )}
             </ScrollView>
@@ -302,6 +323,17 @@ export default function InsightsScreen() {
 }
 
 /** Strip HTML tags for plain-text display (reports come as HTML from the web) */
+/**
+ * Pull the src out of the portrait row's <img> tag.
+ *
+ * The URL is absolute and carries an HMAC key rather than an email, so it is safe to
+ * hand to <Image> directly.
+ */
+function extractImageSrc(html: string): string | null {
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match ? match[1] : null;
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -383,5 +415,11 @@ const styles = StyleSheet.create({
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center' },
   modalScroll: { paddingHorizontal: 20, paddingVertical: 20, paddingBottom: 40 },
   reportCard: { padding: 20 },
+  portraitImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
   reportContent: { fontSize: 17, fontFamily: Fonts.display, color: Colors.textSecondary, lineHeight: 29 },
 });
