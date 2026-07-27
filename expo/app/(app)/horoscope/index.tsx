@@ -11,7 +11,8 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { getZodiacByName, getMoonPhase } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { getHoroscope, fetchCuratedHoroscope, categorizeHoroscope, type HoroscopePeriod } from '@/services/horoscope';
+import { type HoroscopePeriod } from '@/services/horoscope';
+import { getPersonalHoroscope, type PersonalHoroscopeReading } from '@/services/personal-horoscope';
 import AppBackground from '@/components/AppBackground';
 
 type PeriodType = HoroscopePeriod;
@@ -20,6 +21,8 @@ const CATEGORY_CONFIG: Record<string, { color: string; Icon: typeof Heart }> = {
   love: { color: Colors.accent, Icon: Heart },
   career: { color: Colors.purpleLight, Icon: Briefcase },
   health: { color: Colors.teal, Icon: Activity },
+  wellness: { color: Colors.teal, Icon: Activity },
+  overview: { color: Colors.gold, Icon: Star },
   general: { color: Colors.gold, Icon: Star },
   finance: { color: Colors.success, Icon: TrendingUp },
   spiritual: { color: '#A855F7', Icon: Flame },
@@ -41,23 +44,21 @@ export default function HoroscopeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const contentAnim = useRef(new Animated.Value(1)).current;
 
-  // Try curated horoscope from Supabase (written by the web app), fall back to local
+  // A forecast built from this user's own chart. Computed on device and cached, so the
+  // screen works with no network for anyone who has supplied a birth date.
   const signName = profile?.zodiac_sign || 'Aries';
   const todayKey = new Date().toDateString(); // auto-invalidate at midnight
-  const localReading = useMemo(() => getHoroscope(signName, period), [signName, period]);
 
-  const curatedQuery = useQuery({
-    queryKey: ['curatedHoroscope', signName, period, todayKey],
-    queryFn: () => fetchCuratedHoroscope(signName, period),
-    staleTime: 1000 * 60 * 30, // 30 min — curated content changes infrequently
+  const forecastQuery = useQuery<PersonalHoroscopeReading>({
+    queryKey: ['personalHoroscope', signName, period, todayKey, profile?.birth_date ?? '', profile?.birth_lat ?? '', profile?.birth_lon ?? ''],
+    queryFn: () => getPersonalHoroscope({ profile, period }),
+    staleTime: 1000 * 60 * 30,
   });
 
-  const activeReading = curatedQuery.data ?? localReading;
-  const displayText = activeReading.horoscope;
-  const displayCategories = useMemo(
-    () => categorizeHoroscope(activeReading),
-    [activeReading]
-  );
+  const reading = forecastQuery.data;
+  const displayText = reading?.summary ?? '';
+  const displayCategories = useMemo(() => reading?.categories ?? [], [reading]);
+  const isPersonal = reading ? reading.personalizationLevel !== 'sign-only' : false;
 
   // Fade in content whenever period changes
   useEffect(() => {
@@ -78,11 +79,13 @@ export default function HoroscopeScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: ['curatedHoroscope', signName, period] });
+      // Recompute from the current sky rather than re-reading a cached generic row.
+      await getPersonalHoroscope({ profile, period, forceRefresh: true });
+      await queryClient.invalidateQueries({ queryKey: ['personalHoroscope'] });
     } finally {
       setRefreshing(false);
     }
-  }, [queryClient, signName, period]);
+  }, [queryClient, profile, period]);
 
   const getPeriodLabel = () => {
     const now = new Date();
@@ -107,7 +110,9 @@ export default function HoroscopeScreen() {
           {/* Header with zodiac info */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.eyebrow}>YOUR PERSONAL FORECAST</Text>
+              <Text style={styles.eyebrow}>
+                {isPersonal ? 'YOUR PERSONAL FORECAST' : `GENERAL FORECAST${zodiac ? ' · ' + zodiac.name.toUpperCase() : ''}`}
+              </Text>
               <Text style={styles.title}>The sky ahead</Text>
               {zodiac && (
                 <View style={styles.signRow}>
@@ -174,11 +179,42 @@ export default function HoroscopeScreen() {
                 </View>
               )}
               <Text style={styles.fullReadingText}>{displayText}</Text>
+
+              {/* State plainly what the reading is based on, so a sign-level forecast is
+                  never presented as though it came from the user's own chart. */}
+              {reading && (
+                <View style={styles.confidenceRow}>
+                  <View style={[styles.confidenceBadge, !isPersonal && styles.confidenceBadgeGeneral]}>
+                    <Text style={[styles.confidenceText, !isPersonal && styles.confidenceTextGeneral]}>
+                      {reading.confidenceLabel}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {reading?.upgradeHint && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    router.push('/profile');
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={reading.upgradeHint}
+                  style={({ pressed }) => [styles.upgradeHint, pressed && styles.upgradeHintPressed]}
+                >
+                  <Text style={styles.upgradeHintText}>{reading.upgradeHint}</Text>
+                  <ArrowRight size={14} color={Colors.purpleLight} />
+                </Pressable>
+              )}
+
+              {reading?.caution && <Text style={styles.cautionText}>{reading.caution}</Text>}
             </GlassCard>
 
             {displayCategories.length > 0 && (
               <View style={styles.focusRail}>
-                <Text style={styles.focusLabel}>TODAY&apos;S FOCUS</Text>
+                <Text style={styles.focusLabel}>
+                  {period === 'daily' ? "TODAY'S FOCUS" : period === 'weekly' ? "THIS WEEK'S FOCUS" : "THIS MONTH'S FOCUS"}
+                </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.focusChips}>
                   {displayCategories.slice(0, 4).map((entry, index) => {
                     const cat = entry.category?.toLowerCase() || 'general';
@@ -243,6 +279,30 @@ export default function HoroscopeScreen() {
 }
 
 const styles = StyleSheet.create({
+  confidenceRow: { flexDirection: 'row', marginTop: 14 },
+  confidenceBadge: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+    backgroundColor: 'rgba(168,85,247,0.14)', borderWidth: 1, borderColor: 'rgba(168,85,247,0.35)',
+  },
+  confidenceBadgeGeneral: {
+    backgroundColor: 'rgba(148,163,184,0.14)', borderColor: 'rgba(148,163,184,0.35)',
+  },
+  confidenceText: {
+    fontSize: 11, letterSpacing: 0.4, color: Colors.purpleLight, fontFamily: Fonts.body,
+  },
+  confidenceTextGeneral: { color: Colors.textSecondary },
+  upgradeHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12,
+    paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
+    backgroundColor: 'rgba(168,85,247,0.08)',
+  },
+  upgradeHintPressed: { opacity: 0.7 },
+  upgradeHintText: { flex: 1, fontSize: 12, lineHeight: 17, color: Colors.purpleLight, fontFamily: Fonts.body },
+  cautionText: {
+    marginTop: 12, fontSize: 11, lineHeight: 16, fontStyle: 'italic',
+    color: Colors.textSecondary, fontFamily: Fonts.body,
+  },
+
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
