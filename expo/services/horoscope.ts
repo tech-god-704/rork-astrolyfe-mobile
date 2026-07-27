@@ -17,24 +17,39 @@ export interface CategorizedReading {
 }
 
 /**
- * Fetch curated horoscope from the Supabase `horoscopes` table.
- * The web app writes curated daily/weekly/monthly content per zodiac sign.
- * Returns null if no curated content exists (falls back to local generation).
+ * Fetch curated content for a sign from the `horoscopes` collection.
+ *
+ * Only used for sign-only readers — anyone with a birth date gets a forecast computed
+ * from their own chart instead, which never needs the network.
+ *
+ * The date filter is not optional. This query previously took the newest row by
+ * `created_at`, ignoring the `valid_date` column that exists and is indexed. That is
+ * harmless while the table is empty, but the moment it is populated it would serve one
+ * row per sign forever, and "today's horoscope" would silently freeze on whichever row
+ * was written last.
  */
 export async function fetchCuratedHoroscope(
   sign: string,
   period: HoroscopePeriod,
+  forDate: Date = new Date(),
 ): Promise<HoroscopeReading | null> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+    // Local calendar date — toISOString() would hand a user west of UTC tomorrow's row
+    // from late afternoon onward.
+    const y = forDate.getFullYear();
+    const m = String(forDate.getMonth() + 1).padStart(2, '0');
+    const d = String(forDate.getDate()).padStart(2, '0');
+    const dateKey = `${y}-${m}-${d}`;
+
     const { data, error } = await supabase
       .from('horoscopes')
-      .select('content, title, category')
+      .select('content, title, category, valid_date')
       .eq('zodiac_sign', sign.toLowerCase())
       .eq('period_type', period)
-      .order('created_at', { ascending: false })
+      .eq('valid_date', dateKey)
       .limit(1)
       .abortSignal(controller.signal)
       .maybeSingle();
@@ -46,7 +61,7 @@ export async function fetchCuratedHoroscope(
     return {
       sign,
       period,
-      date: new Date().toISOString().split('T')[0],
+      date: dateKey,
       horoscope: data.content,
       source: 'curated',
     };

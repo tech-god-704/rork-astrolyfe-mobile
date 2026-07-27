@@ -58,12 +58,12 @@ export interface NatalChartResult {
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
 
-const SIGNS = [
+export const SIGNS = [
   'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
   'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces',
 ];
 
-const SIGN_RULERS: Record<string, string> = {
+export const SIGN_RULERS: Record<string, string> = {
   Aries: 'Mars', Taurus: 'Venus', Gemini: 'Mercury', Cancer: 'Moon',
   Leo: 'Sun', Virgo: 'Mercury', Libra: 'Venus', Scorpio: 'Pluto',
   Sagittarius: 'Jupiter', Capricorn: 'Saturn', Aquarius: 'Uranus', Pisces: 'Neptune',
@@ -118,19 +118,19 @@ const ELEMENTS: Record<string, OrbitalElements> = {
 
 // ── Math helpers ───────────────────────────────────────────
 
-function norm360(d: number): number {
+export function norm360(d: number): number {
   d = d % 360;
   return d < 0 ? d + 360 : d;
 }
 
-function julianDay(y: number, m: number, d: number, h: number = 12): number {
+export function julianDay(y: number, m: number, d: number, h: number = 12): number {
   if (m <= 2) { y--; m += 12; }
   const A = Math.floor(y / 100);
   const B = 2 - A + Math.floor(A / 4);
   return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + h / 24 + B - 1524.5;
 }
 
-function T(jd: number): number {
+export function T(jd: number): number {
   return (jd - 2451545.0) / 36525.0;
 }
 
@@ -181,13 +181,13 @@ function helioXYZ(el: OrbitalElements, t: number): { x: number; y: number; z: nu
 
 // ── Geocentric longitudes ──────────────────────────────────
 
-function geocentricLon(planet: string, t: number): number {
+export function geocentricLon(planet: string, t: number): number {
   const p = helioXYZ(ELEMENTS[planet], t);
   const e = helioXYZ(ELEMENTS.Earth, t);
   return norm360(Math.atan2(p.y - e.y, p.x - e.x) * RAD);
 }
 
-function sunLon(t: number): number {
+export function sunLon(t: number): number {
   const e = helioXYZ(ELEMENTS.Earth, t);
   return norm360(Math.atan2(-e.y, -e.x) * RAD);
 }
@@ -196,7 +196,7 @@ function sunLon(t: number): number {
  * Moon's ecliptic longitude — main terms of Meeus/ELP theory.
  * Accurate to ~0.3°.
  */
-function moonLon(t: number): number {
+export function moonLon(t: number): number {
   const Lp = norm360(218.3164477 + 481267.88123421 * t);
   const D  = norm360(297.8501921 + 445267.1114034  * t);
   const M  = norm360(357.5291092 + 35999.0502909   * t);
@@ -235,7 +235,7 @@ function moonLon(t: number): number {
 
 // ── Retrograde detection ───────────────────────────────────
 
-function isRetro(planet: string, t: number): boolean {
+export function isRetro(planet: string, t: number): boolean {
   if (planet === 'Sun' || planet === 'Moon') return false;
   const step = 1 / 36525; // 1 day in centuries
   const lon1 = geocentricLon(planet, t - step);
@@ -248,7 +248,7 @@ function isRetro(planet: string, t: number): boolean {
 
 // ── Ascendant ──────────────────────────────────────────────
 
-function calcAscendant(jd: number, lat: number, lon: number): number {
+export function calcAscendant(jd: number, lat: number, lon: number): number {
   const t = T(jd);
   const eps = (23.4393 - 0.0130 * t) * DEG;
   const D = jd - 2451545.0;
@@ -265,13 +265,13 @@ function calcAscendant(jd: number, lat: number, lon: number): number {
 
 // ── Sign helpers ───────────────────────────────────────────
 
-function lonToSign(lon: number): { sign: string; degree: number; index: number } {
+export function lonToSign(lon: number): { sign: string; degree: number; index: number } {
   const n = norm360(lon);
   const idx = Math.floor(n / 30) % 12;
   return { sign: SIGNS[idx], degree: n - idx * 30, index: idx };
 }
 
-function houseOf(planetIdx: number, refIdx: number): number {
+export function houseOf(planetIdx: number, refIdx: number): number {
   let h = planetIdx - refIdx + 1;
   if (h <= 0) h += 12;
   return h;
@@ -393,6 +393,26 @@ function calcModalities(planets: NatalPlanet[]): ModalityDistribution {
 
 // ── Public API ─────────────────────────────────────────────
 
+/**
+ * (0, 0) is a real place in the Gulf of Guinea, but as stored birth coordinates it is
+ * almost always "never filled in" — PocketBase numeric fields default to 0, not null.
+ * Treating it as a location produced a confident, wrong rising sign for every profile
+ * that had never supplied one. Rejecting the exact origin costs nothing real: nobody
+ * in this dataset was born on that spot, and a birth city that resolves there would be
+ * better handled by fixing the geocoder.
+ */
+function hasUsableCoordinates(latitude?: number, longitude?: number): boolean {
+  if (latitude == null || longitude == null) return false;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return false;
+  return !(latitude === 0 && longitude === 0);
+}
+
+export const PLANET_NAMES = [
+  'Sun', 'Moon', 'Mercury', 'Venus', 'Mars',
+  'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto',
+] as const;
+
 export function calculateNatalChart(params: {
   year: number;
   month: number;
@@ -401,19 +421,33 @@ export function calculateNatalChart(params: {
   minute?: number;
   latitude?: number;
   longitude?: number;
+  /**
+   * Minutes to subtract from the supplied clock time to reach UT — the standard
+   * "UTC offset" of the birthplace, so New York in July is -240.
+   *
+   * Birth time is recorded as a wall clock reading, but the astronomy below needs
+   * Universal Time. Without this the two were silently treated as the same, which
+   * moved the ascendant by up to a full rotation: a 14:30 New York birth landed on
+   * Virgo instead of Scorpio, an error of 47°. Optional so existing callers keep
+   * their current behaviour until they pass an offset.
+   */
+  utcOffsetMinutes?: number;
 }): NatalChartResult {
-  const { year, month, day, hour = 12, minute = 0, latitude, longitude } = params;
+  const { year, month, day, hour = 12, minute = 0, latitude, longitude, utcOffsetMinutes } = params;
 
-  const jd = julianDay(year, month, day, hour + minute / 60);
+  const clockHours = hour + minute / 60;
+  const utHours = clockHours - (utcOffsetMinutes ?? 0) / 60;
+
+  const jd = julianDay(year, month, day, utHours);
   const t = T(jd);
 
-  // Ascendant (requires location)
+  // Ascendant (requires a location we actually trust)
   let ascLon: number | null = null;
   let ascSign: string | null = null;
   let ascIdx = 0;
 
-  if (latitude != null && longitude != null) {
-    ascLon = calcAscendant(jd, latitude, longitude);
+  if (hasUsableCoordinates(latitude, longitude)) {
+    ascLon = calcAscendant(jd, latitude as number, longitude as number);
     const info = lonToSign(ascLon);
     ascSign = info.sign;
     ascIdx = info.index;
@@ -423,8 +457,6 @@ export function calculateNatalChart(params: {
   const sunDeg = sunLon(t);
   const sunIdx = Math.floor(norm360(sunDeg) / 30) % 12;
   const houseRef = ascLon != null ? ascIdx : sunIdx;
-
-  const PLANET_NAMES = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'];
 
   const planets: NatalPlanet[] = PLANET_NAMES.map((name) => {
     let lon: number;

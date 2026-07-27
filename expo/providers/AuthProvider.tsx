@@ -8,8 +8,6 @@ import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
 
-const ADMIN_UUID = '48355a3b-3a15-414b-9bf4-f344e98a7c19';
-
 export interface QuizData {
   birth_year?: number;
   birth_month?: number;
@@ -31,6 +29,12 @@ export interface UserProfile {
   birth_city: string | null;
   birth_lat: number | null;
   birth_lon: number | null;
+  /**
+   * IANA zone of the birthplace. Required to convert a birth-time wall clock reading
+   * into UT; without it the horoscope engine cannot trust the ascendant and drops to
+   * its birth-date tier.
+   */
+  timezone: string | null;
   quiz_data: QuizData | null;
   // Subscription fields (synced by Stripe webhook → profiles table)
   subscription_status: string | null;
@@ -42,14 +46,15 @@ export interface UserProfile {
 
 const ACTIVE_STATUSES = ['active', 'trialing', 'trial', 'lifetime'];
 
-const ADMIN_TEST_PROFILE: UserProfile = {
-  email: 'admin@astrolyfe.app',
-  display_name: 'AstroLyfe Admin',
+const GUEST_PREVIEW_PROFILE: UserProfile = {
+  email: '',
+  display_name: 'Guest Explorer',
   zodiac_sign: 'Cancer',
   birth_date: '1990-07-15',
   birth_city: 'Los Angeles, CA',
   birth_lat: 34.0522,
   birth_lon: -118.2437,
+  timezone: 'America/Los_Angeles',
   quiz_data: {
     birth_year: 1990,
     birth_month: 7,
@@ -59,24 +64,17 @@ const ADMIN_TEST_PROFILE: UserProfile = {
     birth_place: 'Los Angeles, CA',
     country_code: 'US',
   },
-  subscription_status: 'lifetime',
+  subscription_status: 'free',
   subscription_product: null,
   subscription_period_end: null,
   trial_end_date: null,
-  is_admin: true,
+  is_admin: false,
 };
 
-function checkIsAdmin(session: Session | null, profile: UserProfile | null): boolean {
+function checkIsAdmin(profile: UserProfile | null): boolean {
   // profiles.is_admin is the real mechanism, and the backend pins that field against
   // anything but a superuser write, so a user cannot grant it to themselves.
-  //
-  // The app_metadata / user_metadata checks that used to sit here were Supabase
-  // concepts with no PocketBase equivalent — they would now always be undefined.
-  // ADMIN_UUID is likewise a Postgres uuid and will not match a PocketBase id, so it
-  // is retained only so an existing constant does not silently change meaning.
-  if (profile?.is_admin) return true;
-  if (!session?.user) return false;
-  return session.user.id === ADMIN_UUID;
+  return profile?.is_admin === true;
 }
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
@@ -95,7 +93,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     return () => { isMounted.current = false; };
   }, []);
 
-  const isAdmin = useMemo(() => skipAuth || checkIsAdmin(session, profile), [skipAuth, session, profile]);
+  const isAdmin = useMemo(() => checkIsAdmin(profile), [profile]);
 
   /**
    * Fetch profile from PROFILES table (source of truth for mobile app).
@@ -110,7 +108,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // Try profiles table first (keyed by auth.users.id, has subscription data)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, quiz_data, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
+        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
         .eq('email', email)
         .abortSignal(controller.signal)
         .maybeSingle();
@@ -124,6 +122,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           zodiac_sign: profileData.zodiac_sign,
           birth_date: profileData.date_of_birth,
           birth_city: profileData.birth_city,
+          timezone: profileData.timezone ?? null,
           birth_lat: profileData.birth_lat,
           birth_lon: profileData.birth_lon,
           quiz_data: profileData.quiz_data,
@@ -158,6 +157,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         email: userData.email,
         display_name: null,
         zodiac_sign: null,
+        // The users table has no timezone column; this fallback path is for funnel leads
+        // who have no profile row yet, so the horoscope stays on its birth-date tier.
+        timezone: null,
         // The funnel stores the real birth date inside quiz_data as MM/DD/YYYY.
         birth_date: normalizeBirthDate(userData.birth_date) ?? normalizeBirthDate(quiz?.birth_date),
         birth_city: null,
@@ -189,6 +191,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         if (!isMounted.current) return;
         setSession(existing);
         setUser(existing?.user ?? null);
+        // AppState only calls its listener after a transition; begin refresh on the
+        // initial foregrounded launch as well.
+        supabase.auth.startAutoRefresh();
         if (existing?.user?.email) {
           const p = await fetchProfile(existing.user.email);
           if (isMounted.current) setProfile(p);
@@ -221,7 +226,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   useEffect(() => {
     if (skipAuth && !profile) {
-      setProfile(ADMIN_TEST_PROFILE);
+      setProfile(GUEST_PREVIEW_PROFILE);
       setIsLoading(false);
       setIsReady(true);
     }
@@ -313,10 +318,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, [user, fetchProfile]);
 
   const isSubscribed = useMemo(() => {
+    // Guest exploration can navigate the product, but it is never an admin session
+    // and remains unable to read or write protected PocketBase records.
+    if (skipAuth) return true;
     if (isAdmin) return true;
     const status = profile?.subscription_status;
     return status ? ACTIVE_STATUSES.includes(status) : false;
-  }, [profile, isAdmin]);
+  }, [profile, isAdmin, skipAuth]);
 
   return useMemo(() => ({
     session,
