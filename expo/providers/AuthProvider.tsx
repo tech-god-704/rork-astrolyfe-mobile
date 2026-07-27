@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { Session, User } from '@supabase/supabase-js';
+// Types come from the backend client rather than supabase-js: the app now talks to
+// PocketBase through a compatible shim, and supabase-js is no longer the source of
+// truth for what a session or a user is.
+import type { PbSession as Session, PbUser as User } from '@/lib/supabase';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
@@ -64,13 +67,16 @@ const ADMIN_TEST_PROFILE: UserProfile = {
 };
 
 function checkIsAdmin(session: Session | null, profile: UserProfile | null): boolean {
+  // profiles.is_admin is the real mechanism, and the backend pins that field against
+  // anything but a superuser write, so a user cannot grant it to themselves.
+  //
+  // The app_metadata / user_metadata checks that used to sit here were Supabase
+  // concepts with no PocketBase equivalent — they would now always be undefined.
+  // ADMIN_UUID is likewise a Postgres uuid and will not match a PocketBase id, so it
+  // is retained only so an existing constant does not silently change meaning.
   if (profile?.is_admin) return true;
   if (!session?.user) return false;
-  return (
-    session.user.id === ADMIN_UUID ||
-    session.user.app_metadata?.role === 'admin' ||
-    session.user.user_metadata?.role === 'admin'
-  );
+  return session.user.id === ADMIN_UUID;
 }
 
 export const [AuthProvider, useAuth] = createContextHook(() => {

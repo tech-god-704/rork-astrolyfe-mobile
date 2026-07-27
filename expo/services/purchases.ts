@@ -49,7 +49,10 @@ export async function fetchUnlockedSlugs(userEmail: string): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from('purchases')
-      .select('product_id, products(slug)')
+      // product_id already holds the slug — the backend writes it that way when
+      // recording a purchase. The previous `products(slug)` was a PostgREST embed,
+      // which has no equivalent on the current backend and was never needed.
+      .select('product_id')
       .eq('user_email', userEmail)
       .eq('status', 'completed')
       .abortSignal(controller.signal);
@@ -70,18 +73,8 @@ export async function fetchUnlockedSlugs(userEmail: string): Promise<string[]> {
 
   return rows
     .map((r: Record<string, unknown>) => {
-      const p = r.products;
-      if (!p) return null;
-      if (Array.isArray(p)) {
-        const first = p[0];
-        return first && typeof first === 'object' && 'slug' in first
-          ? String((first as Record<string, unknown>).slug)
-          : null;
-      }
-      if (typeof p === 'object' && 'slug' in (p as Record<string, unknown>)) {
-        return String((p as Record<string, unknown>).slug);
-      }
-      return null;
+      const slug = r.product_id;
+      return typeof slug === 'string' && slug !== '' ? slug : null;
     })
     .filter((slug): slug is string => slug !== null);
 }

@@ -68,15 +68,11 @@ export default function ChatConversationScreen() {
         schema: 'public',
         table: 'chat_messages',
         filter: `conversation_id=eq.${conversationId}`,
-      }, (payload) => {
-        queryClient.setQueryData<ChatMessage[]>(['chatMessages', conversationId], (old) => {
-          const newMsg = payload.new as ChatMessage;
-          if (!old) return [newMsg];
-          // Remove optimistic version if real one arrives
-          const filtered = old.filter((m) => !m.id.startsWith('optimistic-') || m.message !== newMsg.message);
-          if (filtered.some((m) => m.id === newMsg.id)) return filtered;
-          return [...filtered, newMsg];
-        });
+      }, () => {
+        // Refetch rather than splicing a payload row into the cache. The backend now
+        // polls for changes instead of streaming them, so there is no changed-row
+        // payload to merge — reading payload.new here would have thrown at runtime.
+        void queryClient.invalidateQueries({ queryKey: ['chatMessages', conversationId] });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {

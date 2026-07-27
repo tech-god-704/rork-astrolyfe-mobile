@@ -1,23 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+/**
+ * Backend client.
+ *
+ * The name is kept because seven files import from '@/lib/supabase', and the funnel's
+ * move to PocketBase should not require touching each of them. What is exported is a
+ * PocketBase client presenting the same surface this app used from supabase-js — see
+ * lib/pocketbase.ts for the translation and its two deliberate differences.
+ *
+ * To go back to Supabase, restore this file's previous contents; nothing else changes.
+ */
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://pqafzkanarjmfrljjzil.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxYWZ6a2FuYXJqbWZybGpqemlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1OTE3ODksImV4cCI6MjA5MzE2Nzc4OX0.e265P0hrCHj3eL5gYcGpbTK2U4BYrqhX-SwxQ_-Ku8Q';
-
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      storage: AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10,
-      },
-    },
-  }
-);
+export { supabase, type PbUser, type PbSession } from './pocketbase';
+export { supabase as default } from './pocketbase';
