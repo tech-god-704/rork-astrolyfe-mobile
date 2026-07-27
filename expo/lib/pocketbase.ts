@@ -55,6 +55,8 @@ let currentToken: string | null = null;
 let currentUser: PbUser | null = null;
 let loaded = false;
 const authListeners = new Set<AuthChangeHandler>();
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+let refreshInFlight: Promise<void> | null = null;
 
 function session(): PbSession | null {
   return currentToken && currentUser
@@ -104,6 +106,42 @@ async function saveAuth(token: string | null, user: PbUser | null): Promise<void
     }
   } catch {
     // A storage failure costs persistence across restarts, not this session.
+  }
+}
+
+/**
+ * PocketBase tokens do not refresh merely because a client uses them. Refresh while
+ * the app is active so a returning customer does not retain a stale local session
+ * whose protected requests then fail. A transient network failure leaves the current
+ * session intact; an explicitly rejected token clears it and notifies the app.
+ */
+async function refreshAuth(): Promise<void> {
+  await loadAuth();
+  if (!currentToken || refreshInFlight) return refreshInFlight ?? undefined;
+
+  const work = (async () => {
+    try {
+      const res = await pbFetch('/api/collections/users/auth-refresh', { method: 'POST' });
+      if (typeof res?.token !== 'string' || !res?.record) {
+        throw new Error('PocketBase returned an invalid refreshed session');
+      }
+      await saveAuth(res.token, res.record as PbUser);
+      emit('TOKEN_REFRESHED');
+    } catch (e: any) {
+      // Offline/temporary failures should not force a customer out. A rejected
+      // token, however, cannot recover and must not leave a misleading session.
+      if (e?.status === 401 || e?.status === 403) {
+        await saveAuth(null, null);
+        emit('SIGNED_OUT');
+      }
+    }
+  })();
+
+  refreshInFlight = work;
+  try {
+    await work;
+  } finally {
+    if (refreshInFlight === work) refreshInFlight = null;
   }
 }
 
@@ -466,10 +504,20 @@ export const supabase = {
       };
     },
 
-    // PocketBase tokens are long-lived and refreshed on use, so these exist only to
-    // satisfy the call sites that drive them from AppState.
-    startAutoRefresh() {},
-    stopAutoRefresh() {},
+    // AuthProvider starts/stops this with the app lifecycle. Refresh immediately on
+    // foregrounding, then every six hours while the app remains in use.
+    startAutoRefresh() {
+      void refreshAuth();
+      if (!refreshTimer) {
+        refreshTimer = setInterval(() => {
+          void refreshAuth();
+        }, 6 * 60 * 60 * 1000);
+      }
+    },
+    stopAutoRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = null;
+    },
   },
 };
 

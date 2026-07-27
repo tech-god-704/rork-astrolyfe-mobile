@@ -8,8 +8,6 @@ import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
 
-const ADMIN_UUID = '48355a3b-3a15-414b-9bf4-f344e98a7c19';
-
 export interface QuizData {
   birth_year?: number;
   birth_month?: number;
@@ -42,9 +40,9 @@ export interface UserProfile {
 
 const ACTIVE_STATUSES = ['active', 'trialing', 'trial', 'lifetime'];
 
-const ADMIN_TEST_PROFILE: UserProfile = {
-  email: 'admin@astrolyfe.app',
-  display_name: 'AstroLyfe Admin',
+const GUEST_PREVIEW_PROFILE: UserProfile = {
+  email: '',
+  display_name: 'Guest Explorer',
   zodiac_sign: 'Cancer',
   birth_date: '1990-07-15',
   birth_city: 'Los Angeles, CA',
@@ -59,24 +57,17 @@ const ADMIN_TEST_PROFILE: UserProfile = {
     birth_place: 'Los Angeles, CA',
     country_code: 'US',
   },
-  subscription_status: 'lifetime',
+  subscription_status: 'free',
   subscription_product: null,
   subscription_period_end: null,
   trial_end_date: null,
-  is_admin: true,
+  is_admin: false,
 };
 
-function checkIsAdmin(session: Session | null, profile: UserProfile | null): boolean {
+function checkIsAdmin(profile: UserProfile | null): boolean {
   // profiles.is_admin is the real mechanism, and the backend pins that field against
   // anything but a superuser write, so a user cannot grant it to themselves.
-  //
-  // The app_metadata / user_metadata checks that used to sit here were Supabase
-  // concepts with no PocketBase equivalent — they would now always be undefined.
-  // ADMIN_UUID is likewise a Postgres uuid and will not match a PocketBase id, so it
-  // is retained only so an existing constant does not silently change meaning.
-  if (profile?.is_admin) return true;
-  if (!session?.user) return false;
-  return session.user.id === ADMIN_UUID;
+  return profile?.is_admin === true;
 }
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
@@ -95,7 +86,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     return () => { isMounted.current = false; };
   }, []);
 
-  const isAdmin = useMemo(() => skipAuth || checkIsAdmin(session, profile), [skipAuth, session, profile]);
+  const isAdmin = useMemo(() => checkIsAdmin(profile), [profile]);
 
   /**
    * Fetch profile from PROFILES table (source of truth for mobile app).
@@ -189,6 +180,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         if (!isMounted.current) return;
         setSession(existing);
         setUser(existing?.user ?? null);
+        // AppState only calls its listener after a transition; begin refresh on the
+        // initial foregrounded launch as well.
+        supabase.auth.startAutoRefresh();
         if (existing?.user?.email) {
           const p = await fetchProfile(existing.user.email);
           if (isMounted.current) setProfile(p);
@@ -221,7 +215,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   useEffect(() => {
     if (skipAuth && !profile) {
-      setProfile(ADMIN_TEST_PROFILE);
+      setProfile(GUEST_PREVIEW_PROFILE);
       setIsLoading(false);
       setIsReady(true);
     }
@@ -313,10 +307,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, [user, fetchProfile]);
 
   const isSubscribed = useMemo(() => {
+    // Guest exploration can navigate the product, but it is never an admin session
+    // and remains unable to read or write protected PocketBase records.
+    if (skipAuth) return true;
     if (isAdmin) return true;
     const status = profile?.subscription_status;
     return status ? ACTIVE_STATUSES.includes(status) : false;
-  }, [profile, isAdmin]);
+  }, [profile, isAdmin, skipAuth]);
 
   return useMemo(() => ({
     session,

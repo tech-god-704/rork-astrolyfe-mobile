@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Modal, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, KeyRound, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -14,13 +14,11 @@ import AppBackground from '@/components/AppBackground';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, setSkipAuth } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pin, setPin] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
@@ -175,49 +173,9 @@ export default function LoginScreen() {
                 <Text style={styles.signupText}>Don&apos;t have an account? <Text style={styles.signupTextBold}>Sign up</Text></Text>
               </Pressable>
             </Animated.View>
-
-            {/* Dev bypass */}
-            {__DEV__ && <View style={styles.devBypassRow}>
-              <Pressable onPress={() => setShowPinModal(true)} style={({ pressed }) => [styles.devLockBtn, pressed && { opacity: 0.6 }]} hitSlop={16}>
-                <View style={styles.devLockInner}>
-                  <KeyRound size={20} color={Colors.textSecondary} />
-                </View>
-              </Pressable>
-            </View>}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-      {/* PIN Modal */}
-      <Modal visible={showPinModal} transparent animationType="fade" onRequestClose={() => { setShowPinModal(false); setPin(''); }}>
-        <Pressable style={styles.modalOverlay} onPress={() => { setShowPinModal(false); setPin(''); }}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Enter PIN</Text>
-            <TextInput
-              style={styles.pinInput}
-              value={pin}
-              onChangeText={(text) => {
-                const digits = text.replace(/[^0-9]/g, '').slice(0, 4);
-                setPin(digits);
-                if (digits === '1985') {
-                  setShowPinModal(false);
-                  setPin('');
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-                  setSkipAuth(true);
-                  router.replace('/(app)/(home)');
-                }
-              }}
-              keyboardType="number-pad"
-              maxLength={4}
-              placeholder="----"
-              placeholderTextColor={Colors.textMuted}
-              autoFocus
-              secureTextEntry
-            />
-            <Text style={styles.modalHint}>4-digit code</Text>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -287,39 +245,4 @@ const styles = StyleSheet.create({
   signupLink: { alignItems: 'center', paddingVertical: 12 },
   signupText: { fontSize: 15, color: Colors.textSecondary },
   signupTextBold: { color: Colors.gold, fontWeight: '700' },
-  devBypassRow: { alignItems: 'center', marginTop: 40, paddingBottom: 20 },
-  devLockBtn: { padding: 12 },
-  devLockInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
-  modalCard: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
-    padding: 28,
-    width: 260,
-    alignItems: 'center',
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 20 },
-  pinInput: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    letterSpacing: 12,
-    width: '100%',
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.purple,
-  },
-  modalHint: { fontSize: 13, color: Colors.textMuted, marginTop: 12 },
 });

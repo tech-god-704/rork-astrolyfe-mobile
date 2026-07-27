@@ -80,53 +80,20 @@ export async function fetchUnlockedSlugs(userEmail: string): Promise<string[]> {
 }
 
 /**
- * Record a completed purchase in the database.
- * Validates that the product exists before inserting.
+ * Deliberately refuses client-side purchase recording. A verified Stripe webhook is
+ * the only component allowed to mark a purchase completed.
  */
 export async function recordPurchase(
   userEmail: string,
   productSlug: string,
   stripePaymentIntentId: string,
 ): Promise<void> {
-  if (!userEmail || !productSlug || !stripePaymentIntentId) {
-    throw new Error('Missing required purchase fields');
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const [productResult, existingResult] = await Promise.all([
-      supabase
-        .from('products')
-        .select('slug, price')
-        .eq('slug', productSlug)
-        .abortSignal(controller.signal)
-        .single(),
-      supabase
-        .from('purchases')
-        .select('id')
-        .eq('stripe_payment_intent_id', stripePaymentIntentId)
-        .abortSignal(controller.signal)
-        .maybeSingle(),
-    ]);
-
-    if (productResult.error || !productResult.data) throw new Error('Product not found');
-    const product = productResult.data;
-
-    if (existingResult.data) {
-      console.log('[Purchases] Purchase already recorded for this payment intent');
-      return;
-    }
-
-    const { error } = await supabase.from('purchases').insert({
-      user_email: userEmail,
-      product_id: product.slug,
-      status: 'completed',
-      stripe_payment_intent_id: stripePaymentIntentId,
-    });
-
-    if (error) throw error;
-  } finally {
-    clearTimeout(timer);
-  }
+  // A device must never grant premium access based on a client-controlled payment
+  // intent identifier. Purchases are created only by the verified Stripe webhook.
+  // Keep the exported function as a loud, safe guard for any future call site until
+  // a native payment sheet plus server-side confirmation is intentionally built.
+  void userEmail;
+  void productSlug;
+  void stripePaymentIntentId;
+  throw new Error('Purchases are confirmed securely on the SoulSketch website.');
 }

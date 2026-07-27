@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal, Image, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,11 +9,12 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
-import { fetchProducts, fetchUnlockedSlugs, recordPurchase, type Product } from '@/services/purchases';
-import { createPaymentIntent } from '@/services/stripe';
+import { fetchProducts, fetchUnlockedSlugs, type Product } from '@/services/purchases';
 import { fetchUserReports, REPORT_META, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
 import AppBackground from '@/components/AppBackground';
+
+const WEB_CHECKOUT_URL = 'https://soulmate.astrolyfe.co';
 
 export default function InsightsScreen() {
   const router = useRouter();
@@ -61,38 +62,22 @@ export default function InsightsScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
-    try {
-      const amountInCents = Math.round(product.price * 100);
-      const { paymentIntentId } = await createPaymentIntent(amountInCents);
-
-      Alert.alert(
-        'Confirm Purchase',
-        `Unlock "${product.name}" for $${product.price}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Purchase',
-            onPress: async () => {
-              try {
-                await recordPurchase(user.email!, product.slug, paymentIntentId);
-                await unlockedQuery.refetch();
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-                Alert.alert('Success', `You've unlocked ${product.name}!`);
-              } catch (err: unknown) {
-                const msg = err instanceof Error ? err.message : 'Purchase recording failed';
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-                Alert.alert('Error', msg);
-              }
-            },
+    Alert.alert(
+      'Complete your secure checkout',
+      `Finish your ${product.name} purchase securely on the SoulSketch website. Your access will appear here after payment is confirmed.`,
+      [
+        { text: 'Not now', style: 'cancel' },
+        {
+          text: 'Continue securely',
+          onPress: () => {
+            void Linking.openURL(WEB_CHECKOUT_URL).catch(() => {
+              Alert.alert('Unable to Open Checkout', 'Please visit soulmate.astrolyfe.co in your browser to continue securely.');
+            });
           },
-        ]
-      );
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Payment failed';
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert('Error', message);
-    }
-  }, [user, unlockedQuery]);
+        },
+      ],
+    );
+  }, [user]);
 
   const onRefresh = useCallback(() => {
     void productsQuery.refetch();
@@ -228,7 +213,7 @@ export default function InsightsScreen() {
                           } else {
                             Alert.alert(
                               product.name,
-                              'Your report is being generated. Check back soon or view it at app.astrolyfe.co',
+                              'Your report is being prepared. Check back here soon—your private content will appear in My Insights when it is ready.',
                             );
                           }
                         }}
