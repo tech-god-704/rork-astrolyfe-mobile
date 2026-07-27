@@ -15,7 +15,7 @@
  */
 
 import { calculateNatalChart } from './natal';
-import { planetPositions, localDayNoon, localDateKey, samplePeriod, addDays } from './ephemeris';
+import { planetPositions, localDayNoon, localDateKey, samplePeriod } from './ephemeris';
 import { findTransitAspects, type TransitAspect, type NatalPoint } from './transit-aspects';
 import { rankAspects, dedupeByKey } from './forecast-ranking';
 import {
@@ -168,14 +168,18 @@ export function birthUtcOffsetMinutes(profile: HoroscopeProfileInput | null | un
   }
 }
 
+/**
+ * Cache key for a period.
+ *
+ * Every period keys on the day its window opens, because `samplePeriod` always walks
+ * forward from *today*. An earlier version anchored weekly to the containing Monday and
+ * monthly to the calendar month, which quietly broke both: the window moved every day
+ * while the key did not, so Monday's reading was pinned for the rest of the week and the
+ * 1st of the month's reading was pinned until the 30th. Key and window must describe the
+ * same span or the cache serves a forecast for days that have already passed.
+ */
 function periodStartKey(period: HoroscopePeriod, date: Date): string {
-  if (period === 'daily') return localDateKey(date);
-  if (period === 'weekly') {
-    // Anchor to the Monday of the containing week so the key is stable all week.
-    const day = (date.getDay() + 6) % 7;
-    return localDateKey(addDays(date, -day));
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return localDateKey(date);
 }
 
 const TITLES: Record<HoroscopePeriod, string> = {

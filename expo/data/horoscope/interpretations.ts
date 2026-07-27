@@ -102,6 +102,9 @@ export const NATAL_THEMES: Record<string, string[]> = {
   Uranus:  ['individuality', 'need for freedom', 'where you break from convention'],
   Neptune: ['imagination and ideals', 'spiritual life', 'where boundaries blur'],
   Pluto:   ['capacity for transformation', 'buried power', 'where you rebuild yourself'],
+  // Present only at the full-chart tier. Without this the sentence fell back to the
+  // generic "your chart" filler, which read as padding rather than a real placement.
+  Ascendant: ['how you meet the world', 'your outward manner', 'the face you lead with'],
 };
 
 /** Practical suggestions, keyed by tone. Grounded, never prescriptive. */

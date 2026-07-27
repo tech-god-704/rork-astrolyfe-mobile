@@ -17,6 +17,7 @@ import {
   TRANSIT_PLANET_WEIGHT,
   NATAL_PLANET_WEIGHT,
 } from './transit-aspects';
+import { localDateKey } from './ephemeris';
 
 /** Aspects differ in how loudly they speak, independent of who is involved. */
 const ASPECT_WEIGHT: Record<AspectType, number> = {
@@ -74,7 +75,10 @@ export function dedupeByKey(
     for (const aspect of aspects) {
       const existing = best.get(aspect.key);
       if (!existing || aspect.score > existing.score) {
-        best.set(aspect.key, { ...aspect, peakDate: date.toISOString().slice(0, 10) });
+        // localDateKey, not toISOString(). The sampled instant is local noon, which for
+        // a device at UTC+13 converts to the previous UTC day — so a peak the user sees
+        // as Friday would have been recorded and displayed as Thursday.
+        best.set(aspect.key, { ...aspect, peakDate: localDateKey(date) });
       }
     }
   }

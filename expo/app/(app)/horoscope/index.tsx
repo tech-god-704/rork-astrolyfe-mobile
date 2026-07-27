@@ -50,7 +50,16 @@ export default function HoroscopeScreen() {
   const todayKey = new Date().toDateString(); // auto-invalidate at midnight
 
   const forecastQuery = useQuery<PersonalHoroscopeReading>({
-    queryKey: ['personalHoroscope', signName, period, todayKey, profile?.birth_date ?? '', profile?.birth_lat ?? '', profile?.birth_lon ?? ''],
+    // Every input that changes the chart belongs in the key. Birth time and zone were
+    // missing, so a user who followed the "add your birth time" prompt would have kept
+    // seeing the old lower-confidence reading until the day rolled over.
+    queryKey: [
+      'personalHoroscope', signName, period, todayKey,
+      profile?.birth_date ?? '',
+      profile?.birth_lat ?? '', profile?.birth_lon ?? '',
+      profile?.quiz_data?.birth_hour ?? '', profile?.quiz_data?.birth_minute ?? '',
+      profile?.timezone ?? '',
+    ],
     queryFn: () => getPersonalHoroscope({ profile, period }),
     staleTime: 1000 * 60 * 30,
   });
@@ -93,8 +102,10 @@ export default function HoroscopeScreen() {
       case 'daily': {
         return now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
       }
-      case 'weekly': return 'This Week\'s Forecast';
-      case 'monthly': return now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      // The engine samples forward from today, so these are rolling windows rather than
+      // the calendar week/month the previous labels implied.
+      case 'weekly': return 'The Next 7 Days';
+      case 'monthly': return 'The Next 30 Days';
     }
   };
 

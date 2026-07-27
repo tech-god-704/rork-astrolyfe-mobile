@@ -29,6 +29,12 @@ export interface UserProfile {
   birth_city: string | null;
   birth_lat: number | null;
   birth_lon: number | null;
+  /**
+   * IANA zone of the birthplace. Required to convert a birth-time wall clock reading
+   * into UT; without it the horoscope engine cannot trust the ascendant and drops to
+   * its birth-date tier.
+   */
+  timezone: string | null;
   quiz_data: QuizData | null;
   // Subscription fields (synced by Stripe webhook → profiles table)
   subscription_status: string | null;
@@ -48,6 +54,7 @@ const GUEST_PREVIEW_PROFILE: UserProfile = {
   birth_city: 'Los Angeles, CA',
   birth_lat: 34.0522,
   birth_lon: -118.2437,
+  timezone: 'America/Los_Angeles',
   quiz_data: {
     birth_year: 1990,
     birth_month: 7,
@@ -101,7 +108,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // Try profiles table first (keyed by auth.users.id, has subscription data)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, quiz_data, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
+        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
         .eq('email', email)
         .abortSignal(controller.signal)
         .maybeSingle();
@@ -115,6 +122,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           zodiac_sign: profileData.zodiac_sign,
           birth_date: profileData.date_of_birth,
           birth_city: profileData.birth_city,
+          timezone: profileData.timezone ?? null,
           birth_lat: profileData.birth_lat,
           birth_lon: profileData.birth_lon,
           quiz_data: profileData.quiz_data,
@@ -149,6 +157,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         email: userData.email,
         display_name: null,
         zodiac_sign: null,
+        // The users table has no timezone column; this fallback path is for funnel leads
+        // who have no profile row yet, so the horoscope stays on its birth-date tier.
+        timezone: null,
         // The funnel stores the real birth date inside quiz_data as MM/DD/YYYY.
         birth_date: normalizeBirthDate(userData.birth_date) ?? normalizeBirthDate(quiz?.birth_date),
         birth_city: null,

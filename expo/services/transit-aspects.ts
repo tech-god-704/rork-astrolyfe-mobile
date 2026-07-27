@@ -46,6 +46,10 @@ export const TRANSIT_PLANET_WEIGHT: Record<string, number> = {
 export const NATAL_PLANET_WEIGHT: Record<string, number> = {
   Sun: 1.0, Moon: 1.0, Venus: 0.85, Mars: 0.8, Mercury: 0.75,
   Saturn: 0.7, Jupiter: 0.7, Uranus: 0.5, Neptune: 0.5, Pluto: 0.5,
+  // Only ever present when birth time, place and zone are all known, so when it is
+  // here it is trustworthy and rates alongside the luminaries. Without an entry it
+  // fell to the 0.4 default and was ranked below planets it should outweigh.
+  Ascendant: 0.95,
 };
 
 /** Which sections a planet pair can legitimately speak to. */
@@ -60,6 +64,7 @@ const PLANET_CATEGORIES: Record<string, ForecastCategory[]> = {
   Uranus:  ['overview', 'career'],
   Neptune: ['overview', 'wellness'],
   Pluto:   ['overview', 'wellness'],
+  Ascendant: ['overview', 'wellness', 'love'],
 };
 
 export interface NatalPoint {
