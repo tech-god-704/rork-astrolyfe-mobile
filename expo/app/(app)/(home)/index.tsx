@@ -13,6 +13,7 @@ import { getMoonPhase, getZodiacByName } from '@/constants/zodiac';
 import { categorizeHoroscope, fetchCuratedHoroscope, getHoroscope } from '@/services/horoscope';
 import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const SIGNAL_COLORS: Record<string, string> = {
   general: Colors.gold,
@@ -22,6 +23,7 @@ const SIGNAL_COLORS: Record<string, string> = {
 };
 
 export default function HomeScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
@@ -227,7 +229,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },

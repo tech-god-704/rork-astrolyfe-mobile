@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, AppState, AppStateStatus, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
+import { ThemeProvider, useTheme, useThemedStyles } from "@/providers/ThemeProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Colors from "@/constants/colors";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -89,6 +90,8 @@ function AuthGate({ onReady }: { onReady: () => void }) {
 
 function RootLayoutNav() {
   const { isReady } = useAuth();
+  const { theme } = useTheme();
+  const styles = useThemedStyles(createLayoutStyles);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [appReady, setAppReady] = useState(false);
 
@@ -108,10 +111,14 @@ function RootLayoutNav() {
   }
 
   return (
-    <View style={layoutStyles.root}>
-      {/* Dark background to prevent any white flash */}
-      <View style={layoutStyles.loading} />
-      <Animated.View style={[layoutStyles.root, { opacity: appReady ? fadeAnim : 1 }]}>
+    <View style={styles.root}>
+      {/* Prevents a white/black flash of the wrong theme's background while the
+          navigator underneath is still mounting. */}
+      <View style={styles.loading} />
+      <Animated.View style={[styles.root, { opacity: appReady ? fadeAnim : 1 }]}>
+        {/* Light content (white icons/text) reads on the dark theme's near-black
+            status bar; dark content is needed once the status bar itself is light. */}
+        <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
         <AuthGate onReady={handleReady} />
         <Stack
           screenOptions={{
@@ -129,7 +136,7 @@ function RootLayoutNav() {
   );
 }
 
-const layoutStyles = StyleSheet.create({
+const createLayoutStyles = () => StyleSheet.create({
   root: {
     flex: 1,
   },
@@ -146,10 +153,11 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <AuthProvider>
-            <StatusBar style="light" />
-            <RootLayoutNav />
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <RootLayoutNav />
+            </AuthProvider>
+          </ThemeProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>
     </ErrorBoundary>

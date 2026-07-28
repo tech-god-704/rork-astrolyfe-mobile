@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import CosmicBackground from '@/components/CosmicBackground';
 import BrandMark from '@/components/BrandMark';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 /**
  * One-time welcome tour, shown between login and the tab bar for any account whose
@@ -64,6 +65,7 @@ const STEPS: Step[] = [
 ];
 
 export default function WelcomeTourScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { profile, refreshProfile } = useAuth();
   const [step, setStep] = useState(0);
@@ -160,7 +162,7 @@ export default function WelcomeTourScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   safeArea: { flex: 1, paddingHorizontal: 28, justifyContent: 'space-between' },
   top: {
     flexDirection: 'row',

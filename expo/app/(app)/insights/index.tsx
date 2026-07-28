@@ -13,10 +13,12 @@ import { fetchProducts, fetchUnlockedSlugs, type Product } from '@/services/purc
 import { fetchUserReports, REPORT_META, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const WEB_CHECKOUT_URL = 'https://soulmate.astrolyfe.co';
 
 export default function InsightsScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [viewingReport, setViewingReport] = useState<UserReport | null>(null);
@@ -343,7 +345,7 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   cardPressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
   safeArea: { flex: 1 },

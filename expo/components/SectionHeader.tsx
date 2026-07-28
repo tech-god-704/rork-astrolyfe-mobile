@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 interface SectionHeaderProps {
   title: string;
@@ -12,6 +13,7 @@ interface SectionHeaderProps {
 }
 
 export default function SectionHeader({ title, subtitle, action, onAction }: SectionHeaderProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container}>
       <View style={styles.left}>
@@ -28,7 +30,7 @@ export default function SectionHeader({ title, subtitle, action, onAction }: Sec
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

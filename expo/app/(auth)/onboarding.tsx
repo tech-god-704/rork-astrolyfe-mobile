@@ -12,6 +12,7 @@ import { ZODIAC_SIGNS } from '@/constants/zodiac';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail, getPasswordError, getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const STEP_META = [
   { label: 'ACCOUNT', detail: 'Your private space' },
@@ -20,6 +21,7 @@ const STEP_META = [
 ] as const;
 
 export default function OnboardingScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { signUp } = useAuth();
   const [step, setStep] = useState<number>(0);
@@ -300,7 +302,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   flex: { flex: 1 },

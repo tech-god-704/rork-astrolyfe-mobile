@@ -12,6 +12,7 @@ import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getCompatibility, type CompatibilityResult } from '@/services/compatibility';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const RING_SIZE = Math.min(200, SCREEN_W - 100);
@@ -86,6 +87,7 @@ function getDailyCosmicTip(sign1: string, sign2: string): string {
 }
 
 export default function CompatibilityScreen() {
+  const styles = useThemedStyles(createStyles);
   const { profile } = useAuth();
   const userZodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
 
@@ -539,6 +541,7 @@ function AnimatedRing({ cx, cy, r, stroke, strokeWidth, circumference, scoreAnim
 
 // Animated score display
 function AnimatedScore({ score, color }: { score: Animated.Value; color: string }) {
+  const styles = useThemedStyles(createStyles);
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
@@ -551,7 +554,7 @@ function AnimatedScore({ score, color }: { score: Animated.Value; color: string 
   return <Text style={[styles.scoreValue, { color }]}>{display}%</Text>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },

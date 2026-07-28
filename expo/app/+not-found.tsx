@@ -7,8 +7,10 @@ import AppBackground from '@/components/AppBackground';
 import BrandMark from '@/components/BrandMark';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 export default function NotFoundScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
 
   return (
@@ -46,7 +48,7 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1, paddingHorizontal: 24, justifyContent: 'center' },
   content: { alignItems: 'center' },

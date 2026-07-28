@@ -7,10 +7,12 @@ import AppBackground from '@/components/AppBackground';
 import BrandMark from '@/components/BrandMark';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const WEB_CHECKOUT_URL = 'https://soulmate.astrolyfe.co';
 
 export default function SubscriptionGuard({ children }: { children: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   const { isSubscribed, isLoading, refreshProfile } = useAuth();
   const [restoring, setRestoring] = useState(false);
 
@@ -106,7 +108,7 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 30 },

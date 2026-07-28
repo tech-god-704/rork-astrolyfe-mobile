@@ -14,6 +14,7 @@ import GlassCard from '@/components/GlassCard';
 import { type HoroscopePeriod } from '@/services/horoscope';
 import { getPersonalHoroscope, type PersonalHoroscopeReading } from '@/services/personal-horoscope';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 type PeriodType = HoroscopePeriod;
 
@@ -35,6 +36,7 @@ const PERIOD_LABELS: { key: PeriodType; label: string }[] = [
 ];
 
 export default function HoroscopeScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -277,7 +279,7 @@ export default function HoroscopeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   confidenceRow: { flexDirection: 'row', marginTop: 14 },
   confidenceBadge: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,

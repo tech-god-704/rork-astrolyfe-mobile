@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles, Bell } from 'lucide-react-native';
+import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles, Bell, MoonStar, Sun as SunIcon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -15,10 +15,13 @@ import GlassCard from '@/components/GlassCard';
 import { getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
 import { NOTIFICATION_TIME_PRESETS, requestNotificationPermission } from '@/services/notifications';
+import { useThemedStyles, useTheme } from '@/providers/ThemeProvider';
 
 export default function ProfileScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { profile, user, signOut, refreshProfile, isAdmin } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [displayName, setDisplayName] = useState<string>('');
   const [birthDate, setBirthDate] = useState<string>('');
   const [birthTime, setBirthTime] = useState<string>('');
@@ -397,6 +400,43 @@ export default function ProfileScreen() {
             </ScrollView>
           </GlassCard>
 
+          {/* Appearance */}
+          <GlassCard style={styles.formCard}>
+            <Text style={styles.sectionLabel}>APPEARANCE</Text>
+            <Text style={styles.sectionDescription}>Dark is the default. Light keeps the same purple accents on a bright background.</Text>
+            <View style={styles.appearanceRow}>
+              {(['dark', 'light'] as const).map((option) => {
+                const isSelected = theme === option;
+                return (
+                  <Pressable
+                    key={option}
+                    style={({ pressed }) => [styles.appearanceChip, isSelected && styles.appearanceChipActive, pressed && styles.signChipPressed]}
+                    onPress={() => {
+                      if (isSelected) return;
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setTheme(option);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${option === 'dark' ? 'Dark' : 'Light'} appearance`}
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    {option === 'dark' ? (
+                      <MoonStar size={16} color={isSelected ? Colors.purpleLight : Colors.textMuted} />
+                    ) : (
+                      <SunIcon size={16} color={isSelected ? Colors.purpleLight : Colors.textMuted} />
+                    )}
+                    <Text style={[styles.signChipLabel, isSelected && { color: Colors.purpleLight }]}>{option === 'dark' ? 'Dark' : 'Light'}</Text>
+                    {isSelected && (
+                      <View style={[styles.checkDot, { backgroundColor: Colors.purple }]}>
+                        <Check size={8} color="#fff" />
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </GlassCard>
+
           {/* Notifications */}
           <GlassCard style={styles.formCard}>
             <View style={styles.notifHeaderRow}>
@@ -495,7 +535,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
@@ -540,6 +580,13 @@ const styles = StyleSheet.create({
   profileActionTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
   profileActionText: { color: Colors.textMuted, fontSize: 11, marginTop: 3 },
   formCard: { marginBottom: 20, gap: 4, borderRadius: 22 },
+  appearanceRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  appearanceChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, borderRadius: 14, backgroundColor: Colors.bgInput,
+    borderWidth: 1, borderColor: Colors.bgInputBorder,
+  },
+  appearanceChipActive: { backgroundColor: Colors.purpleDim, borderColor: Colors.purple },
   notifHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   notifHeaderCopy: { flex: 1 },
   notifMessage: { color: Colors.purpleLight, fontSize: 12, marginTop: 12, lineHeight: 17 },

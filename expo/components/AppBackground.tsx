@@ -2,8 +2,14 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
+import { useTheme } from '@/providers/ThemeProvider';
 
 export default function AppBackground({ quiet = false }: { quiet?: boolean }) {
+  // The gradient colors below are read fresh on every render (not frozen inside a
+  // StyleSheet.create block), so they already pick up a theme change — this call is
+  // only here to subscribe to the theme context, which is what makes this component
+  // re-render in the first place when the preference changes.
+  useTheme();
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
       <LinearGradient

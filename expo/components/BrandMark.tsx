@@ -1,8 +1,10 @@
 import React from 'react';
 import { Image, Platform, StyleSheet, View } from 'react-native';
 import Colors from '@/constants/colors';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 export default function BrandMark({ size = 96 }: { size?: number; light?: boolean }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View
       accessibilityElementsHidden
@@ -23,7 +25,7 @@ export default function BrandMark({ size = 96 }: { size?: number; light?: boolea
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   root: {
     backgroundColor: Colors.bg,
     borderWidth: 1,

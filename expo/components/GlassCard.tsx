@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform, StyleProp } from 'react-native';
 import Colors from '@/constants/colors';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface GlassCardProps {
 }
 
 export default function GlassCard({ children, style, variant = 'default', glowColor }: GlassCardProps) {
+  const styles = useThemedStyles(createStyles);
   const isGlow = variant === 'glow';
   const isElevated = variant === 'elevated';
   const isSubtle = variant === 'subtle';
@@ -40,12 +42,16 @@ export default function GlassCard({ children, style, variant = 'default', glowCo
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(9,5,27,0.76)',
+    // This is the single most-used surface in the app. It previously hardcoded a
+    // near-black fill directly here rather than reading it from the palette, so every
+    // card everywhere would have rendered as a dark box on a light background —
+    // glassCard/glassCardElevated exist in constants/colors.ts specifically to fix that.
+    backgroundColor: Colors.glassCard,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(218,200,242,0.13)',
+    borderColor: Colors.bgCardBorder,
     padding: 18,
     overflow: 'hidden',
     ...Platform.select({
@@ -59,8 +65,8 @@ const styles = StyleSheet.create({
     }),
   },
   elevated: {
-    backgroundColor: 'rgba(21,12,51,0.88)',
-    borderColor: 'rgba(192,154,235,0.24)',
+    backgroundColor: Colors.glassCardElevated,
+    borderColor: Colors.bgCardBorder,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -72,8 +78,8 @@ const styles = StyleSheet.create({
     }),
   },
   subtle: {
-    backgroundColor: 'rgba(218,200,242,0.035)',
-    borderColor: 'rgba(218,200,242,0.09)',
+    backgroundColor: Colors.bgCard,
+    borderColor: Colors.bgCardBorder,
     padding: 16,
   },
 });

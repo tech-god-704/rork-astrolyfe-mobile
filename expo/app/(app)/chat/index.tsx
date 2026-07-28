@@ -12,6 +12,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/GlassCard';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 interface Astrologer {
   id: string;
@@ -174,6 +175,7 @@ function getTimeAgo(dateStr: string | null): string {
 }
 
 function StarRating({ rating }: { rating: number }) {
+  const styles = useThemedStyles(createStyles);
   const full = Math.floor(rating);
   const hasHalf = rating - full >= 0.5;
   return (
@@ -196,6 +198,7 @@ function AstrologerCardLarge({ astrologer, onPress, disabled }: {
   onPress: () => void;
   disabled: boolean;
 }) {
+  const styles = useThemedStyles(createStyles);
   const profile = getAstrologerProfile(astrologer.specialty);
 
   return (
@@ -279,6 +282,7 @@ function AstrologerCardLarge({ astrologer, onPress, disabled }: {
 }
 
 export default function ChatListScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -556,7 +560,7 @@ export default function ChatListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   pageHeader: { paddingHorizontal: 20, marginTop: 8, marginBottom: 18 },

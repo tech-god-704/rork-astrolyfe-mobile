@@ -8,8 +8,10 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import CosmicBackground from '@/components/CosmicBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 export default function WelcomeScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const artwork = useRef(new Animated.Value(0)).current;
   const content = useRef(new Animated.Value(0)).current;
@@ -112,7 +114,7 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   safeArea: {
     flex: 1,
     paddingHorizontal: 20,

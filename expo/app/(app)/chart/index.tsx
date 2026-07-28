@@ -11,6 +11,7 @@ import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const DEG = Math.PI / 180;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -62,6 +63,7 @@ const ASPECT_MEANINGS: Record<string, string> = {
 };
 
 export default function ChartScreen() {
+  const styles = useThemedStyles(createStyles);
   const { profile } = useAuth();
   const userSign = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
   const [expandedPlanet, setExpandedPlanet] = useState<string | null>(null);
@@ -555,7 +557,7 @@ function ordinal(n: number): string {
   return `${n}th`;
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },

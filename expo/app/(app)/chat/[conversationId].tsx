@@ -10,6 +10,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 interface ChatMessage {
   id: string;
@@ -33,6 +34,7 @@ const STARTER_PROMPTS = [
 ];
 
 export default function ChatConversationScreen() {
+  const styles = useThemedStyles(createStyles);
   const { conversationId, name } = useLocalSearchParams<{ conversationId: string; name: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -322,7 +324,7 @@ export default function ChatConversationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   flex: { flex: 1 },
   loader: { marginTop: 40 },

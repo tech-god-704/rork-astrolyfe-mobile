@@ -7,8 +7,10 @@ import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import Colors from '@/constants/colors';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useAuth } from '@/providers/AuthProvider';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 function TabBarBackground() {
+  const tabStyles = useThemedStyles(createTabStyles);
   return (
     <View style={StyleSheet.absoluteFill}>
       <View style={[StyleSheet.absoluteFill, tabStyles.background]} />
@@ -18,6 +20,7 @@ function TabBarBackground() {
 }
 
 function TabIcon({ Icon, color, focused }: { Icon: typeof Home; color: string; focused: boolean }) {
+  const tabStyles = useThemedStyles(createTabStyles);
   return (
     <View style={tabStyles.iconWrap}>
       {focused && <View style={tabStyles.activeGlow} />}
@@ -28,6 +31,7 @@ function TabIcon({ Icon, color, focused }: { Icon: typeof Home; color: string; f
 }
 
 function TabButton({ style, ...props }: BottomTabBarButtonProps) {
+  const tabStyles = useThemedStyles(createTabStyles);
   return <PlatformPressable {...props} style={[style, tabStyles.tabButton]} />;
 }
 
@@ -135,7 +139,7 @@ export default function AppTabLayout() {
   return <SubscriptionGuard><AppTabs /></SubscriptionGuard>;
 }
 
-const tabStyles = StyleSheet.create({
+const createTabStyles = () => StyleSheet.create({
   background: {
     backgroundColor: 'rgba(1,1,2,0.94)',
     shadowColor: Colors.purple,

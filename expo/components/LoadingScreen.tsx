@@ -4,8 +4,10 @@ import AppBackground from '@/components/AppBackground';
 import BrandMark from '@/components/BrandMark';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 export default function LoadingScreen() {
+  const styles = useThemedStyles(createStyles);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
   const rotation = useRef(new Animated.Value(0)).current;
@@ -58,7 +60,7 @@ export default function LoadingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: Colors.bg,

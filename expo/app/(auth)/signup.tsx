@@ -11,8 +11,10 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail, getPasswordError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
+import { useThemedStyles } from '@/providers/ThemeProvider';
 
 export default function SignupScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { signUp } = useAuth();
   const [email, setEmail] = useState<string>('');
@@ -209,7 +211,7 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
   flex: { flex: 1 },
