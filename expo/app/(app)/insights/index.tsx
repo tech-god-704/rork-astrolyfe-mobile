@@ -41,7 +41,16 @@ export default function InsightsScreen() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const products = productsQuery.data ?? [];
+  // This screen is a catalog of reports to unlock. The live products collection
+  // currently holds exactly one row — "SoulSketch 7-Day Trial", category
+  // "subscription" — which is the entry ticket a customer already paid to be looking
+  // at this screen at all, not a report. Listing it here showed it as permanently
+  // locked and buyable to customers who were already paying subscribers: nothing
+  // ever writes to the purchases collection this screen checks for unlock status
+  // (the real webhook updates users/profiles directly), so it could never have shown
+  // as owned for anyone. Filtering by category is future-proof against another
+  // subscription-tier row being added later, not just this one slug.
+  const products = (productsQuery.data ?? []).filter((product) => product.category !== 'subscription');
   const unlockedSlugs = unlockedQuery.data ?? [];
   const reports = reportsQuery.data ?? [];
   const unlockedCount = isAdmin ? products.length : products.filter((product) => unlockedSlugs.includes(product.slug)).length;
