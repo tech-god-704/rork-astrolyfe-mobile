@@ -22,7 +22,6 @@ export default class ErrorBoundary extends Component<Props, State> {
   // useThemedStyles like every other component — this is the class-component
   // equivalent, reading ThemeContext directly rather than through the hook.
   static contextType = ThemeContext;
-  declare context: React.ContextType<typeof ThemeContext>;
 
   constructor(props: Props) {
     super(props);
@@ -43,10 +42,16 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // `declare context: ...` (the normal way to type this) breaks the RORK/Metro
+      // build: Babel's TS-stripping plugin rejects `declare` class fields without an
+      // extra config option this project doesn't enable. tsc accepts it fine, which
+      // is how this got through locally — casting inline instead of declaring the
+      // field's type avoids emitting anything Babel needs to strip specially.
       // ThemeContext is null only if this boundary were ever mounted outside
       // ThemeProvider, which app/_layout.tsx's provider order guarantees it is not —
       // 'dark' is a safe literal fallback, not a load-bearing default.
-      const palette = getPalette(this.context?.theme ?? 'dark');
+      const theme = (this.context as React.ContextType<typeof ThemeContext>)?.theme ?? 'dark';
+      const palette = getPalette(theme);
       const styles = createStyles(palette);
       return (
         <View style={styles.container}>
