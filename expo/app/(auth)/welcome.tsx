@@ -7,12 +7,10 @@ import { ArrowRight, LockKeyhole, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
-import { useAuth } from '@/providers/AuthProvider';
 import CosmicBackground from '@/components/CosmicBackground';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { setSkipAuth } = useAuth();
   const artwork = useRef(new Animated.Value(0)).current;
   const content = useRef(new Animated.Value(0)).current;
 
@@ -22,12 +20,6 @@ export default function WelcomeScreen() {
       Animated.timing(content, { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
   }, [artwork, content]);
-
-  const preview = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setSkipAuth(true);
-    router.replace('/(app)/(home)');
-  };
 
   return (
     <CosmicBackground>
@@ -113,16 +105,6 @@ export default function WelcomeScreen() {
             accessibilityLabel="Sign in to AstroLyfe"
           >
             <Text style={styles.secondaryText}>Sign in</Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [styles.previewButton, pressed && { opacity: 0.65 }]}
-            onPress={preview}
-            testID="skip-btn"
-            accessibilityRole="button"
-            accessibilityLabel="Explore AstroLyfe as a guest"
-          >
-            <Text style={styles.previewText}>Explore as a guest</Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -292,16 +274,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: 15,
     fontWeight: '800',
-  },
-  previewButton: {
-    minHeight: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewText: {
-    color: Colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
   },
   pressed: {
     opacity: 0.88,
