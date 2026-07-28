@@ -36,6 +36,14 @@ const DARK_COLORS = {
   glassCard: 'rgba(9,5,27,0.76)',
   glassCardElevated: 'rgba(21,12,51,0.88)',
 
+  // Bottom tab bar chrome — previously hardcoded in app/(app)/_layout.tsx and never
+  // sourced from this palette, so it stayed a solid near-black strip in light mode
+  // while every screen above it turned white.
+  tabBarBg: 'rgba(1,1,2,0.94)',
+  tabBarBorder: 'rgba(218,200,242,0.15)',
+  tabBarActive: '#FFFFFF',
+  tabBarInactive: 'rgba(218,200,242,0.54)',
+
   purple: '#6138A3',
   purpleLight: '#B993E1',
   purpleSoft: '#DAC8F2',
@@ -112,6 +120,11 @@ const LIGHT_COLORS: ColorPalette = {
 
   glassCard: 'rgba(255,255,255,0.82)',
   glassCardElevated: 'rgba(255,255,255,0.94)',
+
+  tabBarBg: 'rgba(253,252,255,0.94)',
+  tabBarBorder: 'rgba(97,56,163,0.14)',
+  tabBarActive: '#6138A3',
+  tabBarInactive: 'rgba(97,56,163,0.42)',
 
   purple: '#6138A3',
   purpleLight: '#7C4DC4',

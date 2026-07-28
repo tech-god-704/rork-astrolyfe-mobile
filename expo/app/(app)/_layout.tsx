@@ -7,7 +7,7 @@ import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import Colors from '@/constants/colors';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useAuth } from '@/providers/AuthProvider';
-import { useThemedStyles } from '@/providers/ThemeProvider';
+import { useTheme, useThemedStyles } from '@/providers/ThemeProvider';
 
 function TabBarBackground() {
   const tabStyles = useThemedStyles(createTabStyles);
@@ -36,12 +36,16 @@ function TabButton({ style, ...props }: BottomTabBarButtonProps) {
 }
 
 function AppTabs() {
+  // Subscribes to theme so screenOptions below (which read Colors.tabBarActive /
+  // Colors.tabBarInactive) recompute on a theme change — this component doesn't
+  // otherwise re-render when the preference flips.
+  useTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: 'rgba(218,200,242,0.54)',
+        tabBarActiveTintColor: Colors.tabBarActive,
+        tabBarInactiveTintColor: Colors.tabBarInactive,
         tabBarActiveBackgroundColor: 'transparent',
         tabBarInactiveBackgroundColor: 'transparent',
         tabBarHideOnKeyboard: true,
@@ -141,7 +145,7 @@ export default function AppTabLayout() {
 
 const createTabStyles = () => StyleSheet.create({
   background: {
-    backgroundColor: 'rgba(1,1,2,0.94)',
+    backgroundColor: Colors.tabBarBg,
     shadowColor: Colors.purple,
     shadowOpacity: 0.22,
     shadowRadius: 18,
@@ -156,7 +160,7 @@ const createTabStyles = () => StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(218,200,242,0.15)',
+    backgroundColor: Colors.tabBarBorder,
   },
   iconWrap: {
     width: 38,
@@ -181,7 +185,7 @@ const createTabStyles = () => StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.tabBarActive,
     shadowColor: Colors.lavender,
     shadowOpacity: 0.95,
     shadowRadius: 7,

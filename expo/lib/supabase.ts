@@ -9,5 +9,5 @@
  * To go back to Supabase, restore this file's previous contents; nothing else changes.
  */
 
-export { supabase, type PbUser, type PbSession } from './pocketbase';
+export { supabase, getFileUrl, uploadFile, type PbUser, type PbSession } from './pocketbase';
 export { supabase as default } from './pocketbase';

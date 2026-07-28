@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Switch, type TextInput as TextInputType } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Switch, Image, type TextInput as TextInputType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles, Bell, MoonStar, Sun as SunIcon } from 'lucide-react-native';
+import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles, Bell, MoonStar, Sun as SunIcon, Camera } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
-import { supabase } from '@/lib/supabase';
+import { supabase, uploadFile } from '@/lib/supabase';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getBirthDateError } from '@/lib/validation';
@@ -35,6 +36,8 @@ export default function ProfileScreen() {
   const [notifMinute, setNotifMinute] = useState<number>(0);
   const [notifMessage, setNotifMessage] = useState<string | null>(null);
   const notifMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const nameRef = useRef<TextInputType>(null);
   const birthRef = useRef<TextInputType>(null);
@@ -197,6 +200,40 @@ export default function ProfileScreen() {
     },
   });
 
+  const pickAvatar = useCallback(async () => {
+    if (!profile?.id || avatarUploading) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photo access needed', 'Enable photo library access in Settings to change your profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    setAvatarPreview(asset.uri);
+    setAvatarUploading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    try {
+      await uploadFile('profiles', profile.id, 'avatar', {
+        uri: asset.uri,
+        name: asset.fileName || `avatar-${profile.id}.jpg`,
+        type: asset.mimeType || 'image/jpeg',
+      });
+      await refreshProfile();
+    } catch {
+      setAvatarPreview(null);
+      Alert.alert("Couldn't update photo", 'Please try again.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }, [profile?.id, avatarUploading, refreshProfile]);
+
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -226,18 +263,36 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.profilePercent}>{completeness.percent}%</Text>
             </View>
-            <View style={styles.avatarOuter}>
-              <LinearGradient
-                colors={zodiac ? [zodiac.color, Colors.purple] : [Colors.purple, Colors.indigoLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatarGradient}
-              >
-                <View style={styles.avatarInner}>
-                  <Text style={styles.avatarText}>{zodiac?.symbol ?? (displayName[0] ?? '?')}</Text>
+            <Pressable
+              onPress={pickAvatar}
+              disabled={avatarUploading}
+              accessibilityRole="button"
+              accessibilityLabel={avatarPreview ?? profile?.avatar_url ? 'Change profile picture' : 'Add a profile picture'}
+            >
+              <View style={styles.avatarOuter}>
+                <LinearGradient
+                  colors={zodiac ? [zodiac.color, Colors.purple] : [Colors.purple, Colors.indigoLight]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarGradient}
+                >
+                  <View style={styles.avatarInner}>
+                    {avatarPreview ?? profile?.avatar_url ? (
+                      <Image source={{ uri: (avatarPreview ?? profile?.avatar_url) as string }} style={styles.avatarPhoto} />
+                    ) : (
+                      <Text style={styles.avatarText}>{zodiac?.symbol ?? (displayName[0] ?? '?')}</Text>
+                    )}
+                  </View>
+                </LinearGradient>
+                <View style={styles.avatarEditBadge}>
+                  {avatarUploading ? (
+                    <ActivityIndicator size="small" color={Colors.paperInk} />
+                  ) : (
+                    <Camera size={13} color={Colors.paperInk} />
+                  )}
                 </View>
-              </LinearGradient>
-            </View>
+              </View>
+            </Pressable>
             <Text style={styles.displayNameHeader}>{displayName || 'Stargazer'}</Text>
             <Text style={styles.email}>{user?.email ?? ''}</Text>
             <View style={styles.badgeRow}>
@@ -562,6 +617,20 @@ const createStyles = () => StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontSize: 36, color: Colors.purpleLight },
+  avatarPhoto: { width: '100%' as unknown as number, height: '100%' as unknown as number, borderRadius: 44 },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.purple,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.bgCardSolid,
+  },
   displayNameHeader: { fontSize: 26, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.55, textAlign: 'center' },
   email: { fontSize: 14, color: Colors.textMuted, marginTop: 4, textAlign: 'center' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },

@@ -183,6 +183,46 @@ function filterValue(v: unknown): string {
   return `'${String(v).replace(/'/g, "\\'")}'`;
 }
 
+/**
+ * Public URL for a file stored on a record's file-type field, per PocketBase's
+ * `/api/files/{collection}/{recordId}/{filename}` convention.
+ */
+export function getFileUrl(collection: string, recordId: string, filename: string): string {
+  return `${PB_URL}/api/files/${encodeURIComponent(collection)}/${encodeURIComponent(recordId)}/${encodeURIComponent(filename)}`;
+}
+
+/**
+ * Multipart upload to a single file-type field. Separate from the Query builder's
+ * JSON-only update() because PocketBase (like any REST API) needs an actual
+ * multipart/form-data body for a file, which a JSON PATCH cannot carry.
+ */
+export async function uploadFile(
+  collection: string,
+  recordId: string,
+  field: string,
+  file: { uri: string; name: string; type: string },
+): Promise<any> {
+  await loadAuth();
+  const form = new FormData();
+  form.append(field, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+
+  const headers: Record<string, string> = {};
+  if (currentToken) headers.Authorization = currentToken;
+
+  const res = await fetch(
+    `${PB_URL}/api/collections/${encodeURIComponent(collection)}/records/${recordId}`,
+    { method: 'PATCH', headers, body: form },
+  );
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : {};
+  if (!res.ok) {
+    const err: any = new Error(body?.message || `PocketBase HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
 // ── query builder ─────────────────────────────────────────────────────
 
 class Query<T = any> implements PromiseLike<Result<T>> {

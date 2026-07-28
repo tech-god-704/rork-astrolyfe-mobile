@@ -1,13 +1,14 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, Sparkles, Compass, Heart, Sun } from 'lucide-react-native';
+import { ArrowRight, Camera, Sparkles, Compass, Heart, Sun } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
-import { supabase } from '@/lib/supabase';
+import { supabase, uploadFile } from '@/lib/supabase';
 import CosmicBackground from '@/components/CosmicBackground';
 import BrandMark from '@/components/BrandMark';
 import { useThemedStyles } from '@/providers/ThemeProvider';
@@ -67,10 +68,84 @@ const STEPS: Step[] = [
 export default function WelcomeTourScreen() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const { profile, refreshProfile } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const [step, setStep] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
+
+  // The web funnel never asks for a name, so most accounts land here with a null
+  // display_name. A native in-app signup already collects one, so only show this step
+  // when there is genuinely nothing on file yet — locked at mount so a background
+  // refreshProfile() mid-flow can't yank the step out from under the customer.
+  const [showProfileStep] = useState(() => !profile?.display_name?.trim());
+  const [profileStepDone, setProfileStepDone] = useState(false);
+  const [name, setName] = useState(profile?.display_name ?? '');
+  const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url ?? null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const pickedAsset = useRef<ImagePicker.ImagePickerAsset | null>(null);
+
+  const pickPhoto = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photo access needed', 'Enable photo library access in Settings to add a profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    pickedAsset.current = result.assets[0];
+    setAvatarUri(result.assets[0].uri);
+    setAvatarError(null);
+  }, []);
+
+  const continueFromProfileStep = useCallback(async () => {
+    const trimmed = name.trim();
+    if (!trimmed || savingProfile) return;
+    setSavingProfile(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+
+    try {
+      // Upsert rather than update: a funnel customer's profiles row may not exist yet
+      // at this point, and this is the one place in the app that needs to be able to
+      // create it rather than assume it. user_id only matters for that insert branch —
+      // it's the required relation the profiles schema enforces.
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({ email: profile?.email, user_id: user?.id, display_name: trimmed }, { onConflict: 'email' });
+      if (error) throw error;
+
+      const recordId = (data as { id?: string } | null)?.id ?? profile?.id ?? null;
+      if (pickedAsset.current && recordId) {
+        const asset = pickedAsset.current;
+        setAvatarUploading(true);
+        try {
+          await uploadFile('profiles', recordId, 'avatar', {
+            uri: asset.uri,
+            name: asset.fileName || `avatar-${recordId}.jpg`,
+            type: asset.mimeType || 'image/jpeg',
+          });
+        } catch {
+          setAvatarError("Couldn't upload that photo — you can add one later from your profile.");
+        } finally {
+          setAvatarUploading(false);
+        }
+      }
+      await refreshProfile();
+    } catch {
+      // Same reasoning as finish() below — never trap someone here because a single
+      // write failed. Worst case their name doesn't stick and they can set it from the
+      // Profile tab instead.
+    } finally {
+      setSavingProfile(false);
+      setProfileStepDone(true);
+    }
+  }, [name, savingProfile, profile?.email, profile?.id, user?.id, refreshProfile]);
 
   const animateTo = useCallback((next: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -107,6 +182,81 @@ export default function WelcomeTourScreen() {
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
+
+  if (showProfileStep && !profileStepDone) {
+    return (
+      <CosmicBackground>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.top}>
+            <BrandMark size={40} />
+          </View>
+
+          <View style={styles.content}>
+            <Pressable
+              onPress={pickPhoto}
+              disabled={avatarUploading}
+              style={styles.avatarPicker}
+              accessibilityRole="button"
+              accessibilityLabel={avatarUri ? 'Change profile picture' : 'Add a profile picture'}
+            >
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Camera size={26} color={Colors.lavender} strokeWidth={1.8} />
+                </View>
+              )}
+              {avatarUploading && (
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator color={Colors.paperInk} />
+                </View>
+              )}
+            </Pressable>
+            <Text style={styles.avatarCaption}>{avatarUri ? 'Tap to change' : 'Add a photo — optional'}</Text>
+
+            <Text style={styles.eyebrow}>Let's set up your profile</Text>
+            <Text style={styles.title}>What should we call you?</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Your first name"
+              placeholderTextColor={Colors.textFaint}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              maxLength={60}
+              onSubmitEditing={continueFromProfileStep}
+            />
+            {avatarError ? <Text style={styles.profileStepError}>{avatarError}</Text> : null}
+          </View>
+
+          <View style={styles.bottom}>
+            <Pressable
+              onPress={continueFromProfileStep}
+              disabled={!name.trim() || savingProfile}
+              style={({ pressed }) => [
+                styles.cta,
+                pressed && styles.ctaPressed,
+                (!name.trim() || savingProfile) && styles.ctaDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Continue"
+            >
+              {savingProfile ? (
+                <ActivityIndicator color={Colors.black} />
+              ) : (
+                <>
+                  <Text style={styles.ctaText}>Continue</Text>
+                  <ArrowRight size={18} color={Colors.black} strokeWidth={2.4} />
+                </>
+              )}
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </CosmicBackground>
+    );
+  }
 
   return (
     <CosmicBackground>
@@ -219,6 +369,62 @@ const createStyles = () => StyleSheet.create({
     color: 'rgba(218,200,242,0.82)',
     textAlign: 'center',
     maxWidth: 320,
+  },
+  avatarPicker: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(150,98,198,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(192,154,235,0.4)',
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(1,1,2,0.45)',
+  },
+  avatarCaption: {
+    fontFamily: Fonts.body,
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: 'rgba(218,200,242,0.62)',
+    marginBottom: 26,
+  },
+  nameInput: {
+    width: '100%',
+    maxWidth: 320,
+    minHeight: 56,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    backgroundColor: Colors.bgInput,
+    borderWidth: 1,
+    borderColor: Colors.bgInputBorder,
+    fontFamily: Fonts.body,
+    fontSize: 17,
+    color: Colors.paperInk,
+    textAlign: 'center',
+  },
+  profileStepError: {
+    fontFamily: Fonts.body,
+    fontSize: 13,
+    color: Colors.danger,
+    textAlign: 'center',
+    marginTop: 14,
+    maxWidth: 300,
   },
   bottom: { paddingBottom: 20, gap: 22 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8 },

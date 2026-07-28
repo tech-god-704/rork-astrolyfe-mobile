@@ -5,7 +5,7 @@ import { AppState, AppStateStatus } from 'react-native';
 // truth for what a session or a user is.
 import type { PbSession as Session, PbUser as User } from '@/lib/supabase';
 import createContextHook from '@nkzw/create-context-hook';
-import { supabase } from '@/lib/supabase';
+import { supabase, getFileUrl } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
 import { syncDailyReminder } from '@/services/notifications';
 
@@ -23,8 +23,15 @@ export interface QuizData {
 }
 
 export interface UserProfile {
+  /**
+   * PocketBase record id on the profiles collection. Null on the users-table fallback
+   * path (no profiles row exists yet) — an avatar upload needs a record to attach the
+   * file to, so callers must treat a null id as "no photo upload available yet."
+   */
+  id: string | null;
   email: string;
   display_name: string | null;
+  avatar_url: string | null;
   zodiac_sign: string | null;
   birth_date: string | null;
   birth_city: string | null;
@@ -57,8 +64,10 @@ export interface UserProfile {
 const ACTIVE_STATUSES = ['active', 'trialing', 'trial', 'lifetime'];
 
 const GUEST_PREVIEW_PROFILE: UserProfile = {
+  id: null,
   email: '',
   display_name: 'Guest Explorer',
+  avatar_url: null,
   zodiac_sign: 'Cancer',
   birth_date: '1990-07-15',
   birth_city: 'Los Angeles, CA',
@@ -134,7 +143,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // Try profiles table first (keyed by auth.users.id, has subscription data)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, onboarding_completed, notifications_enabled, notification_hour, notification_minute, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
+        .select('id, email, display_name, avatar, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, onboarding_completed, notifications_enabled, notification_hour, notification_minute, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
         .eq('email', email)
         .abortSignal(controller.signal)
         .maybeSingle();
@@ -143,8 +152,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
       if (profileData) {
         return {
+          id: profileData.id,
           email: profileData.email,
           display_name: profileData.display_name,
+          avatar_url: profileData.avatar
+            ? getFileUrl('profiles', profileData.id, profileData.avatar)
+            : null,
           zodiac_sign: profileData.zodiac_sign,
           birth_date: profileData.date_of_birth,
           birth_city: profileData.birth_city,
@@ -184,8 +197,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       const quiz = userData.quiz_data as QuizData | null;
 
       return {
+        id: null,
         email: userData.email,
         display_name: null,
+        avatar_url: null,
         zodiac_sign: null,
         // The users table has no timezone column; this fallback path is for funnel leads
         // who have no profile row yet, so the horoscope stays on its birth-date tier.
