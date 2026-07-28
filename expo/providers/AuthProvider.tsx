@@ -317,34 +317,36 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     });
     if (error) throw error;
 
-    // The profiles row is auto-created by the DB trigger.
-    // Wait briefly for trigger to execute, then update with display info.
-    await new Promise((r) => setTimeout(r, 500));
-
-    const { error: updateError } = await supabase.from('profiles').update({
+    // PocketBase has no trigger/hook that auto-creates a profiles row on signup (there
+    // is no pb_hooks directory in this project at all) — the previous comment claiming
+    // one existed was a leftover Supabase-era assumption. update() silently no-ops on
+    // zero matching rows rather than erroring, so display_name/zodiac_sign/birth data
+    // was being lost with no visible failure for every native in-app signup. upsert()
+    // both creates the row (user_id is required for that branch, per the profiles
+    // create rule) and updates it if it already exists, in one call.
+    const { data: profileRow, error: upsertError } = await supabase.from('profiles').upsert({
+      email,
+      user_id: data.user?.id,
       display_name: displayName,
       zodiac_sign: zodiacSign || null,
       date_of_birth: birthDate || null,
       birth_city: birthCity || null,
-    }).eq('email', email);
+    }, { onConflict: 'email' });
 
-    if (updateError) {
-      // Trigger may not have fired yet — retry once after delay
-      console.log('[Auth] Profile update failed, retrying...', updateError.message);
-      await new Promise((r) => setTimeout(r, 1000));
-      const { error: retryError } = await supabase.from('profiles').update({
-        display_name: displayName,
-        zodiac_sign: zodiacSign || null,
-        date_of_birth: birthDate || null,
-        birth_city: birthCity || null,
-      }).eq('email', email);
-      if (retryError) {
-        console.error('[Auth] Profile update retry failed:', retryError.message);
-      }
+    if (upsertError) {
+      console.error('[Auth] Profile upsert failed:', upsertError.message);
+    } else {
+      void profileRow;
+      // The SIGNED_IN event supabase.auth.signUp() fires internally already populated
+      // `profile` in context from whatever the bare row looked like before this write —
+      // stale display_name/etc. Refresh it now so callers (e.g. welcome-tour's
+      // showProfileStep check) see what was just saved instead of asking again.
+      const fresh = await fetchProfile(email);
+      if (isMounted.current && fresh) setProfile(fresh);
     }
 
     return data;
-  }, []);
+  }, [fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });

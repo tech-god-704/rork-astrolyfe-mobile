@@ -13,7 +13,7 @@ import { supabase, uploadFile } from '@/lib/supabase';
 import CosmicBackground from '@/components/CosmicBackground';
 import BrandMark from '@/components/BrandMark';
 import { useThemedStyles } from '@/providers/ThemeProvider';
-import { NOTIF_PROMPT_FLAG } from '@/constants/storageKeys';
+import { NOTIF_PROMPT_FLAG, onboardingDoneKey } from '@/constants/storageKeys';
 
 /**
  * One-time welcome tour, shown between login and the tab bar for any account whose
@@ -175,9 +175,17 @@ export default function WelcomeTourScreen() {
         await refreshProfile();
       }
     } catch {
-      // Never trap someone on the tour because a single write failed — worst case they
-      // see it again next login, which is a minor annoyance, not a broken app.
+      // Never trap someone on the tour because a single write failed. Set unconditionally
+      // below regardless of this failure — see onboardingDoneKey's doc comment for why
+      // that, not this catch alone, is what actually prevents a same-session bounce loop.
     } finally {
+      if (profile?.email) {
+        // AuthGate falls back to this if the write above failed: without it, a failed
+        // write left profile.onboarding_completed stale, and AuthGate would redirect
+        // straight back here the instant navigation below lands on Home — not "next
+        // login," an immediate loop in the same session.
+        await AsyncStorage.setItem(onboardingDoneKey(profile.email), '1').catch(() => {});
+      }
       // Consumed by Home on its next mount to show the one-time notification
       // pre-permission prompt. AsyncStorage rather than a query param: Home already
       // has no route-param handling and this only ever needs to fire once per device.

@@ -1,40 +1,41 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal, Image, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Lock, Unlock, BookOpen, ShoppingCart, Sparkles, Star, ChevronRight, X, Compass, Heart } from 'lucide-react-native';
+import { Unlock, BookOpen, Sparkles, ChevronRight, X, Compass, Heart, Clock3 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
-import { fetchProducts, fetchUnlockedSlugs, type Product } from '@/services/purchases';
-import { fetchUserReports, REPORT_META, type UserReport } from '@/services/reports';
+import { fetchUserReports, REPORT_META, type ReportType, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
-const WEB_CHECKOUT_URL = 'https://soulmate.astrolyfe.co';
+// Every subscriber gets all of these as part of the one bundled SoulSketch purchase —
+// there is no separate a-la-carte catalog today (the `products` collection has exactly
+// one row, the subscription entry ticket itself). This screen used to gate these behind
+// a `products` + `purchases` unlock check that could never succeed: `purchases` has zero
+// rows ever (the real webhook writes straight to users/profiles), and product slugs
+// ("soulmate-sketch-trial") never matched report types ("full_map", "venus_love", ...)
+// even if it had. Driving the list from REPORT_META directly is what actually reflects
+// what a subscriber is entitled to.
+const REPORT_ORDER: ReportType[] = [
+  'soulmate_portrait',
+  'full_map',
+  'venus_love',
+  'sun_career',
+  'moon_wellbeing',
+  'transit_forecast',
+];
 
 export default function InsightsScreen() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [viewingReport, setViewingReport] = useState<UserReport | null>(null);
-
-  const productsQuery = useQuery({
-    queryKey: ['products'],
-    queryFn: fetchProducts,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  const unlockedQuery = useQuery({
-    queryKey: ['unlockedSlugs', user?.email],
-    queryFn: () => fetchUnlockedSlugs(user!.email!),
-    enabled: !!user?.email,
-    staleTime: 1000 * 30,
-  });
 
   const reportsQuery = useQuery({
     queryKey: ['userReports', user?.email],
@@ -43,58 +44,17 @@ export default function InsightsScreen() {
     staleTime: 1000 * 60 * 2,
   });
 
-  // This screen is a catalog of reports to unlock. The live products collection
-  // currently holds exactly one row — "SoulSketch 7-Day Trial", category
-  // "subscription" — which is the entry ticket a customer already paid to be looking
-  // at this screen at all, not a report. Listing it here showed it as permanently
-  // locked and buyable to customers who were already paying subscribers: nothing
-  // ever writes to the purchases collection this screen checks for unlock status
-  // (the real webhook updates users/profiles directly), so it could never have shown
-  // as owned for anyone. Filtering by category is future-proof against another
-  // subscription-tier row being added later, not just this one slug.
-  const products = (productsQuery.data ?? []).filter((product) => product.category !== 'subscription');
-  const unlockedSlugs = unlockedQuery.data ?? [];
   const reports = reportsQuery.data ?? [];
-  const unlockedCount = isAdmin ? products.length : products.filter((product) => unlockedSlugs.includes(product.slug)).length;
-  const collectionProgress = products.length > 0 ? Math.round((unlockedCount / products.length) * 100) : 0;
-
-  // Map product slugs to their web-generated report content
-  const reportBySlug = new Map<string, UserReport>();
+  const reportByType = new Map<ReportType, UserReport>();
   for (const r of reports) {
-    // Match report_type to product slug (e.g. 'full_map' → 'full_map')
-    reportBySlug.set(r.report_type, r);
+    reportByType.set(r.report_type, r);
   }
+  const availableCount = REPORT_ORDER.filter((type) => reportByType.has(type)).length;
+  const collectionProgress = Math.round((availableCount / REPORT_ORDER.length) * 100);
 
-  const handlePurchase = useCallback(async (product: Product) => {
-    if (!user?.email) {
-      Alert.alert('Sign In Required', 'Please sign in to purchase insights.');
-      return;
-    }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-
-    Alert.alert(
-      'Complete your secure checkout',
-      `Finish your ${product.name} purchase securely on the SoulSketch website. Your access will appear here after payment is confirmed.`,
-      [
-        { text: 'Not now', style: 'cancel' },
-        {
-          text: 'Continue securely',
-          onPress: () => {
-            void Linking.openURL(WEB_CHECKOUT_URL).catch(() => {
-              Alert.alert('Unable to Open Checkout', 'Please visit soulmate.astrolyfe.co in your browser to continue securely.');
-            });
-          },
-        },
-      ],
-    );
-  }, [user]);
-
-  const onRefresh = useCallback(() => {
-    void productsQuery.refetch();
-    void unlockedQuery.refetch();
+  const onRefresh = () => {
     void reportsQuery.refetch();
-  }, [productsQuery, unlockedQuery, reportsQuery]);
+  };
 
   return (
     <View style={styles.container}>
@@ -103,7 +63,7 @@ export default function InsightsScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={productsQuery.isRefetching} onRefresh={onRefresh} tintColor={Colors.purple} />}
+          refreshControl={<RefreshControl refreshing={reportsQuery.isRefetching} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
           {/* Header */}
           <View style={styles.headerRow}>
@@ -126,7 +86,7 @@ export default function InsightsScreen() {
             <View style={styles.toolkitTop}>
               <View>
                 <Text style={styles.toolkitEyebrow}>YOUR COSMIC TOOLKIT</Text>
-                <Text style={styles.toolkitTitle}>{unlockedCount} insight{unlockedCount === 1 ? '' : 's'} unlocked</Text>
+                <Text style={styles.toolkitTitle}>{availableCount} of {REPORT_ORDER.length} insights ready</Text>
               </View>
               <View style={styles.reportCount}>
                 <BookOpen size={14} color={Colors.lavenderIce} />
@@ -166,102 +126,81 @@ export default function InsightsScreen() {
           </View>
 
           <Text style={styles.sectionLabel}>Personal reports</Text>
-          {productsQuery.isLoading ? (
+          {reportsQuery.isLoading ? (
             <View style={styles.loaderWrap} accessibilityLiveRegion="polite">
               <ActivityIndicator color={Colors.purple} />
               <Text style={styles.loaderText}>Loading your insights…</Text>
             </View>
-          ) : products.length > 0 ? (
+          ) : (
             <View style={styles.productList}>
-              {products.map((product, index) => {
-                const isUnlocked = isAdmin || unlockedSlugs.includes(product.slug);
+              {REPORT_ORDER.map((type) => {
+                const meta = REPORT_META[type];
+                const report = reportByType.get(type);
+                const isReady = !!report;
                 return (
                   <GlassCard
-                    key={product.slug}
-                    variant={isUnlocked ? 'glow' : 'default'}
-                    glowColor={isUnlocked ? Colors.success : undefined}
+                    key={type}
+                    variant={isReady ? 'glow' : 'default'}
+                    glowColor={isReady ? Colors.success : undefined}
                     style={styles.productCard}
                   >
                     {/* Accent line */}
-                    <View style={[styles.productAccent, { backgroundColor: isUnlocked ? Colors.success : Colors.purple }]} />
+                    <View style={[styles.productAccent, { backgroundColor: isReady ? Colors.success : Colors.purple }]} />
 
                     <View style={styles.productHeader}>
-                      <View style={[styles.productIcon, isUnlocked ? styles.productIconUnlocked : styles.productIconLocked]}>
-                        {isUnlocked ? (
+                      <View style={[styles.productIcon, isReady ? styles.productIconUnlocked : styles.productIconLocked]}>
+                        {isReady ? (
                           <Unlock size={18} color={Colors.success} />
                         ) : (
-                          <Lock size={18} color={Colors.purpleLight} />
+                          <Clock3 size={18} color={Colors.purpleLight} />
                         )}
                       </View>
                       <View style={styles.productInfo}>
-                        <Text style={styles.productName}>{product.name}</Text>
-                        {product.category && (
-                          <View style={styles.categoryBadge}>
-                            <Text style={styles.categoryText}>{product.category}</Text>
-                          </View>
-                        )}
+                        <Text style={styles.productName}>{meta.title}</Text>
                       </View>
-                      {!isUnlocked && (
-                        <Text style={styles.productPrice}>${product.price}</Text>
-                      )}
-                      {isUnlocked && (
-                        <View style={styles.unlockedBadge}>
-                          <Text style={styles.unlockedText}>Unlocked</Text>
-                        </View>
-                      )}
+                      <View style={[styles.unlockedBadge, !isReady && styles.pendingBadge]}>
+                        <Text style={[styles.unlockedText, !isReady && styles.pendingText]}>
+                          {isReady ? 'Ready' : 'Generating'}
+                        </Text>
+                      </View>
                     </View>
 
-                    <Text style={styles.productDesc}>{product.description}</Text>
+                    <Text style={styles.productDesc}>{meta.description}</Text>
 
-                    {isUnlocked ? (
+                    {isReady ? (
                       <Pressable
                         style={({ pressed }) => [styles.viewBtn, pressed && { opacity: 0.8 }]}
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                          const report = reportBySlug.get(product.slug);
-                          if (report) {
-                            setViewingReport(report);
-                          } else {
-                            Alert.alert(
-                              product.name,
-                              'Your report is being prepared. Check back here soon—your private content will appear in My Insights when it is ready.',
-                            );
-                          }
+                          setViewingReport(report);
                         }}
                         accessibilityRole="button"
-                        accessibilityLabel={`${reportBySlug.has(product.slug) ? 'Read' : 'View'} ${product.name}`}
+                        accessibilityLabel={`Read ${meta.title}`}
                       >
                         <BookOpen size={14} color={Colors.success} />
-                        <Text style={styles.viewBtnText}>
-                          {reportBySlug.has(product.slug) ? 'Read Report' : 'View Content'}
-                        </Text>
+                        <Text style={styles.viewBtnText}>Read Report</Text>
                         <ChevronRight size={14} color={Colors.success} />
                       </Pressable>
                     ) : (
                       <Pressable
-                        style={({ pressed }) => [styles.purchaseBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
-                        onPress={() => handlePurchase(product)}
+                        style={({ pressed }) => [styles.pendingRow, pressed && { opacity: 0.7 }]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                          Alert.alert(
+                            meta.title,
+                            "Your report is being prepared and typically arrives within 24-48 hours of your purchase. It will appear here — and you'll get an email — the moment it's ready.",
+                          );
+                        }}
                         accessibilityRole="button"
-                        accessibilityLabel={`Unlock ${product.name} for ${product.price} dollars`}
+                        accessibilityLabel={`${meta.title} is still being prepared`}
                       >
-                        <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.purchaseBtnInner}>
-                          <ShoppingCart size={15} color="#fff" />
-                          <Text style={styles.purchaseBtnText}>Unlock for ${product.price}</Text>
-                        </LinearGradient>
+                        <Text style={styles.pendingRowText}>Ready within 24-48 hours of purchase</Text>
                       </Pressable>
                     )}
                   </GlassCard>
                 );
               })}
             </View>
-          ) : (
-            <GlassCard style={styles.emptyCard}>
-              <View style={styles.emptyIconWrap}>
-                <Star size={36} color={Colors.gold} />
-              </View>
-              <Text style={styles.emptyTitle}>Coming Soon</Text>
-              <Text style={styles.emptyDesc}>Premium insights and readings are being prepared by our expert astrologers.</Text>
-            </GlassCard>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -385,23 +324,16 @@ const createStyles = () => StyleSheet.create({
   productIconLocked: { backgroundColor: Colors.purpleDim },
   productInfo: { flex: 1 },
   productName: { fontSize: 18, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary },
-  categoryBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 4 },
-  categoryText: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  productPrice: { fontSize: 20, fontWeight: '800', color: Colors.gold },
   unlockedBadge: { backgroundColor: Colors.successDim, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   unlockedText: { fontSize: 11, fontWeight: '700', color: Colors.success, textTransform: 'uppercase', letterSpacing: 0.5 },
+  pendingBadge: { backgroundColor: Colors.purpleDim },
+  pendingText: { color: Colors.purpleLight },
   productDesc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
 
   viewBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: Colors.successDim, borderRadius: 14, alignSelf: 'flex-start' },
   viewBtnText: { fontSize: 14, fontWeight: '600', color: Colors.success },
-  purchaseBtn: { borderRadius: 14, overflow: 'hidden' },
-  purchaseBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, gap: 8 },
-  purchaseBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-
-  emptyCard: { alignItems: 'center', paddingVertical: 50, gap: 14 },
-  emptyIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  emptyDesc: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
+  pendingRow: { paddingVertical: 10, paddingHorizontal: 14, backgroundColor: Colors.purpleDim, borderRadius: 14, alignSelf: 'flex-start' },
+  pendingRowText: { fontSize: 12.5, fontWeight: '600', color: Colors.purpleLight },
 
   // Report viewer modal
   modalContainer: { flex: 1, backgroundColor: Colors.bg },

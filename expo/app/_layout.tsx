@@ -4,12 +4,14 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, AppState, AppStateStatus, Platform, StyleSheet, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { ThemeProvider, useTheme, useThemedStyles } from "@/providers/ThemeProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Colors from "@/constants/colors";
 import LoadingScreen from "@/components/LoadingScreen";
+import { onboardingDoneKey } from "@/constants/storageKeys";
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -49,6 +51,24 @@ function AuthGate({ onReady }: { onReady: () => void }) {
   const segments = useSegments();
   const router = useRouter();
   const splashHidden = useRef(false);
+  // Fallback for when welcome-tour's onboarding_completed write failed: without this,
+  // a stale profile.onboarding_completed would make needsOnboarding true again the
+  // instant navigation lands on Home, bouncing straight back to /welcome-tour in the
+  // same session rather than "next login" as that failure path assumes. Keyed per
+  // email so a second account on the same device isn't wrongly treated as done.
+  const [onboardingDoneLocally, setOnboardingDoneLocally] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.email) {
+      setOnboardingDoneLocally(false);
+      return;
+    }
+    let cancelled = false;
+    AsyncStorage.getItem(onboardingDoneKey(profile.email))
+      .then((v) => { if (!cancelled) setOnboardingDoneLocally(!!v); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [profile?.email]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -62,7 +82,7 @@ function AuthGate({ onReady }: { onReady: () => void }) {
     // to home before the onboarding check has anything to check against.
     const profileResolved = profile !== null || skipAuth;
     const needsOnboarding =
-      isAuthenticated && !skipAuth && profile !== null && profile.onboarding_completed !== true;
+      isAuthenticated && !skipAuth && profile !== null && profile.onboarding_completed !== true && !onboardingDoneLocally;
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/welcome");
@@ -83,7 +103,7 @@ function AuthGate({ onReady }: { onReady: () => void }) {
         onReady();
       }, 150);
     }
-  }, [isAuthenticated, isReady, profile, skipAuth, segments, router, onReady]);
+  }, [isAuthenticated, isReady, profile, skipAuth, segments, router, onReady, onboardingDoneLocally]);
 
   return null;
 }
