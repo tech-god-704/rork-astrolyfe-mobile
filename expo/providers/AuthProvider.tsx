@@ -390,10 +390,22 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * back to users (profiles.user_id is also enforced at creation by a PocketBase hook —
    * see pb_hooks/astrolyfe.pb.js — so it can never be unset), and deleting the users
    * record below was directly tested to remove all three correctly on its own.
+   *
+   * Deliberately refuses to proceed if profile.subscription_status is active: nothing
+   * here cancels the underlying Stripe subscription (that lives entirely server-side,
+   * driven by the webhook), so deleting the account out from under an active
+   * subscription would leave it billing indefinitely with no account left to identify
+   * it to support. There is no self-service cancellation flow today — email is the
+   * only path — so this blocks rather than silently deletes.
    */
   const deleteAccount = useCallback(async () => {
     if (!user?.id || !user?.email) {
       throw new Error('No active session to delete.');
+    }
+    if (profile && ACTIVE_STATUSES.includes(profile.subscription_status ?? '')) {
+      throw new Error(
+        'You have an active subscription, so deleting your account now would leave it billing with nothing left to cancel it against. Email support@astrolyfe.co to cancel your subscription first, then come back to delete your account.'
+      );
     }
     const { id, email } = user;
 
@@ -422,7 +434,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // future change there (e.g. clearing a query cache) doesn't need to be kept in
     // sync by hand in two places.
     await signOut();
-  }, [user, signOut]);
+  }, [user, profile, signOut]);
 
   const isSubscribed = useMemo(() => {
     // Guest exploration can navigate the product, but it is never an admin session
