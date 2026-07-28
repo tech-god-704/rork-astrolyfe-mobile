@@ -82,6 +82,11 @@ function AppTabs() {
         options={{
           title: 'Ask',
           tabBarIcon: ({ color, focused }) => <TabIcon Icon={MessageCircle} color={color} focused={focused} />,
+          // Hidden for launch: the astrologer replies are seeded personas with nothing
+          // that generates a reply — see the game plan discussed for building that out
+          // properly. Not deleted, same href: null pattern already used for
+          // compatibility/chart above, kept routable rather than removed.
+          href: null,
         }}
       />
       <Tabs.Screen

@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Sparkles, Heart, Briefcase, Activity, TrendingUp, Flame, MessageCircle, Star, Sun } from 'lucide-react-native';
+import { ArrowRight, Sparkles, Heart, Briefcase, Activity, TrendingUp, Flame, Star, Sun } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -267,21 +267,9 @@ export default function HoroscopeScreen() {
               );
             })}
 
-            <Pressable
-              style={({ pressed }) => [styles.askCta, pressed && { opacity: 0.86, transform: [{ scale: 0.99 }] }]}
-              onPress={() => router.push('/(app)/chat')}
-              accessibilityRole="button"
-              accessibilityLabel="Talk through this forecast with an astrologer"
-            >
-              <View style={styles.askCtaIcon}>
-                <MessageCircle size={19} color={Colors.lavenderIce} />
-              </View>
-              <View style={styles.askCtaCopy}>
-                <Text style={styles.askCtaLabel}>MAKE IT PERSONAL</Text>
-                <Text style={styles.askCtaTitle}>Talk through this forecast</Text>
-              </View>
-              <ArrowRight size={18} color={Colors.lavenderIce} />
-            </Pressable>
+            {/* "Talk through this forecast" card intentionally removed for launch —
+                the chat tab is hidden (see app/(app)/_layout.tsx) until real replies
+                are built. */}
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
@@ -378,9 +366,4 @@ const styles = StyleSheet.create({
   entryCategory: { fontSize: 16, fontWeight: '700', textTransform: 'capitalize' },
   entryContent: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
   accentLine: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: 2 },
-  askCta: { minHeight: 78, marginTop: 12, borderRadius: 20, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(192,154,235,0.24)', backgroundColor: 'rgba(97,56,163,0.14)', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  askCtaIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(150,98,198,0.24)', alignItems: 'center', justifyContent: 'center' },
-  askCtaCopy: { flex: 1 },
-  askCtaLabel: { color: Colors.purpleLight, fontSize: 8, fontWeight: '900', letterSpacing: 1.2, marginBottom: 4 },
-  askCtaTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
 });

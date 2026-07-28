@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, BookOpen, ChevronRight, Clock3, Compass, Heart, MessageCircle, MoonStar, Sparkles, X } from 'lucide-react-native';
+import { ArrowRight, BookOpen, ChevronRight, Clock3, Compass, Heart, MoonStar, Sparkles, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -173,16 +173,12 @@ export default function HomeScreen() {
               ))}
             </View>
 
-            <Pressable style={({ pressed }) => [styles.askCard, pressed && styles.pressed]} onPress={() => navigate('/(app)/chat')} accessibilityRole="button" accessibilityLabel="Ask an astrologer about today's reading">
-              <View style={styles.askIcon}>
-                <MessageCircle size={19} color={Colors.lavenderIce} />
-              </View>
-              <View style={styles.askCopy}>
-                <Text style={styles.askTitle}>What does this mean for you?</Text>
-                <Text style={styles.askText}>Ask an astrologer about today&apos;s reading.</Text>
-              </View>
-              <ChevronRight size={18} color={Colors.textMuted} />
-            </Pressable>
+            {/* Ask-an-astrologer card intentionally removed for launch — the chat tab
+                is hidden (see app/(app)/_layout.tsx) until real replies are built.
+                Fixed-height spacer replaces the card's own marginBottom so the section
+                below keeps its original breathing room without touching the shared
+                sectionHeader style, which is reused elsewhere on this screen. */}
+            <View style={{ height: 20 }} />
 
             <View style={styles.sectionHeader}>
               <View>
@@ -296,11 +292,6 @@ const styles = StyleSheet.create({
   signalTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800', marginBottom: 4 },
   signalText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19 },
   signalNumber: { color: Colors.textFaint, fontFamily: Fonts.mono, fontSize: 11 },
-  askCard: { minHeight: 82, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(192,154,235,0.20)', backgroundColor: 'rgba(97,56,163,0.12)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 34 },
-  askIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(150,98,198,0.22)', alignItems: 'center', justifyContent: 'center' },
-  askCopy: { flex: 1 },
-  askTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
-  askText: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
   library: { gap: 10, marginBottom: 22 },
   libraryRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 13, borderRadius: 18, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)', paddingHorizontal: 14 },
   libraryRowPressed: { backgroundColor: Colors.bgCardHover, transform: [{ scale: 0.99 }] },
