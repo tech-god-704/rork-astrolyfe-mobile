@@ -23,6 +23,8 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const PB_URL =
   process.env.EXPO_PUBLIC_POCKETBASE_URL || 'https://astrolyfe-main.cloudpod.pro';
@@ -79,7 +81,26 @@ async function loadAuth(): Promise<void> {
   if (loaded) return;
   loaded = true;
   try {
-    const raw = await AsyncStorage.getItem(AUTH_KEY);
+    let raw: string | null = null;
+    if (Platform.OS !== 'web') {
+      try {
+        raw = await SecureStore.getItemAsync(AUTH_KEY);
+      } catch {
+        // A device without a usable keychain should still be able to sign in.
+      }
+    }
+    if (!raw) {
+      raw = await AsyncStorage.getItem(AUTH_KEY);
+      // Migrate sessions written by older builds into the platform keychain.
+      if (raw && Platform.OS !== 'web') {
+        try {
+          await SecureStore.setItemAsync(AUTH_KEY, raw);
+          await AsyncStorage.removeItem(AUTH_KEY);
+        } catch {
+          // Keep the legacy value if migration is unavailable on this device.
+        }
+      }
+    }
     if (raw) {
       const parsed = JSON.parse(raw);
       currentToken = parsed?.token ?? null;
@@ -100,8 +121,34 @@ async function saveAuth(token: string | null, user: PbUser | null): Promise<void
   loaded = true;
   try {
     if (token && user) {
-      await AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ token, user }));
+      const raw = JSON.stringify({ token, user });
+      if (Platform.OS !== 'web') {
+        let storedSecurely = false;
+        try {
+          await SecureStore.setItemAsync(AUTH_KEY, raw);
+          storedSecurely = true;
+        } catch {
+          // The keychain is unavailable, or rejected the value outright — Android caps
+          // a SecureStore entry at roughly 2KB and a populated quiz_data can exceed
+          // that. Clearing any older entry before falling back is what makes the
+          // fallback safe: loadAuth() reads SecureStore BEFORE AsyncStorage, so a
+          // smaller stale copy left behind here would win on every cold start and
+          // resurrect a superseded token forever.
+          try { await SecureStore.deleteItemAsync(AUTH_KEY); } catch { /* best effort */ }
+        }
+        if (storedSecurely) {
+          // Deliberately its own try: if this throws inside the block above, execution
+          // would fall through and ALSO write the token to AsyncStorage, leaving it
+          // sitting in plaintext storage next to the keychain copy.
+          try { await AsyncStorage.removeItem(AUTH_KEY); } catch { /* best effort */ }
+          return;
+        }
+      }
+      await AsyncStorage.setItem(AUTH_KEY, raw);
     } else {
+      if (Platform.OS !== 'web') {
+        try { await SecureStore.deleteItemAsync(AUTH_KEY); } catch { /* best effort */ }
+      }
       await AsyncStorage.removeItem(AUTH_KEY);
     }
   } catch {
@@ -161,7 +208,14 @@ async function pbFetch(
 
   const res = await fetch(`${PB_URL}${path}`, { ...init, headers, signal });
   const text = await res.text();
-  const body = text ? JSON.parse(text) : {};
+  let body: any = {};
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = { message: text.slice(0, 200) };
+    }
+  }
 
   if (!res.ok) {
     const err: any = new Error(body?.message || `PocketBase HTTP ${res.status}`);
@@ -214,7 +268,14 @@ export async function uploadFile(
     { method: 'PATCH', headers, body: form },
   );
   const text = await res.text();
-  const body = text ? JSON.parse(text) : {};
+  let body: any = {};
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = { message: text.slice(0, 200) };
+    }
+  }
   if (!res.ok) {
     const err: any = new Error(body?.message || `PocketBase HTTP ${res.status}`);
     err.status = res.status;

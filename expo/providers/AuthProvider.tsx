@@ -65,6 +65,16 @@ export interface UserProfile {
 
 const ACTIVE_STATUSES = ['active', 'trialing', 'trial', 'lifetime'];
 
+/**
+ * Anything Stripe may still bill against — a superset of ACTIVE_STATUSES.
+ *
+ * past_due deliberately grants no access (so it is absent from ACTIVE_STATUSES and the
+ * customer still sees the paywall) but DOES still have a live subscription Stripe is
+ * retrying, so deleting the account under it would strand a billing relationship with
+ * nothing left to cancel it against.
+ */
+const BILLING_ACTIVE_STATUSES = [...ACTIVE_STATUSES, 'past_due'];
+
 const GUEST_PREVIEW_PROFILE: UserProfile = {
   id: null,
   email: '',
@@ -340,6 +350,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }, { onConflict: 'email' });
 
     if (upsertError) {
+      // Deliberately does NOT throw. By this point auth.signUp() has already created
+      // the account and fired SIGNED_IN, so the session is live and AuthGate will
+      // navigate into the app regardless of what this function reports — throwing
+      // only flashes an error the customer can't act on, since retrying calls
+      // signUp() again with an email that now exists and fails with "already in use."
+      // The failure is recoverable by design instead: the PocketBase hook has already
+      // created the profiles row, welcome-tour asks for a name whenever display_name
+      // is empty, and the Profile tab can set the rest.
       console.error('[Auth] Profile upsert failed:', upsertError.message);
     } else {
       void profileRow;
@@ -363,17 +381,22 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     if (isMounted.current) {
+      // Invalidate any profile request still in flight so a slow response from the
+      // previous account cannot repopulate state after logout.
+      fetchVersion.current += 1;
       setSession(null);
       setUser(null);
       setProfile(null);
     }
   }, []);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (): Promise<UserProfile | null> => {
     if (user?.email) {
       const p = await fetchProfile(user.email);
       if (isMounted.current) setProfile(p);
+      return p;
     }
+    return null;
   }, [user, fetchProfile]);
 
   /**
@@ -402,12 +425,32 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     if (!user?.id || !user?.email) {
       throw new Error('No active session to delete.');
     }
-    if (profile && ACTIVE_STATUSES.includes(profile.subscription_status ?? '')) {
+    const { id, email } = user;
+
+    // Check billing state with a direct query rather than refreshProfile(). That path
+    // collapses "the request failed" and "no such row" into the same null, and its
+    // version guard returns null whenever a concurrent fetch supersedes it — the
+    // AppState foreground listener, pull-to-refresh, and SubscriptionGuard's restore
+    // all trigger one. Routing deletion through it would refuse a customer who simply
+    // has no profiles row, or who happened to background the app mid-tap, and tell
+    // them to "try again when you are online" while they already are. Since account
+    // deletion is an App Store requirement, wrongly blocking it is its own defect.
+    // maybeSingle() separates the two cases: a real error fails closed, while an
+    // absent row genuinely means nothing is being billed.
+    const { data: billingRow, error: billingError } = await supabase
+      .from('profiles')
+      .select('subscription_status')
+      .eq('email', email)
+      .maybeSingle();
+    if (billingError) {
+      throw new Error('We could not verify your subscription status. Please check your connection and try again.');
+    }
+    const billingStatus = (billingRow as { subscription_status?: string | null } | null)?.subscription_status ?? '';
+    if (BILLING_ACTIVE_STATUSES.includes(billingStatus)) {
       throw new Error(
         'You have an active subscription, so deleting your account now would leave it billing with nothing left to cancel it against. Email support@astrolyfe.co to cancel your subscription first, then come back to delete your account.'
       );
     }
-    const { id, email } = user;
 
     // Best-effort: not worth failing account deletion over a local notification that
     // stops mattering the moment the session below is gone anyway.
@@ -434,7 +477,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // future change there (e.g. clearing a query cache) doesn't need to be kept in
     // sync by hand in two places.
     await signOut();
-  }, [user, profile, signOut]);
+  }, [user, signOut]);
 
   const isSubscribed = useMemo(() => {
     // Guest exploration can navigate the product, but it is never an admin session
