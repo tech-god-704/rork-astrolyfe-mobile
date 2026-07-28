@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowRight, Camera, Sparkles, Compass, Heart, Sun } from 'lucide-react-native';
@@ -12,6 +13,7 @@ import { supabase, uploadFile } from '@/lib/supabase';
 import CosmicBackground from '@/components/CosmicBackground';
 import BrandMark from '@/components/BrandMark';
 import { useThemedStyles } from '@/providers/ThemeProvider';
+import { NOTIF_PROMPT_FLAG } from '@/constants/storageKeys';
 
 /**
  * One-time welcome tour, shown between login and the tab bar for any account whose
@@ -176,6 +178,10 @@ export default function WelcomeTourScreen() {
       // Never trap someone on the tour because a single write failed — worst case they
       // see it again next login, which is a minor annoyance, not a broken app.
     } finally {
+      // Consumed by Home on its next mount to show the one-time notification
+      // pre-permission prompt. AsyncStorage rather than a query param: Home already
+      // has no route-param handling and this only ever needs to fire once per device.
+      await AsyncStorage.setItem(NOTIF_PROMPT_FLAG, '1').catch(() => {});
       router.replace('/(app)/(home)');
     }
   }, [finishing, profile?.email, refreshProfile, router]);

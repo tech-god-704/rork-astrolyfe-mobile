@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,8 +12,12 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { getMoonPhase, getZodiacByName } from '@/constants/zodiac';
 import { categorizeHoroscope, fetchCuratedHoroscope, getHoroscope } from '@/services/horoscope';
+import { requestNotificationPermission } from '@/services/notifications';
+import { supabase } from '@/lib/supabase';
+import { NOTIF_PROMPT_FLAG } from '@/constants/storageKeys';
 import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
+import NotificationPromptModal from '@/components/NotificationPromptModal';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const SIGNAL_COLORS: Record<string, string> = {
@@ -26,10 +31,43 @@ export default function HomeScreen() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [promptDismissed, setPromptDismissed] = useState(false);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const reveal = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(NOTIF_PROMPT_FLAG).then((flag) => {
+      if (cancelled || !flag) return;
+      // Consume immediately so this can never show again, regardless of what the
+      // customer does next (background the app, force-quit before answering, etc).
+      void AsyncStorage.removeItem(NOTIF_PROMPT_FLAG);
+      setShowNotifPrompt(true);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleEnableNotifications = useCallback(async () => {
+    setShowNotifPrompt(false);
+    const granted = await requestNotificationPermission();
+    if (granted && profile?.email) {
+      try {
+        await supabase.from('profiles').update({ notifications_enabled: true }).eq('email', profile.email);
+        await refreshProfile();
+      } catch {
+        // The OS permission is granted either way; a failed write here just means the
+        // Profile tab's toggle won't be pre-checked, which the customer can flip
+        // themselves on the screen they're about to land on.
+      }
+    }
+    router.push('/(app)/profile');
+  }, [profile?.email, refreshProfile, router]);
+
+  const handleDismissNotifPrompt = useCallback(() => {
+    setShowNotifPrompt(false);
+  }, []);
 
   const signName = profile?.zodiac_sign || 'Aries';
   const zodiac = getZodiacByName(signName);
@@ -225,6 +263,11 @@ export default function HomeScreen() {
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
+      <NotificationPromptModal
+        visible={showNotifPrompt}
+        onEnable={handleEnableNotifications}
+        onDismiss={handleDismissNotifPrompt}
+      />
     </View>
   );
 }
