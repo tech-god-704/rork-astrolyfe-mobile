@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Switch, Image, type TextInput as TextInputType } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Switch, Image, Linking, type TextInput as TextInputType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -619,6 +619,16 @@ export default function ProfileScreen() {
             </LinearGradient>
           </Pressable>
 
+          <View style={styles.legalRow}>
+            <Pressable onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/privacy-policy.php')} accessibilityRole="link" accessibilityLabel="Privacy Policy" hitSlop={8}>
+              <Text style={styles.legalLink}>Privacy Policy</Text>
+            </Pressable>
+            <Text style={styles.legalDivider}>·</Text>
+            <Pressable onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/terms.php')} accessibilityRole="link" accessibilityLabel="Terms and Conditions" hitSlop={8}>
+              <Text style={styles.legalLink}>Terms &amp; Conditions</Text>
+            </Pressable>
+          </View>
+
           <Pressable style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.8 }]} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out of AstroLyfe">
             <LogOut size={17} color={Colors.danger} />
             <Text style={styles.logoutText}>Sign Out</Text>
@@ -761,6 +771,9 @@ const createStyles = () => StyleSheet.create({
   saveBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 14, shadowColor: Colors.purple, shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
   saveBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, gap: 8 },
   saveBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14, marginTop: 4 },
+  legalLink: { fontSize: 12.5, fontWeight: '600', color: Colors.textMuted, textDecorationLine: 'underline' },
+  legalDivider: { fontSize: 12.5, color: Colors.textFaint },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

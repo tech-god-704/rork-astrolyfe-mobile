@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -171,9 +171,18 @@ export default function LoginScreen() {
                 </LinearGradient>
               </Pressable>
 
-              <Pressable onPress={() => router.push('/(auth)/onboarding')} style={styles.signupLink} accessibilityRole="link">
-                <Text style={styles.signupText}>Don&apos;t have an account? <Text style={styles.signupTextBold}>Sign up</Text></Text>
+              {/* Accounts are created on the web funnel today, not in this app — see
+                  welcome.tsx for the same decision. Plain text, not a purchase CTA. */}
+              <Pressable onPress={() => Linking.openURL('https://soulmate.astrolyfe.co')} style={styles.signupLink} accessibilityRole="link" accessibilityLabel="New to AstroLyfe? Get started on our website">
+                <Text style={styles.signupText}>New to AstroLyfe? <Text style={styles.signupTextBold}>Get started at soulmate.astrolyfe.co</Text></Text>
               </Pressable>
+
+              <Text style={styles.legalText}>
+                By signing in, you agree to our{' '}
+                <Text style={styles.legalLink} onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/terms.php')}>Terms &amp; Conditions</Text>
+                {' '}and{' '}
+                <Text style={styles.legalLink} onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/privacy-policy.php')}>Privacy Policy</Text>.
+              </Text>
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -245,6 +254,8 @@ const createStyles = () => StyleSheet.create({
   btnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   btnDisabled: { opacity: 0.5 },
   signupLink: { alignItems: 'center', paddingVertical: 12 },
-  signupText: { fontSize: 15, color: Colors.textSecondary },
+  signupText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   signupTextBold: { color: Colors.gold, fontWeight: '700' },
+  legalText: { fontSize: 11.5, color: Colors.textFaint, textAlign: 'center', lineHeight: 17, paddingHorizontal: 8, marginTop: 4 },
+  legalLink: { color: Colors.textMuted, textDecorationLine: 'underline' },
 });
