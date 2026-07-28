@@ -319,13 +319,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     });
     if (error) throw error;
 
-    // PocketBase has no trigger/hook that auto-creates a profiles row on signup (there
-    // is no pb_hooks directory in this project at all) — the previous comment claiming
-    // one existed was a leftover Supabase-era assumption. update() silently no-ops on
-    // zero matching rows rather than erroring, so display_name/zodiac_sign/birth data
-    // was being lost with no visible failure for every native in-app signup. upsert()
-    // both creates the row (user_id is required for that branch, per the profiles
-    // create rule) and updates it if it already exists, in one call.
+    // A PocketBase hook (pb_hooks/astrolyfe.pb.js, onRecordAfterCreateSuccess on
+    // 'users') DOES auto-create a profiles row the instant the users record above is
+    // created — confirmed by direct empirical test, not assumption. But it reads the
+    // display name from users.name, which the PocketBase client shim's signUp() never
+    // sets (it drops the options.data passed above entirely — see lib/pocketbase.ts).
+    // So for a native in-app signup specifically, the hook's row exists but with an
+    // empty display_name/zodiac_sign/birth data. upsert() finds that existing row (by
+    // email) and patches it with what the customer actually entered; update() used to
+    // do the same patch but could silently no-op if the hook's write raced with this
+    // one, which upsert's insert-or-patch semantics don't depend on.
+
     const { data: profileRow, error: upsertError } = await supabase.from('profiles').upsert({
       email,
       user_id: data.user?.id,
@@ -381,9 +385,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * before the users record — checked directly against the live PocketBase schema
    * (not assumed): all three have an OPTIONAL user_id relation, and purchases'
    * specifically has cascadeDelete:false, so none of them would be reliably cleaned up
-   * by deleting the users record alone. chat_conversations/chat_messages are NOT
-   * deleted explicitly here: their user_id/conversation_id relations are required and
-   * cascadeDelete:true, so deleting users below removes them correctly on its own.
+   * by deleting the users record alone. profiles/chat_conversations/chat_messages are
+   * NOT deleted explicitly here: all three have a REQUIRED, cascadeDelete:true relation
+   * back to users (profiles.user_id is also enforced at creation by a PocketBase hook —
+   * see pb_hooks/astrolyfe.pb.js — so it can never be unset), and deleting the users
+   * record below was directly tested to remove all three correctly on its own.
    */
   const deleteAccount = useCallback(async () => {
     if (!user?.id || !user?.email) {
@@ -412,13 +418,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // of the PocketBase record it was standing in for.
     await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
 
-    await supabase.auth.signOut();
-    if (isMounted.current) {
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-    }
-  }, [user]);
+    // Delegates to signOut() rather than duplicating its session-clearing steps, so a
+    // future change there (e.g. clearing a query cache) doesn't need to be kept in
+    // sync by hand in two places.
+    await signOut();
+  }, [user, signOut]);
 
   const isSubscribed = useMemo(() => {
     // Guest exploration can navigate the product, but it is never an admin session

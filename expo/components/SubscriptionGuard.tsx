@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RotateCcw, Sparkles } from 'lucide-react-native';
@@ -22,6 +22,14 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
   const styles = useThemedStyles(createStyles);
   const { isSubscribed, isLoading, refreshProfile, signOut } = useAuth();
   const [restoring, setRestoring] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const restoreMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    return () => {
+      if (restoreMessageTimer.current) clearTimeout(restoreMessageTimer.current);
+    };
+  }, []);
 
   if (isSubscribed) return <>{children}</>;
 
@@ -37,8 +45,15 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
 
   const restore = async () => {
     setRestoring(true);
+    setRestoreMessage(null);
     try {
       await refreshProfile();
+      // If this actually found an active subscription, isSubscribed flips true and
+      // the component returns <>{children}</> on the next render before this message
+      // could ever be seen — so in practice it only ever surfaces the "still nothing"
+      // case, which is the one that otherwise looked like the button did nothing.
+      setRestoreMessage("Still no active subscription found on this account.");
+      restoreMessageTimer.current = setTimeout(() => setRestoreMessage(null), 5000);
     } finally {
       setRestoring(false);
     }
@@ -97,6 +112,10 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
             <Text style={styles.restoreBtnText}>Restore my access</Text>
           </Pressable>
 
+          {restoreMessage && (
+            <Text style={styles.restoreMessage} accessibilityLiveRegion="polite">{restoreMessage}</Text>
+          )}
+
           <Pressable
             style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
             onPress={signOut}
@@ -140,6 +159,7 @@ const createStyles = () => StyleSheet.create({
     backgroundColor: Colors.purple,
   },
   restoreBtnText: { color: Colors.paperInk, fontSize: 16, fontWeight: '800' },
+  restoreMessage: { color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 10 },
   signOut: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   signOutText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
