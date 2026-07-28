@@ -20,3 +20,23 @@ export const NOTIF_PROMPT_FLAG = 'astrolyfe:pending_notif_prompt';
 export function onboardingDoneKey(email: string): string {
   return `astrolyfe:onboarding_done_local:${email}`;
 }
+
+/**
+ * Synchronous, in-memory companion to onboardingDoneKey's AsyncStorage flag.
+ *
+ * AsyncStorage reads are async: AuthGate only re-reads the persisted flag from an
+ * effect keyed on profile.email, which does not re-fire just because finish() wrote a
+ * new value for the same email. That left the exact same-session bounce this was
+ * meant to fix — the persisted flag only took effect on the *next* cold start, once
+ * that effect ran fresh. This gives AuthGate's navigation effect something it can read
+ * in the very same tick finish() sets it, no await required.
+ */
+const sessionOnboardingDone = new Set<string>();
+
+export function markOnboardingDoneThisSession(email: string): void {
+  sessionOnboardingDone.add(email);
+}
+
+export function isOnboardingDoneThisSession(email: string): boolean {
+  return sessionOnboardingDone.has(email);
+}

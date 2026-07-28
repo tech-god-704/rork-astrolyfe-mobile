@@ -1,6 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Colors from '@/constants/colors';
+import { getPalette, type ColorPalette } from '@/constants/colors';
+import { ThemeContext } from '@/providers/ThemeProvider';
 import AppBackground from '@/components/AppBackground';
 import BrandMark from '@/components/BrandMark';
 import { Fonts } from '@/constants/theme';
@@ -16,6 +17,13 @@ interface State {
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
+  // Error boundaries must be class components (getDerivedStateFromError/
+  // componentDidCatch have no hook equivalent), so the fallback below can't call
+  // useThemedStyles like every other component — this is the class-component
+  // equivalent, reading ThemeContext directly rather than through the hook.
+  static contextType = ThemeContext;
+  declare context: React.ContextType<typeof ThemeContext>;
+
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -35,6 +43,11 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // ThemeContext is null only if this boundary were ever mounted outside
+      // ThemeProvider, which app/_layout.tsx's provider order guarantees it is not —
+      // 'dark' is a safe literal fallback, not a load-bearing default.
+      const palette = getPalette(this.context?.theme ?? 'dark');
+      const styles = createStyles(palette);
       return (
         <View style={styles.container}>
           <AppBackground />
@@ -65,7 +78,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ColorPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bg,

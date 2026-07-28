@@ -13,7 +13,7 @@ import { supabase, uploadFile } from '@/lib/supabase';
 import CosmicBackground from '@/components/CosmicBackground';
 import BrandMark from '@/components/BrandMark';
 import { useThemedStyles } from '@/providers/ThemeProvider';
-import { NOTIF_PROMPT_FLAG, onboardingDoneKey } from '@/constants/storageKeys';
+import { NOTIF_PROMPT_FLAG, onboardingDoneKey, markOnboardingDoneThisSession } from '@/constants/storageKeys';
 
 /**
  * One-time welcome tour, shown between login and the tab bar for any account whose
@@ -180,10 +180,13 @@ export default function WelcomeTourScreen() {
       // that, not this catch alone, is what actually prevents a same-session bounce loop.
     } finally {
       if (profile?.email) {
-        // AuthGate falls back to this if the write above failed: without it, a failed
-        // write left profile.onboarding_completed stale, and AuthGate would redirect
-        // straight back here the instant navigation below lands on Home — not "next
-        // login," an immediate loop in the same session.
+        // AuthGate falls back to these if the write above failed: without them, a
+        // failed write left profile.onboarding_completed stale, and AuthGate would
+        // redirect straight back here the instant navigation below lands on Home — not
+        // "next login," an immediate loop in the same session. The in-memory flag is
+        // what actually stops that THIS session; AsyncStorage is what makes it survive
+        // a cold start where the in-memory Set has reset.
+        markOnboardingDoneThisSession(profile.email);
         await AsyncStorage.setItem(onboardingDoneKey(profile.email), '1').catch(() => {});
       }
       // Consumed by Home on its next mount to show the one-time notification

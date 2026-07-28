@@ -172,6 +172,17 @@ const LIGHT_COLORS: ColorPalette = {
 const PALETTES: Record<ThemeName, ColorPalette> = { dark: DARK_COLORS, light: LIGHT_COLORS };
 
 /**
+ * Resolve a palette by name without going through the mutable Colors singleton.
+ * ErrorBoundary (a class component) needs this: it reads its resolved theme via
+ * static contextType rather than the useThemedStyles hook, so it needs the actual
+ * palette values to build its own styles per-render instead of relying on Colors.xxx
+ * being current at render time.
+ */
+export function getPalette(theme: ThemeName): ColorPalette {
+  return PALETTES[theme];
+}
+
+/**
  * A live, mutable singleton — every screen already does `import Colors from
  * '@/constants/colors'` and reads `Colors.purple` etc. at render time. Rather than
  * migrate every one of those call sites to a context hook, applyTheme() mutates this

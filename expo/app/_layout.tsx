@@ -11,7 +11,7 @@ import { ThemeProvider, useTheme, useThemedStyles } from "@/providers/ThemeProvi
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Colors from "@/constants/colors";
 import LoadingScreen from "@/components/LoadingScreen";
-import { onboardingDoneKey } from "@/constants/storageKeys";
+import { onboardingDoneKey, isOnboardingDoneThisSession } from "@/constants/storageKeys";
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -81,8 +81,14 @@ function AuthGate({ onReady }: { onReady: () => void }) {
     // just isAuthenticated stops that window from routing a first-time login straight
     // to home before the onboarding check has anything to check against.
     const profileResolved = profile !== null || skipAuth;
+    // onboardingDoneLocally (AsyncStorage, async) covers a fresh cold start after a
+    // prior failed write; isOnboardingDoneThisSession (in-memory, synchronous) covers
+    // the same session finish() just ran in — the async state above cannot update in
+    // time for THIS effect run, since nothing re-triggers its effect just because
+    // finish() wrote a new value for the same profile.email.
     const needsOnboarding =
-      isAuthenticated && !skipAuth && profile !== null && profile.onboarding_completed !== true && !onboardingDoneLocally;
+      isAuthenticated && !skipAuth && profile !== null && profile.onboarding_completed !== true
+      && !onboardingDoneLocally && !(profile?.email && isOnboardingDoneThisSession(profile.email));
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/welcome");
@@ -169,17 +175,24 @@ const createLayoutStyles = () => StyleSheet.create({
 });
 
 export default function RootLayout() {
+  // ThemeProvider wraps ErrorBoundary, not the other way around: ErrorBoundary's
+  // fallback UI renders AppBackground, which (since this session's theme migration)
+  // calls useTheme(). With ErrorBoundary above ThemeProvider, that fallback would
+  // itself throw the instant any error was actually caught anywhere in the app —
+  // outside this boundary's own catch scope, since the fallback replaces
+  // this.props.children rather than being wrapped by it — crashing the whole app with
+  // no recovery screen at all, the opposite of what an error boundary is for.
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <ThemeProvider>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <AuthProvider>
               <RootLayoutNav />
             </AuthProvider>
-          </ThemeProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
-    </ErrorBoundary>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }

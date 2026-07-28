@@ -19,7 +19,11 @@ interface ThemeContextValue {
   isReady: boolean;
 }
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+// Exported so ErrorBoundary (a class component — error boundaries must be, since only
+// classes support getDerivedStateFromError/componentDidCatch) can read it via
+// `static contextType`, the only way a class component can consume context; hooks like
+// useTheme() below are function-component-only.
+export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>(DEFAULT_THEME);
