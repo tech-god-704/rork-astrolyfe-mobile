@@ -563,7 +563,11 @@ const styles = StyleSheet.create({
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 7 },
   title: { fontSize: 38, lineHeight: 42, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1.1 },
   subtitle: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 9, maxWidth: 340 },
-  focusScroll: { flexGrow: 0, marginBottom: 18 },
+  // A horizontal ScrollView with only flexGrow: 0 relies on its chip content to imply a
+  // height. That works on native but React Native Web can under-measure it, so the list
+  // below renders a few pixels too high and creeps under the filter row. An explicit
+  // height (chip minHeight 38 + its 1px border, plus breathing room) fixes it everywhere.
+  focusScroll: { flexGrow: 0, height: 46, marginBottom: 18 },
   focusContent: { paddingHorizontal: 20, gap: 8 },
   focusChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)' },
   focusChipActive: { backgroundColor: 'rgba(150,98,198,0.34)', borderColor: 'rgba(218,200,242,0.34)' },
