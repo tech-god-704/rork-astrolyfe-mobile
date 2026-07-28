@@ -44,7 +44,7 @@ const queryClient = new QueryClient({
 });
 
 function AuthGate({ onReady }: { onReady: () => void }) {
-  const { isAuthenticated, isReady } = useAuth();
+  const { isAuthenticated, isReady, profile, skipAuth } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const splashHidden = useRef(false);
@@ -53,10 +53,21 @@ function AuthGate({ onReady }: { onReady: () => void }) {
     if (!isReady) return;
 
     const inAuthGroup = segments[0] === "(auth)";
+    const onWelcomeTour = segments[0] === "welcome-tour";
+
+    // Right after login, session/isAuthenticated flips true a tick before the profile
+    // fetch inside onAuthStateChange resolves. Gating on profileResolved rather than
+    // just isAuthenticated stops that window from routing a first-time login straight
+    // to home before the onboarding check has anything to check against.
+    const profileResolved = profile !== null || skipAuth;
+    const needsOnboarding =
+      isAuthenticated && !skipAuth && profile !== null && profile.onboarding_completed !== true;
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/welcome");
-    } else if (isAuthenticated && inAuthGroup) {
+    } else if (isAuthenticated && profileResolved && needsOnboarding && !onWelcomeTour) {
+      router.replace("/welcome-tour");
+    } else if (isAuthenticated && inAuthGroup && profileResolved && !needsOnboarding) {
       router.replace("/(app)/(home)");
     }
 
@@ -71,7 +82,7 @@ function AuthGate({ onReady }: { onReady: () => void }) {
         onReady();
       }, 150);
     }
-  }, [isAuthenticated, isReady, segments, router, onReady]);
+  }, [isAuthenticated, isReady, profile, skipAuth, segments, router, onReady]);
 
   return null;
 }
@@ -111,6 +122,7 @@ function RootLayoutNav() {
         >
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(app)" />
+          <Stack.Screen name="welcome-tour" />
         </Stack>
       </Animated.View>
     </View>

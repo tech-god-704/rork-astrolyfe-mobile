@@ -7,6 +7,7 @@ import type { PbSession as Session, PbUser as User } from '@/lib/supabase';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
+import { syncDailyReminder } from '@/services/notifications';
 
 export interface QuizData {
   birth_year?: number;
@@ -36,6 +37,15 @@ export interface UserProfile {
    */
   timezone: string | null;
   quiz_data: QuizData | null;
+  /**
+   * True once this account has seen the post-login welcome tour. The column already
+   * existed on the profiles collection with nothing reading or writing it, so every
+   * first login silently skipped straight to the tab bar with no introduction.
+   */
+  onboarding_completed: boolean;
+  notifications_enabled: boolean;
+  notification_hour: number;
+  notification_minute: number;
   // Subscription fields (synced by Stripe webhook → profiles table)
   subscription_status: string | null;
   subscription_product: string | null;
@@ -55,6 +65,11 @@ const GUEST_PREVIEW_PROFILE: UserProfile = {
   birth_lat: 34.0522,
   birth_lon: -118.2437,
   timezone: 'America/Los_Angeles',
+  // A preview session, not a real onboarding candidate — never show the tour for it.
+  onboarding_completed: true,
+  notifications_enabled: false,
+  notification_hour: 8,
+  notification_minute: 0,
   quiz_data: {
     birth_year: 1990,
     birth_month: 7,
@@ -95,6 +110,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const isAdmin = useMemo(() => checkIsAdmin(profile), [profile]);
 
+  // Keep the OS-scheduled reminder in sync with the stored preference. Runs whenever
+  // the resolved profile changes — covers a fresh install, a preference changed on
+  // another device, and a normal toggle from the Profile screen alike, in one place
+  // rather than re-implemented at every call site that can change the setting.
+  // Guest preview has no real account and never enables notifications, so this is a
+  // no-op for it.
+  useEffect(() => {
+    if (skipAuth || !profile) return;
+    void syncDailyReminder(profile.notifications_enabled, profile.notification_hour, profile.notification_minute);
+  }, [skipAuth, profile?.notifications_enabled, profile?.notification_hour, profile?.notification_minute]);
+
   /**
    * Fetch profile from PROFILES table (source of truth for mobile app).
    * Falls back to USERS table if profiles row doesn't exist yet
@@ -108,7 +134,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // Try profiles table first (keyed by auth.users.id, has subscription data)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
+        .select('email, display_name, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, onboarding_completed, notifications_enabled, notification_hour, notification_minute, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
         .eq('email', email)
         .abortSignal(controller.signal)
         .maybeSingle();
@@ -126,6 +152,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           birth_lat: profileData.birth_lat,
           birth_lon: profileData.birth_lon,
           quiz_data: profileData.quiz_data,
+          onboarding_completed: profileData.onboarding_completed === true,
+          notifications_enabled: profileData.notifications_enabled === true,
+          notification_hour: typeof profileData.notification_hour === 'number' ? profileData.notification_hour : 8,
+          notification_minute: typeof profileData.notification_minute === 'number' ? profileData.notification_minute : 0,
           subscription_status: profileData.subscription_status,
           subscription_product: profileData.subscription_product,
           subscription_period_end: profileData.subscription_period_end,
@@ -160,6 +190,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         // The users table has no timezone column; this fallback path is for funnel leads
         // who have no profile row yet, so the horoscope stays on its birth-date tier.
         timezone: null,
+        // No profiles row exists yet, so the tour has definitionally never been shown.
+        onboarding_completed: false,
+        // No profiles row yet, so no preference has ever been set.
+        notifications_enabled: false,
+        notification_hour: 8,
+        notification_minute: 0,
         // The funnel stores the real birth date inside quiz_data as MM/DD/YYYY.
         birth_date: normalizeBirthDate(userData.birth_date) ?? normalizeBirthDate(quiz?.birth_date),
         birth_city: null,

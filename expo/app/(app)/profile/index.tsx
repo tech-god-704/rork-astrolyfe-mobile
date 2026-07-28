@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, type TextInput as TextInputType } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, ActivityIndicator, Switch, type TextInput as TextInputType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles } from 'lucide-react-native';
+import { ChevronRight, Compass, Heart, LogOut, Save, Shield, Calendar, Check, MapPin, Clock, Sparkles, Bell } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -14,6 +14,7 @@ import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
+import { NOTIFICATION_TIME_PRESETS, requestNotificationPermission } from '@/services/notifications';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -26,6 +27,11 @@ export default function ProfileScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ birth?: string; time?: string }>({});
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(false);
+  const [notifHour, setNotifHour] = useState<number>(8);
+  const [notifMinute, setNotifMinute] = useState<number>(0);
+  const [notifMessage, setNotifMessage] = useState<string | null>(null);
+  const notifMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const nameRef = useRef<TextInputType>(null);
   const birthRef = useRef<TextInputType>(null);
@@ -50,8 +56,17 @@ export default function ProfileScreen() {
       if (qd?.birth_hour != null && qd?.birth_minute != null) {
         setBirthTime(`${String(qd.birth_hour).padStart(2, '0')}:${String(qd.birth_minute).padStart(2, '0')}`);
       }
+      setNotifEnabled(profile.notifications_enabled);
+      setNotifHour(profile.notification_hour);
+      setNotifMinute(profile.notification_minute);
     }
   }, [profile]);
+
+  useEffect(() => {
+    return () => {
+      if (notifMessageTimer.current) clearTimeout(notifMessageTimer.current);
+    };
+  }, []);
 
   const zodiac = selectedSign ? getZodiacByName(selectedSign) : null;
 
@@ -131,6 +146,51 @@ export default function ProfileScreen() {
       if (error.message === '__validation__') return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setSaveMessage({ type: 'error', text: error.message });
+    },
+  });
+
+  // Separate from updateMutation on purpose: a notification preference should take
+  // effect the moment it's tapped, not sit unsaved until the customer notices the big
+  // "Update my cosmic profile" button further down the form.
+  const notificationMutation = useMutation({
+    mutationFn: async (next: { enabled: boolean; hour: number; minute: number }) => {
+      if (!user?.email) throw new Error('Not authenticated');
+
+      if (next.enabled) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          throw new Error('Notifications are turned off for AstroLyfe in your device settings.');
+        }
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          notifications_enabled: next.enabled,
+          notification_hour: next.hour,
+          notification_minute: next.minute,
+        })
+        .eq('email', user.email);
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (next) => {
+      // AuthProvider's own effect schedules or cancels the OS reminder once the
+      // refreshed profile carries these values — not duplicated here.
+      void refreshProfile();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      setNotifMessage(next.enabled ? `Daily reminder set for ${NOTIFICATION_TIME_PRESETS.find((p) => p.hour === next.hour && p.minute === next.minute)?.label ?? 'your chosen time'}.` : null);
+      if (notifMessageTimer.current) clearTimeout(notifMessageTimer.current);
+      if (next.enabled) {
+        notifMessageTimer.current = setTimeout(() => setNotifMessage(null), 3000);
+      }
+    },
+    onError: (error: Error, next) => {
+      // Revert the switch rather than leave it showing a state the device rejected.
+      setNotifEnabled(!next.enabled);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setNotifMessage(error.message);
+      notifMessageTimer.current = setTimeout(() => setNotifMessage(null), 4000);
     },
   });
 
@@ -337,6 +397,65 @@ export default function ProfileScreen() {
             </ScrollView>
           </GlassCard>
 
+          {/* Notifications */}
+          <GlassCard style={styles.formCard}>
+            <View style={styles.notifHeaderRow}>
+              <View style={styles.notifHeaderCopy}>
+                <Text style={styles.sectionLabel}>DAILY NOTIFICATIONS</Text>
+                <Text style={styles.sectionDescription}>A gentle reminder to check your horoscope, once a day.</Text>
+              </View>
+              <Switch
+                value={notifEnabled}
+                onValueChange={(value) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setNotifEnabled(value);
+                  notificationMutation.mutate({ enabled: value, hour: notifHour, minute: notifMinute });
+                }}
+                trackColor={{ false: Colors.bgInputBorder, true: Colors.purple }}
+                thumbColor="#fff"
+                disabled={notificationMutation.isPending}
+                accessibilityLabel="Daily notifications"
+                accessibilityRole="switch"
+              />
+            </View>
+
+            {notifEnabled && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.signScroll} contentContainerStyle={styles.signScrollContent}>
+                {NOTIFICATION_TIME_PRESETS.map((preset) => {
+                  const isSelected = notifHour === preset.hour && notifMinute === preset.minute;
+                  return (
+                    <Pressable
+                      key={preset.label}
+                      style={({ pressed }) => [styles.signChip, isSelected && { backgroundColor: Colors.purpleDim, borderColor: Colors.purple }, pressed && styles.signChipPressed]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setNotifHour(preset.hour);
+                        setNotifMinute(preset.minute);
+                        notificationMutation.mutate({ enabled: true, hour: preset.hour, minute: preset.minute });
+                      }}
+                      disabled={notificationMutation.isPending}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Send at ${preset.label}`}
+                      accessibilityState={{ selected: isSelected }}
+                    >
+                      <Bell size={13} color={isSelected ? Colors.purpleLight : Colors.textMuted} />
+                      <Text style={[styles.signChipLabel, isSelected && { color: Colors.purpleLight }]}>{preset.label}</Text>
+                      {isSelected && (
+                        <View style={[styles.checkDot, { backgroundColor: Colors.purple }]}>
+                          <Check size={8} color="#fff" />
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {notifMessage && (
+              <Text style={[styles.notifMessage, notificationMutation.isError && { color: Colors.danger }]}>{notifMessage}</Text>
+            )}
+          </GlassCard>
+
           {saveMessage && (
             <View style={[styles.saveMessageRow, saveMessage.type === 'success' ? styles.saveMessageSuccess : styles.saveMessageError]} accessibilityLiveRegion="polite">
               <Text style={[styles.saveMessageText, { color: saveMessage.type === 'success' ? Colors.success : Colors.danger }]}>{saveMessage.text}</Text>
@@ -421,6 +540,9 @@ const styles = StyleSheet.create({
   profileActionTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: '800' },
   profileActionText: { color: Colors.textMuted, fontSize: 11, marginTop: 3 },
   formCard: { marginBottom: 20, gap: 4, borderRadius: 22 },
+  notifHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  notifHeaderCopy: { flex: 1 },
+  notifMessage: { color: Colors.purpleLight, fontSize: 12, marginTop: 12, lineHeight: 17 },
   sectionLabel: { fontSize: 11, fontWeight: '900', color: Colors.purpleLight, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5 },
   sectionDescription: { color: Colors.textMuted, fontSize: 12, lineHeight: 18, marginBottom: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6, marginTop: 12 },
