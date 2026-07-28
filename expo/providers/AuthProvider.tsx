@@ -7,7 +7,7 @@ import type { PbSession as Session, PbUser as User } from '@/lib/supabase';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase, getFileUrl } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
-import { syncDailyReminder } from '@/services/notifications';
+import { syncDailyReminder, cancelDailyReminder } from '@/services/notifications';
 
 export interface QuizData {
   birth_year?: number;
@@ -370,6 +370,46 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }
   }, [user, fetchProfile]);
 
+  /**
+   * Required for App Store review (Guideline 5.1.1(v)): any app that supports signing
+   * into an account must let the customer delete it from within the app, not just by
+   * emailing support.
+   *
+   * Order matters: user_reports/astro_reports are deleted explicitly, by email, before
+   * the users record — their user_id relation is OPTIONAL, and reports are generated
+   * server-side before a customer necessarily has a PocketBase auth session, so it may
+   * never have been set. Relying on cascade delete alone could silently leave orphaned
+   * report rows behind. chat_conversations/chat_messages/purchases are NOT deleted
+   * explicitly here: their user_id relation is required and already cascadeDelete:true,
+   * so deleting the users record below removes them correctly on its own.
+   */
+  const deleteAccount = useCallback(async () => {
+    if (!user?.id || !user?.email) {
+      throw new Error('No active session to delete.');
+    }
+    const { id, email } = user;
+
+    // Best-effort: not worth failing account deletion over a local notification that
+    // stops mattering the moment the session below is gone anyway.
+    await cancelDailyReminder().catch(() => {});
+
+    const { error: reportsError } = await supabase.from('user_reports').delete().eq('user_email', email);
+    if (reportsError) throw new Error(reportsError.message);
+
+    const { error: astroError } = await supabase.from('astro_reports').delete().eq('user_email', email);
+    if (astroError) throw new Error(astroError.message);
+
+    const { error: userError } = await supabase.from('users').delete().eq('id', id);
+    if (userError) throw new Error(userError.message);
+
+    await supabase.auth.signOut();
+    if (isMounted.current) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    }
+  }, [user]);
+
   const isSubscribed = useMemo(() => {
     // Guest exploration can navigate the product, but it is never an admin session
     // and remains unable to read or write protected PocketBase records.
@@ -393,6 +433,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     signUp,
     signIn,
     signOut,
+    deleteAccount,
     refreshProfile,
-  }), [session, user, profile, isLoading, isReady, skipAuth, isAdmin, isSubscribed, signUp, signIn, signOut, refreshProfile]);
+  }), [session, user, profile, isLoading, isReady, skipAuth, isAdmin, isSubscribed, signUp, signIn, signOut, deleteAccount, refreshProfile]);
 });

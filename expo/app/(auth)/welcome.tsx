@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,8 @@ import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import CosmicBackground from '@/components/CosmicBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
+
+const WEB_FUNNEL_URL = 'https://soulmate.astrolyfe.co';
 
 export default function WelcomeScreen() {
   const styles = useThemedStyles(createStyles);
@@ -83,10 +85,10 @@ export default function WelcomeScreen() {
         <Animated.View style={[styles.actions, { opacity: content }]}>
           <Pressable
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-            onPress={() => router.push('/(auth)/onboarding')}
-            testID="get-started-btn"
+            onPress={() => router.push('/(auth)/login')}
+            testID="login-btn"
             accessibilityRole="button"
-            accessibilityLabel="Build my cosmic profile"
+            accessibilityLabel="Sign in to AstroLyfe"
           >
             <LinearGradient
               colors={[Colors.purple, '#9C47D2']}
@@ -94,19 +96,24 @@ export default function WelcomeScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.primaryGradient}
             >
-              <Text style={styles.primaryText}>Build my cosmic profile</Text>
+              <Text style={styles.primaryText}>Sign in</Text>
               <ArrowRight size={19} color="#FFFFFF" />
             </LinearGradient>
           </Pressable>
 
+          {/* Plain informational text, not a purchase CTA: accounts are created on the
+              web funnel today, not in this app. No pricing or "buy/subscribe" language
+              here on purpose. */}
           <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => router.push('/(auth)/login')}
-            testID="login-btn"
-            accessibilityRole="button"
-            accessibilityLabel="Sign in to AstroLyfe"
+            onPress={() => Linking.openURL(WEB_FUNNEL_URL)}
+            testID="no-account-link"
+            accessibilityRole="link"
+            accessibilityLabel="New to AstroLyfe? Get started on our website"
+            hitSlop={8}
           >
-            <Text style={styles.secondaryText}>Sign in</Text>
+            <Text style={styles.noAccountText}>
+              New to AstroLyfe? Get started at soulmate.astrolyfe.co
+            </Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -263,19 +270,13 @@ const createStyles = () => StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.1,
   },
-  secondaryButton: {
-    minHeight: 52,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(192,154,235,0.22)',
-    backgroundColor: 'rgba(16,9,39,0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryText: {
-    color: Colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
+  noAccountText: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+    paddingVertical: 10,
   },
   pressed: {
     opacity: 0.88,

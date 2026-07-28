@@ -21,7 +21,7 @@ import { useThemedStyles, useTheme } from '@/providers/ThemeProvider';
 export default function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const { profile, user, signOut, refreshProfile, isAdmin } = useAuth();
+  const { profile, user, signOut, deleteAccount, refreshProfile, isAdmin } = useAuth();
   const { theme, setTheme } = useTheme();
   const [displayName, setDisplayName] = useState<string>('');
   const [birthDate, setBirthDate] = useState<string>('');
@@ -38,6 +38,7 @@ export default function ProfileScreen() {
   const notifMessageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const nameRef = useRef<TextInputType>(null);
   const birthRef = useRef<TextInputType>(null);
@@ -239,6 +240,44 @@ export default function ProfileScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: signOut },
     ]);
+  };
+
+  const confirmDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+    } catch (e) {
+      Alert.alert(
+        'Something went wrong',
+        e instanceof Error ? e.message : "We couldn't delete your account. Please try again or contact support.",
+      );
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your account, birth profile, and every generated report. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              'There is no way to recover your data once this is done.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete My Account', style: 'destructive', onPress: confirmDeleteAccount },
+              ],
+            );
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -584,6 +623,21 @@ export default function ProfileScreen() {
             <LogOut size={17} color={Colors.danger} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.deleteAccountBtn, pressed && !deletingAccount && { opacity: 0.7 }]}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+            accessibilityRole="button"
+            accessibilityLabel="Delete my account"
+            accessibilityState={{ disabled: deletingAccount, busy: deletingAccount }}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator size="small" color={Colors.textFaint} />
+            ) : (
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            )}
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -719,4 +773,11 @@ const createStyles = () => StyleSheet.create({
     borderColor: 'rgba(239,68,68,0.15)',
   },
   logoutText: { fontSize: 15, fontWeight: '600', color: Colors.danger },
+  deleteAccountBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    marginTop: 4,
+  },
+  deleteAccountText: { fontSize: 13, fontWeight: '600', color: Colors.textFaint },
 });

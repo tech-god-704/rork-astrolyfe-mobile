@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowUpRight, Check, RotateCcw } from 'lucide-react-native';
+import { RotateCcw, Sparkles } from 'lucide-react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import AppBackground from '@/components/AppBackground';
 import BrandMark from '@/components/BrandMark';
@@ -9,11 +9,18 @@ import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
-const WEB_CHECKOUT_URL = 'https://soulmate.astrolyfe.co';
-
+/**
+ * No pricing, no "buy"/"unlock" CTA, no link to any purchase flow — deliberately.
+ * Apple's Guideline 3.1.1 requires In-App Purchase for subscriptions unlocked inside
+ * the app; this app doesn't sell anything in-app at all today (accounts and
+ * subscriptions are both created on the web funnel), so this screen only ever
+ * explains account status and offers Restore/Sign out. Do not add a purchase button
+ * or external checkout link here without also adding real StoreKit/IAP — a prominent
+ * CTA that opens a browser to pay is exactly the pattern Apple review rejects.
+ */
 export default function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const styles = useThemedStyles(createStyles);
-  const { isSubscribed, isLoading, refreshProfile } = useAuth();
+  const { isSubscribed, isLoading, refreshProfile, signOut } = useAuth();
   const [restoring, setRestoring] = useState(false);
 
   if (isSubscribed) return <>{children}</>;
@@ -43,22 +50,23 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.topline}>
-            <Text style={styles.brand}>ASTROLYFE PREMIUM</Text>
-            <Text style={styles.issue}>FULL ACCESS</Text>
+            <Text style={styles.brand}>ASTROLYFE</Text>
+            <Text style={styles.issue}>ACCOUNT STATUS</Text>
           </View>
 
           <View style={styles.mark}>
             <BrandMark size={112} />
           </View>
 
-          <Text style={styles.eyebrow}>UNLOCK YOUR COSMIC PROFILE</Text>
-          <Text style={styles.title}>Go deeper than your sun sign.</Text>
+          <Text style={styles.eyebrow}>NO ACTIVE SUBSCRIPTION</Text>
+          <Text style={styles.title}>We couldn&apos;t find an active subscription on this account.</Text>
           <Text style={styles.subtitle}>
-            Turn today&apos;s forecast into a personal map for love, timing, purpose, and the patterns in your birth chart.
+            If you recently subscribed, it can take a minute to sync — try restoring below. Otherwise, your
+            subscription is managed from wherever you originally signed up.
           </Text>
 
           <View style={styles.preview}>
-            <Text style={styles.previewLabel}>WHAT YOU UNLOCK</Text>
+            <Text style={styles.previewLabel}>WHAT AN ACTIVE ACCOUNT INCLUDES</Text>
             {[
               'Your complete daily, weekly, and monthly readings',
               'Birth chart patterns explained in plain language',
@@ -66,7 +74,7 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
             ].map((feature, index) => (
               <View key={feature} style={[styles.feature, index > 0 && styles.featureBorder]}>
                 <View style={styles.check}>
-                  <Check size={12} color={Colors.paperInk} strokeWidth={3} />
+                  <Sparkles size={12} color={Colors.paperInk} strokeWidth={2.4} />
                 </View>
                 <Text style={styles.featureText}>{feature}</Text>
               </View>
@@ -74,21 +82,7 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
           </View>
 
           <Pressable
-            style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
-            onPress={() => Linking.openURL(WEB_CHECKOUT_URL)}
-            accessibilityRole="link"
-            accessibilityLabel="Begin seven-day introductory access for one dollar"
-          >
-            <View>
-              <Text style={styles.ctaKicker}>7-DAY INTRODUCTORY ACCESS</Text>
-              <Text style={styles.ctaText}>Begin for $1</Text>
-            </View>
-            <ArrowUpRight size={22} color={Colors.paperInk} />
-          </Pressable>
-          <Text style={styles.disclaimer}>Secure checkout opens in your browser. Cancel anytime.</Text>
-
-          <Pressable
-            style={({ pressed }) => [styles.restore, pressed && !restoring && styles.restorePressed]}
+            style={({ pressed }) => [styles.restoreBtn, pressed && !restoring && styles.pressed]}
             onPress={restore}
             disabled={restoring}
             accessibilityRole="button"
@@ -96,11 +90,20 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
             accessibilityState={{ disabled: restoring, busy: restoring }}
           >
             {restoring ? (
-              <ActivityIndicator color={Colors.textMuted} size="small" />
+              <ActivityIndicator color={Colors.paperInk} size="small" />
             ) : (
-              <RotateCcw size={14} color={Colors.textMuted} />
+              <RotateCcw size={16} color={Colors.paperInk} />
             )}
-            <Text style={styles.restoreText}>I already have access</Text>
+            <Text style={styles.restoreBtnText}>Restore my access</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
+            onPress={signOut}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+          >
+            <Text style={styles.signOutText}>Sign out</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -127,20 +130,17 @@ const createStyles = () => StyleSheet.create({
   featureBorder: { borderTopWidth: 1, borderTopColor: 'rgba(218,200,242,0.08)' },
   check: { width: 23, height: 23, borderRadius: 12, backgroundColor: Colors.gold, alignItems: 'center', justifyContent: 'center' },
   featureText: { flex: 1, color: Colors.textSecondary, fontSize: 14, lineHeight: 20 },
-  cta: {
-    minHeight: 64,
+  restoreBtn: {
+    minHeight: 56,
     borderRadius: 14,
-    paddingHorizontal: 18,
-    backgroundColor: Colors.gold,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: Colors.purple,
   },
-  ctaKicker: { color: 'rgba(254,252,255,0.68)', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
-  ctaText: { color: Colors.paperInk, fontSize: 19, fontWeight: '800', marginTop: 3 },
-  disclaimer: { color: Colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 10 },
-  restore: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
-  restoreText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
-  restorePressed: { opacity: 0.7 },
+  restoreBtnText: { color: Colors.paperInk, fontSize: 16, fontWeight: '800' },
+  signOut: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  signOutText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
 });
