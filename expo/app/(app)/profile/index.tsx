@@ -227,6 +227,10 @@ export default function ProfileScreen() {
         type: asset.mimeType || 'image/jpeg',
       });
       await refreshProfile();
+      // Otherwise this local device URI permanently shadows profile.avatar_url for the
+      // life of the mounted screen — a later refreshProfile() from an unrelated flow
+      // (or the photo having changed on another device) would render as if it hadn't.
+      setAvatarPreview(null);
     } catch {
       setAvatarPreview(null);
       Alert.alert("Couldn't update photo", 'Please try again.');

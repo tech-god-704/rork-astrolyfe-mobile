@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // Types come from the backend client rather than supabase-js: the app now talks to
 // PocketBase through a compatible shim, and supabase-js is no longer the source of
 // truth for what a session or a user is.
@@ -8,6 +9,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import { supabase, getFileUrl } from '@/lib/supabase';
 import { normalizeBirthDate } from '@/lib/validation';
 import { syncDailyReminder, cancelDailyReminder } from '@/services/notifications';
+import { onboardingDoneKey } from '@/constants/storageKeys';
 
 export interface QuizData {
   birth_year?: number;
@@ -375,13 +377,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * into an account must let the customer delete it from within the app, not just by
    * emailing support.
    *
-   * Order matters: user_reports/astro_reports are deleted explicitly, by email, before
-   * the users record — their user_id relation is OPTIONAL, and reports are generated
-   * server-side before a customer necessarily has a PocketBase auth session, so it may
-   * never have been set. Relying on cascade delete alone could silently leave orphaned
-   * report rows behind. chat_conversations/chat_messages/purchases are NOT deleted
-   * explicitly here: their user_id relation is required and already cascadeDelete:true,
-   * so deleting the users record below removes them correctly on its own.
+   * user_reports, astro_reports, and purchases are all deleted explicitly, by email,
+   * before the users record — checked directly against the live PocketBase schema
+   * (not assumed): all three have an OPTIONAL user_id relation, and purchases'
+   * specifically has cascadeDelete:false, so none of them would be reliably cleaned up
+   * by deleting the users record alone. chat_conversations/chat_messages are NOT
+   * deleted explicitly here: their user_id/conversation_id relations are required and
+   * cascadeDelete:true, so deleting users below removes them correctly on its own.
    */
   const deleteAccount = useCallback(async () => {
     if (!user?.id || !user?.email) {
@@ -399,8 +401,16 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     const { error: astroError } = await supabase.from('astro_reports').delete().eq('user_email', email);
     if (astroError) throw new Error(astroError.message);
 
+    const { error: purchasesError } = await supabase.from('purchases').delete().eq('user_email', email);
+    if (purchasesError) throw new Error(purchasesError.message);
+
     const { error: userError } = await supabase.from('users').delete().eq('id', id);
     if (userError) throw new Error(userError.message);
+
+    // Otherwise this account signing up again later would read as having already
+    // finished onboarding, since the flag is keyed by email and survives independently
+    // of the PocketBase record it was standing in for.
+    await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
 
     await supabase.auth.signOut();
     if (isMounted.current) {
