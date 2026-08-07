@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.v5cjeo8w8teyc01wvntgb"
+      "bundleIdentifier": "app.rork.v5cjeo8w8teyc01wvntgb",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
