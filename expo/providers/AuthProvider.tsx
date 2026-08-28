@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PbSession as Session, PbUser as User } from '@/lib/supabase';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase, getFileUrl } from '@/lib/supabase';
+import { verifySubscriptionLive, deleteAccountServer } from '@/lib/backend';
 import { normalizeBirthDate } from '@/lib/validation';
 import { syncDailyReminder, cancelDailyReminder } from '@/services/notifications';
 import { onboardingDoneKey } from '@/constants/storageKeys';
@@ -123,6 +124,40 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const fetchVersion = useRef(0);
   const isMounted = useRef(true);
+  const lastLiveEntitlementCheck = useRef(0);
+
+  /**
+   * Ask the funnel's server to check Stripe DIRECTLY (not just the webhook-synced
+   * PocketBase row) and reconcile any difference. This is the safety net for missed
+   * or delayed webhook deliveries: a customer whose card renewed but whose row still
+   * says otherwise gets access restored without involving support. Throttled to one
+   * live check per 15 minutes; the SubscriptionGuard restore button forces one.
+   */
+  const verifyEntitlement = useCallback(async (email: string, force = false) => {
+    const now = Date.now();
+    if (!force && now - lastLiveEntitlementCheck.current < 15 * 60 * 1000) return;
+    lastLiveEntitlementCheck.current = now;
+    try {
+      const live = await verifySubscriptionLive(email);
+      if (!live?.success) return;
+      const stripeStatus = live.has_subscription ? live.status : 'free';
+      setProfile((prev) =>
+        prev && prev.subscription_status !== stripeStatus
+          ? { ...prev, subscription_status: stripeStatus }
+          : prev
+      );
+      // Write through so every surface reading the row (guard, other devices)
+      // converges too. Best-effort: if this fails the state update above still
+      // unblocks this session, and the next webhook event heals the row.
+      void supabase
+        .from('profiles')
+        .update({ subscription_status: stripeStatus })
+        .eq('email', email)
+        .then(() => undefined, () => undefined);
+    } catch {
+      // Offline or server unreachable — the PocketBase-synced status stands.
+    }
+  }, []);
 
   useEffect(() => {
     isMounted.current = true;
@@ -260,6 +295,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         if (existing?.user?.email) {
           const p = await fetchProfile(existing.user.email);
           if (isMounted.current) setProfile(p);
+          void verifyEntitlement(existing.user.email);
         }
       } catch (e) {
         console.log('[Auth] Init error:', e);
@@ -285,7 +321,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+  }, [fetchProfile, verifyEntitlement]);
 
   useEffect(() => {
     if (skipAuth && !profile) {
@@ -303,6 +339,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           void fetchProfile(user.email).then((p) => {
             if (isMounted.current && p) setProfile(p);
           });
+          void verifyEntitlement(user.email);
         }
       } else {
         supabase.auth.stopAutoRefresh();
@@ -392,12 +429,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const refreshProfile = useCallback(async (): Promise<UserProfile | null> => {
     if (user?.email) {
+      // "Restore my access" (SubscriptionGuard) lands here — bypass the throttle so
+      // a just-renewed subscription shows up on the very first tap.
+      void verifyEntitlement(user.email, true);
       const p = await fetchProfile(user.email);
       if (isMounted.current) setProfile(p);
       return p;
     }
     return null;
-  }, [user, fetchProfile]);
+  }, [user, fetchProfile, verifyEntitlement]);
 
   /**
    * Required for App Store review (Guideline 5.1.1(v)): any app that supports signing
@@ -455,6 +495,22 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // Best-effort: not worth failing account deletion over a local notification that
     // stops mattering the moment the session below is gone anyway.
     await cancelDailyReminder().catch(() => {});
+
+    // Server-first: the PHP endpoint also removes the Brevo contact and portrait
+    // files (neither of which is reachable from the app), and deletes the PocketBase
+    // auth record cleanly. If it succeeds there is nothing left to do client-side.
+    // On any failure fall through to the original client-side cleanup below, which
+    // remains a complete deletion path on its own.
+    try {
+      const res = await deleteAccountServer(false);
+      if (res?.success) {
+        await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
+        await signOut();
+        return;
+      }
+    } catch {
+      // Offline / server error — client-side path below.
+    }
 
     const { error: reportsError } = await supabase.from('user_reports').delete().eq('user_email', email);
     if (reportsError) throw new Error(reportsError.message);

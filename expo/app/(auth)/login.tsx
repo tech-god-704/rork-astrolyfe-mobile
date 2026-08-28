@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
+import { requestPasswordReset } from '@/lib/backend';
 import { isValidEmail } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
@@ -169,6 +170,27 @@ export default function LoginScreen() {
                     <Text style={styles.loginBtnText}>Sign in securely</Text>
                   )}
                 </LinearGradient>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  const e = email.trim();
+                  if (!isValidEmail(e)) {
+                    setFieldErrors({ email: 'Enter your email above first' });
+                    return;
+                  }
+                  setFormError(null);
+                  setFormError('Sending…');
+                  void requestPasswordReset(e)
+                    .then(() => setFormError(`Password link sent to ${e} — check your inbox (and spam folder).`))
+                    .catch(() => setFormError('Could not send right now. Please try again in a moment.'));
+                }}
+                style={styles.signupLink}
+                accessibilityRole="link"
+                accessibilityLabel="Forgot password"
+                hitSlop={8}
+              >
+                <Text style={styles.signupText}>Forgot password?</Text>
               </Pressable>
 
               {/* Accounts are created on the web funnel today, not in this app — see

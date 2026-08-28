@@ -238,6 +238,16 @@ function filterValue(v: unknown): string {
 }
 
 /**
+ * Raw PocketBase auth token for calls to the PHP backend (billing APIs, reports,
+ * account deletion, push registration). Those endpoints authenticate with
+ * `Authorization: Bearer <token>`.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  await loadAuth();
+  return currentToken;
+}
+
+/**
  * Public URL for a file stored on a record's file-type field, per PocketBase's
  * `/api/files/{collection}/{recordId}/{filename}` convention.
  */
