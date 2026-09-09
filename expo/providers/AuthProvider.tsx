@@ -76,6 +76,15 @@ const ACTIVE_STATUSES = ['active', 'trialing', 'trial', 'lifetime'];
  */
 const BILLING_ACTIVE_STATUSES = [...ACTIVE_STATUSES, 'past_due'];
 
+/**
+ * Whether this profile still has a subscription Stripe can bill against. Exported so
+ * the delete-account confirmation can say out loud that continuing also cancels it —
+ * required disclosure, since deleteAccount() now cancels rather than refusing.
+ */
+export function hasBillableSubscription(status: string | null | undefined): boolean {
+  return !!status && BILLING_ACTIVE_STATUSES.includes(status);
+}
+
 const GUEST_PREVIEW_PROFILE: UserProfile = {
   id: null,
   email: '',
@@ -454,12 +463,18 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * see pb_hooks/astrolyfe.pb.js — so it can never be unset), and deleting the users
    * record below was directly tested to remove all three correctly on its own.
    *
-   * Deliberately refuses to proceed if profile.subscription_status is active: nothing
-   * here cancels the underlying Stripe subscription (that lives entirely server-side,
-   * driven by the webhook), so deleting the account out from under an active
-   * subscription would leave it billing indefinitely with no account left to identify
-   * it to support. There is no self-service cancellation flow today — email is the
-   * only path — so this blocks rather than silently deletes.
+   * An active subscription does NOT block deletion. It used to, on the reasoning that
+   * deleting out from under a live subscription would leave it billing with no account
+   * left to cancel it against — a real hazard, but the wrong remedy: 5.1.1(v) requires
+   * deletion to be completable from inside the app, and "email support to cancel first"
+   * is exactly the out-of-app detour the guideline exists to forbid. The server's
+   * delete-account endpoint already takes cancel_subscription, so the hazard is handled
+   * where it actually can be — the subscription is cancelled as part of the deletion.
+   *
+   * The consequence is that with billing live the SERVER path is mandatory: the
+   * client-side fallback below deletes rows but cannot reach Stripe, so falling through
+   * to it would recreate the exact stranded-billing case. When the server is
+   * unreachable the deletion is refused with a retryable message instead.
    */
   const deleteAccount = useCallback(async () => {
     if (!user?.id || !user?.email) {
@@ -486,31 +501,43 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       throw new Error('We could not verify your subscription status. Please check your connection and try again.');
     }
     const billingStatus = (billingRow as { subscription_status?: string | null } | null)?.subscription_status ?? '';
-    if (BILLING_ACTIVE_STATUSES.includes(billingStatus)) {
-      throw new Error(
-        'You have an active subscription, so deleting your account now would leave it billing with nothing left to cancel it against. Email support@astrolyfe.co to cancel your subscription first, then come back to delete your account.'
-      );
-    }
+    const hasLiveBilling = BILLING_ACTIVE_STATUSES.includes(billingStatus);
 
-    // Best-effort: not worth failing account deletion over a local notification that
-    // stops mattering the moment the session below is gone anyway.
-    await cancelDailyReminder().catch(() => {});
+    // Cancelling the scheduled reminder is deliberately NOT done up front. Deletion can
+    // still be refused below (server unreachable while a subscription is live), and a
+    // customer who is told to try again should not have quietly lost their daily
+    // reminder in the attempt. Each path that actually deletes cancels it itself.
+    // Best-effort throughout: not worth failing a deletion over a local notification
+    // that stops mattering the moment the session is gone anyway.
 
     // Server-first: the PHP endpoint also removes the Brevo contact and portrait
-    // files (neither of which is reachable from the app), and deletes the PocketBase
-    // auth record cleanly. If it succeeds there is nothing left to do client-side.
-    // On any failure fall through to the original client-side cleanup below, which
-    // remains a complete deletion path on its own.
+    // files (neither of which is reachable from the app), cancels Stripe when asked,
+    // and deletes the PocketBase auth record cleanly. If it succeeds there is nothing
+    // left to do client-side. On failure fall through to the client-side cleanup
+    // below — but only when nothing is being billed (see hasLiveBilling throw).
     try {
-      const res = await deleteAccountServer(false);
+      const res = await deleteAccountServer(hasLiveBilling);
       if (res?.success) {
+        await cancelDailyReminder().catch(() => {});
         await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
         await signOut();
         return;
       }
     } catch {
-      // Offline / server error — client-side path below.
+      // Offline / server error — client-side path below, or the refusal just under it.
     }
+
+    if (hasLiveBilling) {
+      // Reaching here means the one path that can cancel Stripe did not complete. The
+      // client-side cleanup below would delete the account and leave the subscription
+      // billing forever, so stop instead — this is recoverable by retrying, unlike a
+      // deletion that has already happened.
+      throw new Error(
+        'We could not reach the server to cancel your subscription, so your account was not deleted. Please check your connection and try again.'
+      );
+    }
+
+    await cancelDailyReminder().catch(() => {});
 
     const { error: reportsError } = await supabase.from('user_reports').delete().eq('user_email', email);
     if (reportsError) throw new Error(reportsError.message);

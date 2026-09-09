@@ -2,7 +2,7 @@
   "expo": {
     "name": "AstroLyfe: Horoscope & Zodiac",
     "slug": "v5cjeo8w8teyc01wvntgb",
-    "version": "1.0.0",
+    "version": "1.2.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.rork.v5cjeo8w8teyc01wvntgb",
+      "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -25,7 +26,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "app.rork.v5cjeo8w8teyc01wvntgb"
+      "package": "app.rork.v5cjeo8w8teyc01wvntgb",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/images/favicon-32.png"

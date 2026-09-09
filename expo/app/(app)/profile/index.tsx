@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth, hasBillableSubscription } from '@/providers/AuthProvider';
 import { supabase, uploadFile } from '@/lib/supabase';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
@@ -261,9 +261,15 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
+    // Deletion now cancels an active subscription as part of the same action rather
+    // than refusing until support does it. That has to be said before the customer
+    // taps through, not discovered afterwards on their next statement.
+    const billing = hasBillableSubscription(profile?.subscription_status)
+      ? '\n\nYour active subscription will be cancelled as part of this. You will lose access immediately and will not be billed again.'
+      : '';
     Alert.alert(
       'Delete your account?',
-      'This permanently deletes your account, birth profile, and every generated report. This cannot be undone.',
+      `This permanently deletes your account, birth profile, and every generated report. This cannot be undone.${billing}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
