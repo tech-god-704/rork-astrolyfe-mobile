@@ -3,7 +3,10 @@
     {
       "name": "AstroLyfe",
       "path": "expo",
-      "framework": "react-native"
+      "framework": "react-native",
+      "settings": {
+        "displayName": "AstroLyfe: Horoscope & Zodiac"
+      }
     }
   ]
 }
