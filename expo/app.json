@@ -51,7 +51,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "AstroLyfe uses your photo library so you can set a profile picture."
+          "photosPermission": "AstroLyfe uses your photo library so you can set a profile picture.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ]
     ],
