@@ -11,6 +11,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { requestPasswordReset } from '@/lib/backend';
 import { isValidEmail } from '@/lib/validation';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '@/constants/links';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
@@ -193,17 +194,16 @@ export default function LoginScreen() {
                 <Text style={styles.signupText}>Forgot password?</Text>
               </Pressable>
 
-              {/* Accounts are created on the web funnel today, not in this app — see
-                  welcome.tsx for the same decision. Plain text, not a purchase CTA. */}
-              <Pressable onPress={() => Linking.openURL('https://soulmate.astrolyfe.co')} style={styles.signupLink} accessibilityRole="link" accessibilityLabel="New to AstroLyfe? Get started on our website">
-                <Text style={styles.signupText}>New to AstroLyfe? <Text style={styles.signupTextBold}>Get started at soulmate.astrolyfe.co</Text></Text>
-              </Pressable>
-
+              {/* No "new here? get started at <funnel>" link, deliberately. It read as
+                  plain information, but it pointed at the page that sells the
+                  subscription, and 3.1.3(f) — the exemption this app relies on to have
+                  no in-app purchase at all — is void if there is a call to action to
+                  purchase outside the app. Removing it is what keeps the exemption. */}
               <Text style={styles.legalText}>
                 By signing in, you agree to our{' '}
-                <Text style={styles.legalLink} onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/terms.php')}>Terms &amp; Conditions</Text>
+                <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>Terms &amp; Conditions</Text>
                 {' '}and{' '}
-                <Text style={styles.legalLink} onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/privacy-policy.php')}>Privacy Policy</Text>.
+                <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>Privacy Policy</Text>.
               </Text>
             </Animated.View>
           </ScrollView>
@@ -277,7 +277,6 @@ const createStyles = () => StyleSheet.create({
   btnDisabled: { opacity: 0.5 },
   signupLink: { alignItems: 'center', paddingVertical: 12 },
   signupText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
-  signupTextBold: { color: Colors.gold, fontWeight: '700' },
   legalText: { fontSize: 11.5, color: Colors.textFaint, textAlign: 'center', lineHeight: 17, paddingHorizontal: 8, marginTop: 4 },
   legalLink: { color: Colors.textMuted, textDecorationLine: 'underline' },
 });

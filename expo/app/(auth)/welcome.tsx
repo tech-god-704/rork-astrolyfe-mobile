@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,8 +9,6 @@ import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import CosmicBackground from '@/components/CosmicBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
-
-const WEB_FUNNEL_URL = 'https://soulmate.astrolyfe.co';
 
 export default function WelcomeScreen() {
   const styles = useThemedStyles(createStyles);
@@ -101,20 +99,15 @@ export default function WelcomeScreen() {
             </LinearGradient>
           </Pressable>
 
-          {/* Plain informational text, not a purchase CTA: accounts are created on the
-              web funnel today, not in this app. No pricing or "buy/subscribe" language
-              here on purpose. */}
-          <Pressable
-            onPress={() => Linking.openURL(WEB_FUNNEL_URL)}
-            testID="no-account-link"
-            accessibilityRole="link"
-            accessibilityLabel="New to AstroLyfe? Get started on our website"
-            hitSlop={8}
-          >
-            <Text style={styles.noAccountText}>
-              New to AstroLyfe? Get started at soulmate.astrolyfe.co
-            </Text>
-          </Pressable>
+          {/* There is deliberately nothing below "Sign in".
+              This used to link to the funnel, described in its own comment as
+              informational rather than a purchase CTA. That reading does not survive
+              contact with 3.1.3(f), which is the only reason this app is allowed to
+              ship with no in-app purchase at all: a free companion to a paid web tool
+              qualifies only while there is neither purchasing inside the app nor a call
+              to action to purchase outside it. A link to the page that sells the
+              subscription is the second of those however it is worded, and losing the
+              exemption means owing StoreKit. Sign-in-only is the whole point. */}
         </Animated.View>
       </SafeAreaView>
     </CosmicBackground>
@@ -269,14 +262,6 @@ const createStyles = () => StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.1,
-  },
-  noAccountText: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 4,
-    paddingVertical: 10,
   },
   pressed: {
     opacity: 0.88,

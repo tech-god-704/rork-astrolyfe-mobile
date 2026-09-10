@@ -17,6 +17,7 @@ import { getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
 import { NOTIFICATION_TIME_PRESETS, requestNotificationPermission } from '@/services/notifications';
 import { useThemedStyles, useTheme } from '@/providers/ThemeProvider';
+import { PRIVACY_POLICY_URL, TERMS_URL, SUPPORT_URL } from '@/constants/links';
 
 export default function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
@@ -630,12 +631,16 @@ export default function ProfileScreen() {
           </Pressable>
 
           <View style={styles.legalRow}>
-            <Pressable onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/privacy-policy.php')} accessibilityRole="link" accessibilityLabel="Privacy Policy" hitSlop={8}>
+            <Pressable onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} accessibilityRole="link" accessibilityLabel="Privacy Policy" hitSlop={8}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </Pressable>
             <Text style={styles.legalDivider}>·</Text>
-            <Pressable onPress={() => Linking.openURL('https://soulmate.astrolyfe.co/terms.php')} accessibilityRole="link" accessibilityLabel="Terms and Conditions" hitSlop={8}>
+            <Pressable onPress={() => Linking.openURL(TERMS_URL)} accessibilityRole="link" accessibilityLabel="Terms and Conditions" hitSlop={8}>
               <Text style={styles.legalLink}>Terms &amp; Conditions</Text>
+            </Pressable>
+            <Text style={styles.legalDivider}>·</Text>
+            <Pressable onPress={() => Linking.openURL(SUPPORT_URL)} accessibilityRole="link" accessibilityLabel="Support and help" hitSlop={8}>
+              <Text style={styles.legalLink}>Support</Text>
             </Pressable>
           </View>
 
