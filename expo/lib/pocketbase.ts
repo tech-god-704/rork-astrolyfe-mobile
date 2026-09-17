@@ -301,6 +301,9 @@ class Query<T = any> implements PromiseLike<Result<T>> {
   private fields = '';
   private sort = '';
   private perPage = 200;
+  // Distinguishes the page size above from a caller's explicit .limit(n), which
+  // runDelete must honour rather than paginate past.
+  private limitSet = false;
   private mode: 'many' | 'single' | 'maybeSingle' = 'many';
   private signal?: AbortSignal;
   // supabase-js applies filters AFTER the verb: .update({...}).eq('id', x). The write
@@ -338,6 +341,7 @@ class Query<T = any> implements PromiseLike<Result<T>> {
 
   limit(n: number): this {
     this.perPage = Math.max(1, n);
+    this.limitSet = true;
     return this;
   }
 
@@ -349,12 +353,14 @@ class Query<T = any> implements PromiseLike<Result<T>> {
   single(): this {
     this.mode = 'single';
     this.perPage = 1;
+    this.limitSet = true;
     return this;
   }
 
   maybeSingle(): this {
     this.mode = 'maybeSingle';
     this.perPage = 1;
+    this.limitSet = true;
     return this;
   }
 
@@ -405,16 +411,31 @@ class Query<T = any> implements PromiseLike<Result<T>> {
     return { data: out, error: null };
   }
 
+  /**
+   * PocketBase deletes one record per request, and the list call that finds them is
+   * paginated. A single page would silently cap the delete at the page size while
+   * still reporting success — which for account deletion means the customer's data
+   * outliving their account. So keep re-listing page 1 (the rows just deleted are
+   * gone from it) until nothing matches. Terminates because every pass removes every
+   * row it listed; a failed DELETE throws out of pbFetch rather than looping. An
+   * explicit .limit()/.single() is a caller asking for a bounded delete and is left
+   * at one page.
+   */
   private async runDelete(): Promise<Result<any>> {
-    const rows = await this.fetchRows(['id']);
-    for (const row of rows) {
-      await pbFetch(
-        `/api/collections/${encodeURIComponent(this.collection)}/records/${row.id}`,
-        { method: 'DELETE' },
-        this.signal,
-      );
+    const deleted: string[] = [];
+    for (;;) {
+      const rows = await this.fetchRows(['id']);
+      for (const row of rows) {
+        await pbFetch(
+          `/api/collections/${encodeURIComponent(this.collection)}/records/${row.id}`,
+          { method: 'DELETE' },
+          this.signal,
+        );
+        deleted.push(row.id);
+      }
+      if (this.limitSet || rows.length < this.perPage) break;
     }
-    return { data: rows.map((r: any) => r.id), error: null };
+    return { data: deleted, error: null };
   }
 
   /**

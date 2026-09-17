@@ -418,10 +418,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * course_progress have no relation to users at all. The list is EMAIL_KEYED below.
    *
    * profiles/chat_conversations/chat_messages/push_tokens/notification_log are NOT
-   * deleted explicitly: each reaches users through a cascadeDelete:true relation
-   * (profiles.user_id is also enforced at creation by a PocketBase hook — see
-   * pb_hooks/astrolyfe.pb.js — so it can never be unset), and deleting the users
-   * record was directly tested to remove them correctly on its own.
+   * deleted explicitly: each reaches users through a cascadeDelete:true relation, and
+   * for the first four that relation is also REQUIRED, so it can never be unset
+   * (profiles.user_id is enforced at creation by a PocketBase hook as well — see
+   * pb_hooks/astrolyfe.pb.js). Deleting the users record was directly tested to
+   * remove all five correctly on its own. notification_log.user is the one optional
+   * relation of the group, so a row written without it escapes the cascade; it holds
+   * no email and no user-authored content, has no user_email column to match on, and
+   * its deleteRule is admin-only, so the app cannot reach it either way — cleaning
+   * those up belongs to the server endpoint, not here.
    *
    * An active subscription does NOT block deletion. It used to, on the reasoning that
    * deleting out from under a live subscription would leave it billing with no account
@@ -497,8 +502,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       );
     }
 
-    await cancelDailyReminder().catch(() => {});
-
     // Every collection keyed by a plain user_email text column, which is to say every
     // one the cascade does not reach when the users record goes. Verified against the
     // live schema: readings, compatibility_tests and course_progress have no relation
@@ -527,6 +530,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     const { error: userError } = await supabase.from('users').delete().eq('id', id);
     if (userError) throw new Error(userError.message);
 
+    // Only now, past the last step that can throw. Cancelling before the deletes
+    // would leave a customer who is told to retry (a delete above failed, so the
+    // account still exists) silently without their daily reminder — nothing
+    // re-schedules it, since the sync effect only fires when the stored preference
+    // itself changes.
+    await cancelDailyReminder().catch(() => {});
+
     // Otherwise this account signing up again later would read as having already
     // finished onboarding, since the flag is keyed by email and survives independently
     // of the PocketBase record it was standing in for.
@@ -539,8 +549,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, [user, signOut]);
 
   const isSubscribed = useMemo(() => {
-    // Guest exploration can navigate the product, but it is never an admin session
-    // and remains unable to read or write protected PocketBase records.
+    // Admins get the paid surfaces without a subscription row. is_admin comes from
+    // profiles and is pinned by the backend against anything but a superuser write
+    // (see checkIsAdmin), so this is not self-grantable.
     if (isAdmin) return true;
     const status = profile?.subscription_status;
     return status ? ACTIVE_STATUSES.includes(status) : false;
