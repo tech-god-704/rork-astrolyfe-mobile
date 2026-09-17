@@ -250,7 +250,16 @@ export default function ProfileScreen() {
   const confirmDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
-      await deleteAccount();
+      const result = await deleteAccount();
+      // The confirmation promised the subscription would be cancelled too. When the
+      // server that does the cancelling was unreachable, the account is still gone —
+      // but saying nothing would leave the customer believing billing had stopped.
+      if (result?.subscriptionNeedsManualCancel) {
+        Alert.alert(
+          'Account deleted',
+          "Your account and data are gone. We couldn't reach our billing server to cancel your subscription, so email support@astrolyfe.co and we'll cancel it and refund anything charged in the meantime.",
+        );
+      }
     } catch (e) {
       Alert.alert(
         'Something went wrong',

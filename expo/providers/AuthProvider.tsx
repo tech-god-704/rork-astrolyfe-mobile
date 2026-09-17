@@ -436,10 +436,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * delete-account endpoint already takes cancel_subscription, so the hazard is handled
    * where it actually can be — the subscription is cancelled as part of the deletion.
    *
-   * The consequence is that with billing live the SERVER path is mandatory: the
-   * client-side fallback below deletes rows but cannot reach Stripe, so falling through
-   * to it would recreate the exact stranded-billing case. When the server is
-   * unreachable the deletion is refused with a retryable message instead.
+   * The consequence used to be that with billing live the SERVER path was mandatory,
+   * and an unreachable server refused the deletion with a retryable message. That put
+   * the guideline back where it started: the demo account App Review is given has to
+   * carry a live subscription to get past SubscriptionGuard at all, so a reviewer who
+   * hits a bad minute on the endpoint is told their account was not deleted. The
+   * fallback now completes the deletion and records the uncancelled subscription in
+   * deletion_requests instead, and the caller is told so it can say as much. Returns
+   * { subscriptionNeedsManualCancel } for that reason.
    */
   const deleteAccount = useCallback(async () => {
     if (!user?.id || !user?.email) {
@@ -459,47 +463,76 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // absent row genuinely means nothing is being billed.
     const { data: billingRow, error: billingError } = await supabase
       .from('profiles')
-      .select('subscription_status')
+      .select('subscription_status, stripe_customer_id, subscription_id')
       .eq('email', email)
       .maybeSingle();
     if (billingError) {
       throw new Error('We could not verify your subscription status. Please check your connection and try again.');
     }
-    const billingStatus = (billingRow as { subscription_status?: string | null } | null)?.subscription_status ?? '';
+    const billing = billingRow as {
+      subscription_status?: string | null;
+      stripe_customer_id?: string | null;
+      subscription_id?: string | null;
+    } | null;
+    const billingStatus = billing?.subscription_status ?? '';
     const hasLiveBilling = BILLING_ACTIVE_STATUSES.includes(billingStatus);
 
-    // Cancelling the scheduled reminder is deliberately NOT done up front. Deletion can
-    // still be refused below (server unreachable while a subscription is live), and a
-    // customer who is told to try again should not have quietly lost their daily
-    // reminder in the attempt. Each path that actually deletes cancels it itself.
-    // Best-effort throughout: not worth failing a deletion over a local notification
-    // that stops mattering the moment the session is gone anyway.
+    // Cancelling the scheduled reminder is deliberately NOT done up front. A delete
+    // below can still throw, leaving the account intact, and a customer told to try
+    // again should not have quietly lost their daily reminder in the attempt. Each
+    // path that actually deletes cancels it itself. Best-effort throughout: not worth
+    // failing a deletion over a local notification that stops mattering the moment the
+    // session is gone anyway.
 
     // Server-first: the PHP endpoint also removes the Brevo contact and portrait
     // files (neither of which is reachable from the app), cancels Stripe when asked,
     // and deletes the PocketBase auth record cleanly. If it succeeds there is nothing
     // left to do client-side. On failure fall through to the client-side cleanup
-    // below — but only when nothing is being billed (see hasLiveBilling throw).
+    // below, which deletes either way and records any subscription it could not cancel.
     try {
       const res = await deleteAccountServer(hasLiveBilling);
       if (res?.success) {
         await cancelDailyReminder().catch(() => {});
         await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
         await signOut();
-        return;
+        return { subscriptionNeedsManualCancel: false };
       }
     } catch {
-      // Offline / server error — client-side path below, or the refusal just under it.
+      // Offline / server error — fall through to the client-side path below.
     }
 
+    // Reaching here means the server endpoint — the only thing that can cancel Stripe —
+    // did not complete. This used to refuse the deletion outright so a subscription
+    // could never be left billing with no account to identify it.
+    //
+    // That refusal is the wrong trade for the situation Apple actually tests. The whole
+    // app sits behind SubscriptionGuard, so the demo account App Review is given must
+    // carry a live subscription, which means a reviewer tapping Delete Account lands on
+    // exactly this branch the moment the endpoint is unreachable — and 5.1.1(v) does not
+    // accept "we could not delete your account, try again" as the outcome. Apple does not
+    // require the app to cancel a subscription bought outside it; it requires the account
+    // to go. So delete, and leave a durable trail for the subscription.
+    //
+    // deletion_requests is written before anything is removed, while the auth token and
+    // the Stripe ids still exist (its createRule pins email to the caller's own, and it
+    // is admin-read-only so it exposes nothing back to clients). Best-effort by design:
+    // failing to write an audit row must not resurrect the refusal this replaces, and a
+    // Stripe subscription is searchable by customer email regardless, so support can
+    // still find it if this row never lands.
+    let subscriptionNeedsManualCancel = false;
     if (hasLiveBilling) {
-      // Reaching here means the one path that can cancel Stripe did not complete. The
-      // client-side cleanup below would delete the account and leave the subscription
-      // billing forever, so stop instead — this is recoverable by retrying, unlike a
-      // deletion that has already happened.
-      throw new Error(
-        'We could not reach the server to cancel your subscription, so your account was not deleted. Please check your connection and try again.'
-      );
+      subscriptionNeedsManualCancel = true;
+      await supabase
+        .from('deletion_requests')
+        .insert({
+          email,
+          stripe_customer_id: billing?.stripe_customer_id ?? '',
+          subscription_id: billing?.subscription_id ?? '',
+          subscription_status: billingStatus,
+          reason: 'account deleted client-side; server endpoint unreachable so Stripe was not cancelled',
+          resolved: false,
+        })
+        .then(() => undefined, () => undefined);
     }
 
     // Every collection keyed by a plain user_email text column, which is to say every
@@ -546,6 +579,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // future change there (e.g. clearing a query cache) doesn't need to be kept in
     // sync by hand in two places.
     await signOut();
+
+    return { subscriptionNeedsManualCancel };
   }, [user, signOut]);
 
   const isSubscribed = useMemo(() => {
