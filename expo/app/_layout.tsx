@@ -47,7 +47,7 @@ const queryClient = new QueryClient({
 });
 
 function AuthGate({ onReady }: { onReady: () => void }) {
-  const { isAuthenticated, isReady, profile, skipAuth } = useAuth();
+  const { isAuthenticated, isReady, profile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const splashHidden = useRef(false);
@@ -80,14 +80,14 @@ function AuthGate({ onReady }: { onReady: () => void }) {
     // fetch inside onAuthStateChange resolves. Gating on profileResolved rather than
     // just isAuthenticated stops that window from routing a first-time login straight
     // to home before the onboarding check has anything to check against.
-    const profileResolved = profile !== null || skipAuth;
+    const profileResolved = profile !== null;
     // onboardingDoneLocally (AsyncStorage, async) covers a fresh cold start after a
     // prior failed write; isOnboardingDoneThisSession (in-memory, synchronous) covers
     // the same session finish() just ran in — the async state above cannot update in
     // time for THIS effect run, since nothing re-triggers its effect just because
     // finish() wrote a new value for the same profile.email.
     const needsOnboarding =
-      isAuthenticated && !skipAuth && profile !== null && profile.onboarding_completed !== true
+      isAuthenticated && profile !== null && profile.onboarding_completed !== true
       && !onboardingDoneLocally && !(profile?.email && isOnboardingDoneThisSession(profile.email));
 
     if (!isAuthenticated && !inAuthGroup) {
@@ -109,7 +109,7 @@ function AuthGate({ onReady }: { onReady: () => void }) {
         onReady();
       }, 150);
     }
-  }, [isAuthenticated, isReady, profile, skipAuth, segments, router, onReady, onboardingDoneLocally]);
+  }, [isAuthenticated, isReady, profile, segments, router, onReady, onboardingDoneLocally]);
 
   return null;
 }

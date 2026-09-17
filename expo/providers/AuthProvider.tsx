@@ -85,38 +85,6 @@ export function hasBillableSubscription(status: string | null | undefined): bool
   return !!status && BILLING_ACTIVE_STATUSES.includes(status);
 }
 
-const GUEST_PREVIEW_PROFILE: UserProfile = {
-  id: null,
-  email: '',
-  display_name: 'Guest Explorer',
-  avatar_url: null,
-  zodiac_sign: 'Cancer',
-  birth_date: '1990-07-15',
-  birth_city: 'Los Angeles, CA',
-  birth_lat: 34.0522,
-  birth_lon: -118.2437,
-  timezone: 'America/Los_Angeles',
-  // A preview session, not a real onboarding candidate — never show the tour for it.
-  onboarding_completed: true,
-  notifications_enabled: false,
-  notification_hour: 8,
-  notification_minute: 0,
-  quiz_data: {
-    birth_year: 1990,
-    birth_month: 7,
-    birth_day: 15,
-    birth_hour: 14,
-    birth_minute: 30,
-    birth_place: 'Los Angeles, CA',
-    country_code: 'US',
-  },
-  subscription_status: 'free',
-  subscription_product: null,
-  subscription_period_end: null,
-  trial_end_date: null,
-  is_admin: false,
-};
-
 function checkIsAdmin(profile: UserProfile | null): boolean {
   // profiles.is_admin is the real mechanism, and the backend pins that field against
   // anything but a superuser write, so a user cannot grant it to themselves.
@@ -129,7 +97,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isReady, setIsReady] = useState<boolean>(false);
-  const [skipAuth, setSkipAuth] = useState<boolean>(false);
 
   const fetchVersion = useRef(0);
   const isMounted = useRef(true);
@@ -179,12 +146,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   // the resolved profile changes — covers a fresh install, a preference changed on
   // another device, and a normal toggle from the Profile screen alike, in one place
   // rather than re-implemented at every call site that can change the setting.
-  // Guest preview has no real account and never enables notifications, so this is a
-  // no-op for it.
   useEffect(() => {
-    if (skipAuth || !profile) return;
+    if (!profile) return;
     void syncDailyReminder(profile.notifications_enabled, profile.notification_hour, profile.notification_minute);
-  }, [skipAuth, profile?.notifications_enabled, profile?.notification_hour, profile?.notification_minute]);
+  }, [profile?.notifications_enabled, profile?.notification_hour, profile?.notification_minute]);
 
   /**
    * Fetch profile from PROFILES table (source of truth for mobile app).
@@ -333,14 +298,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, [fetchProfile, verifyEntitlement]);
 
   useEffect(() => {
-    if (skipAuth && !profile) {
-      setProfile(GUEST_PREVIEW_PROFILE);
-      setIsLoading(false);
-      setIsReady(true);
-    }
-  }, [skipAuth, profile]);
-
-  useEffect(() => {
     const handleAppState = (state: AppStateStatus) => {
       if (state === 'active') {
         supabase.auth.startAutoRefresh();
@@ -453,15 +410,18 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
    * into an account must let the customer delete it from within the app, not just by
    * emailing support.
    *
-   * user_reports, astro_reports, and purchases are all deleted explicitly, by email,
-   * before the users record — checked directly against the live PocketBase schema
-   * (not assumed): all three have an OPTIONAL user_id relation, and purchases'
-   * specifically has cascadeDelete:false, so none of them would be reliably cleaned up
-   * by deleting the users record alone. profiles/chat_conversations/chat_messages are
-   * NOT deleted explicitly here: all three have a REQUIRED, cascadeDelete:true relation
-   * back to users (profiles.user_id is also enforced at creation by a PocketBase hook —
-   * see pb_hooks/astrolyfe.pb.js — so it can never be unset), and deleting the users
-   * record below was directly tested to remove all three correctly on its own.
+   * On the client-side fallback path, every collection keyed by a plain user_email
+   * text column is deleted explicitly before the users record, because the cascade
+   * reaches none of them — checked against the live PocketBase schema rather than
+   * assumed. user_reports, astro_reports and purchases have an OPTIONAL user_id
+   * relation (purchases' is cascadeDelete:false); readings, compatibility_tests and
+   * course_progress have no relation to users at all. The list is EMAIL_KEYED below.
+   *
+   * profiles/chat_conversations/chat_messages/push_tokens/notification_log are NOT
+   * deleted explicitly: each reaches users through a cascadeDelete:true relation
+   * (profiles.user_id is also enforced at creation by a PocketBase hook — see
+   * pb_hooks/astrolyfe.pb.js — so it can never be unset), and deleting the users
+   * record was directly tested to remove them correctly on its own.
    *
    * An active subscription does NOT block deletion. It used to, on the reasoning that
    * deleting out from under a live subscription would leave it billing with no account
@@ -539,14 +499,30 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     await cancelDailyReminder().catch(() => {});
 
-    const { error: reportsError } = await supabase.from('user_reports').delete().eq('user_email', email);
-    if (reportsError) throw new Error(reportsError.message);
+    // Every collection keyed by a plain user_email text column, which is to say every
+    // one the cascade does not reach when the users record goes. Verified against the
+    // live schema: readings, compatibility_tests and course_progress have no relation
+    // to users at all, and were surviving this path still holding the customer's email,
+    // their generated reading content and their compatibility partner names. The other
+    // three have an optional user_id relation (purchases' is cascadeDelete:false).
+    // profiles, chat_conversations, chat_messages, push_tokens and notification_log all
+    // reach users through a cascadeDelete relation and are left to it.
+    //
+    // A collection added to the backend later needs adding here too, or the customer's
+    // data outlives their account on this fallback path.
+    const EMAIL_KEYED = [
+      'user_reports',
+      'astro_reports',
+      'purchases',
+      'readings',
+      'compatibility_tests',
+      'course_progress',
+    ] as const;
 
-    const { error: astroError } = await supabase.from('astro_reports').delete().eq('user_email', email);
-    if (astroError) throw new Error(astroError.message);
-
-    const { error: purchasesError } = await supabase.from('purchases').delete().eq('user_email', email);
-    if (purchasesError) throw new Error(purchasesError.message);
+    for (const collection of EMAIL_KEYED) {
+      const { error } = await supabase.from(collection).delete().eq('user_email', email);
+      if (error) throw new Error(error.message);
+    }
 
     const { error: userError } = await supabase.from('users').delete().eq('id', id);
     if (userError) throw new Error(userError.message);
@@ -565,11 +541,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const isSubscribed = useMemo(() => {
     // Guest exploration can navigate the product, but it is never an admin session
     // and remains unable to read or write protected PocketBase records.
-    if (skipAuth) return true;
     if (isAdmin) return true;
     const status = profile?.subscription_status;
     return status ? ACTIVE_STATUSES.includes(status) : false;
-  }, [profile, isAdmin, skipAuth]);
+  }, [profile, isAdmin]);
 
   return useMemo(() => ({
     session,
@@ -577,15 +552,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     profile,
     isLoading,
     isReady,
-    isAuthenticated: !!session || skipAuth,
+    isAuthenticated: !!session,
     isAdmin,
     isSubscribed,
-    skipAuth,
-    setSkipAuth,
     signUp,
     signIn,
     signOut,
     deleteAccount,
     refreshProfile,
-  }), [session, user, profile, isLoading, isReady, skipAuth, isAdmin, isSubscribed, signUp, signIn, signOut, deleteAccount, refreshProfile]);
+  }), [session, user, profile, isLoading, isReady, isAdmin, isSubscribed, signUp, signIn, signOut, deleteAccount, refreshProfile]);
 });
