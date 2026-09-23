@@ -180,7 +180,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
             ? getFileUrl('profiles', profileData.id, profileData.avatar)
             : null,
           zodiac_sign: profileData.zodiac_sign,
-          birth_date: profileData.date_of_birth,
+          // PocketBase returns date fields as full datetimes ("1990-07-15 00:00:00.000Z"),
+          // but every consumer treats birth_date as YYYY-MM-DD. Passed through raw, the
+          // Profile screen showed the datetime in its birth-date field and its save
+          // validation rejected it, so the customer could not save ANY profile change —
+          // not even a name — without first retyping a date they never touched.
+          // personal-horoscope.ts already slices the same way on its side.
+          birth_date: profileData.date_of_birth ? String(profileData.date_of_birth).slice(0, 10) : null,
           birth_city: profileData.birth_city,
           timezone: profileData.timezone ?? null,
           birth_lat: profileData.birth_lat,
