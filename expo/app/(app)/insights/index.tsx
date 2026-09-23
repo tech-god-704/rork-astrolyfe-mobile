@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Modal, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { fetchUserReports, REPORT_META, type ReportType, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
+import { parseReport, type Inline } from '@/lib/reportFormat';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
@@ -243,9 +244,7 @@ export default function InsightsScreen() {
                       );
                     })()
                   ) : (
-                    <Text style={styles.reportContent}>
-                      {stripHtml(viewingReport.content_html)}
-                    </Text>
+                    <ReportBody html={viewingReport.content_html} styles={styles} />
                   )}
                 </GlassCard>
               )}
@@ -269,19 +268,64 @@ function extractImageSrc(html: string): string | null {
   return match ? match[1] : null;
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+type InsightsStyles = ReturnType<typeof createStyles>;
+
+function renderInlines(inlines: Inline[], styles: InsightsStyles) {
+  return inlines.map((part, i) => (
+    <Text key={i} style={[part.bold && styles.reportBold, part.italic && styles.reportItalic]}>
+      {part.text}
+    </Text>
+  ));
+}
+
+/**
+ * Reports are stored as Markdown. Rendering them through a tag-stripper left the
+ * syntax on screen, so this draws the blocks parseReport() produces instead.
+ */
+function ReportBody({ html, styles }: { html: string; styles: InsightsStyles }) {
+  const blocks = useMemo(() => parseReport(html), [html]);
+
+  if (blocks.length === 0) {
+    return <Text style={styles.reportContent}>This report has no content yet.</Text>;
+  }
+
+  return (
+    <View>
+      {blocks.map((block, i) => {
+        switch (block.kind) {
+          case 'rule':
+            return <View key={i} style={styles.reportRule} />;
+          case 'heading':
+            return (
+              <Text key={i} style={[styles.reportHeading, block.level <= 2 && styles.reportHeadingLarge]}>
+                {renderInlines(block.inlines, styles)}
+              </Text>
+            );
+          case 'bullet':
+            return (
+              <View key={i} style={styles.reportBulletRow}>
+                <Text style={styles.reportBulletDot}>•</Text>
+                <Text style={[styles.reportContent, styles.reportBulletText]}>
+                  {renderInlines(block.inlines, styles)}
+                </Text>
+              </View>
+            );
+          case 'quote':
+            return (
+              <Text key={i} style={[styles.reportContent, styles.reportQuote]}>
+                {renderInlines(block.inlines, styles)}
+              </Text>
+            );
+          default:
+            return (
+              <Text key={i} style={[styles.reportContent, styles.reportParagraph]}>
+                {renderInlines(block.inlines, styles)}
+              </Text>
+            );
+        }
+      })}
+    </View>
+  );
 }
 
 const createStyles = () => StyleSheet.create({
@@ -350,4 +394,14 @@ const createStyles = () => StyleSheet.create({
     backgroundColor: '#fff',
   },
   reportContent: { fontSize: 17, fontFamily: Fonts.display, color: Colors.textSecondary, lineHeight: 29 },
+  reportParagraph: { marginBottom: 10 },
+  reportHeading: { fontSize: 19, fontFamily: Fonts.display, fontWeight: '700', color: Colors.textPrimary, lineHeight: 27, marginTop: 14, marginBottom: 8 },
+  reportHeadingLarge: { fontSize: 22, lineHeight: 30 },
+  reportBold: { fontWeight: '700', color: Colors.textPrimary },
+  reportItalic: { fontStyle: 'italic' },
+  reportRule: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.bgCardBorder, marginVertical: 16 },
+  reportBulletRow: { flexDirection: 'row', marginBottom: 10 },
+  reportBulletDot: { fontSize: 17, lineHeight: 29, color: Colors.purpleLight, width: 18 },
+  reportBulletText: { flex: 1 },
+  reportQuote: { borderLeftWidth: 2, borderLeftColor: Colors.purpleLight, paddingLeft: 12, fontStyle: 'italic', marginBottom: 10 },
 });
