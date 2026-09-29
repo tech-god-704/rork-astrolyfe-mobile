@@ -14,6 +14,7 @@ import GlassCard from '@/components/GlassCard';
 import { type HoroscopePeriod } from '@/services/horoscope';
 import { getPersonalHoroscope, type PersonalHoroscopeReading } from '@/services/personal-horoscope';
 import AppBackground from '@/components/AppBackground';
+import SwitchedOnToday from '@/components/SwitchedOnToday';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
 type PeriodType = HoroscopePeriod;
@@ -177,6 +178,8 @@ export default function HoroscopeScreen() {
             <Sun size={13} color={Colors.gold} />
             <Text style={styles.dateText}>{getPeriodLabel()}</Text>
           </View>
+
+          <SwitchedOnToday profile={profile} />
 
           <Animated.View style={{ opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
             {/* Full reading card */}

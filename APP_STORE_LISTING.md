@@ -55,11 +55,13 @@ POWER PLACES
 • Your top cities for love, career, home, luck and drive
 • A live map of your lines across the world
 • Check any city and see what it does for you, including the rising sign you would have if you lived there
+• When to go: the dates each place is switched on, worked out from the real movement of the planets
 
 COUPLE MAP
 • Add your partner, crush or best friend
 • See both of your love lines on one map
 • Find your love city together, and the places where you both thrive
+• Best time to go together: the days both of your love lines are switched on at once
 • Their details stay on your phone
 
 SOULMATE
@@ -114,7 +116,7 @@ reviewer compares against the saturated category.
 | --- | --- | --- |
 | 1 | Places — Power City card with the map below | The cities your chart lights up |
 | 2 | Places — map with the Love chip selected | Your lines, around the world |
-| 3 | Places — "Check a city" result with "you'd rise as…" | Check any city on Earth |
+| 3 | Places — "Check a city" result with "you'd rise as…" and its "Best time to go" | Check any city on Earth — and when to go |
 | 4 | Couple — love city together + two-colour map | Where you two thrive |
 | 5 | Soulmate — portrait and love cities | Your soulmate, and where you'll meet |
 | 6 | Insights — the city reports list | Personal city reports |
@@ -128,7 +130,7 @@ display (1320 × 2868); a 6.5" set is still accepted.
 Paste into **App Review Information → Notes**:
 
 ```
-AstroLyfe is a relocation and relationship-mapping app. Its core features — Power Places, the world line map, Couple Map, and "the rising sign you'd have if you lived here" — calculate where on Earth each planet sat at the user's exact birth moment (astrocartography) and match those lines to real cities. They are computed on the device from planetary positions, not from per-sign text.
+AstroLyfe is a relocation and relationship-mapping app. Its core features — Power Places, the world line map, Couple Map, and "the rising sign you'd have if you lived here" — calculate where on Earth each planet sat at the user's exact birth moment (astrocartography) and match those lines to real cities. A timing engine then scans the real sky a year ahead to date when each place is "switched on" (including, for couples, the days both people's lines are active together). All of it is computed on the device from planetary positions, not from per-sign text.
 
 Demo account: the sign-in above has an active subscription and full birth details, so every feature is unlocked. Suggested path: Places tab (Power City, map, "Check a city") → Couple tab (enter any birth date, time and city to see a shared map) → Soulmate → Insights (city reports).
 

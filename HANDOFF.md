@@ -17,7 +17,7 @@ Companion files:
 | | |
 | --- | --- |
 | **App Store** | Version **1.2.2 (build 14) rejected 2026-09-28** under **Guideline 4.3(b) — Spam** (saturated category: astrology). A reply was sent to App Review on 2026-09-29; no answer yet. |
-| **Code** | The app has since been repositioned away from "horoscope app" (sections 3–4). All of it is on `main`. Typecheck clean, iOS bundle builds. |
+| **Code** | The app has since been repositioned away from "horoscope app" (sections 3–4). All of it is on `main`. Typecheck clean, iOS bundle builds, and a scripted walkthrough of every screen as the demo user passes (section 9). |
 | **Next step** | Build from `main` in RORK → check it on a phone → update the App Store listing per `APP_STORE_LISTING.md` → resubmit **once**, with everything changed. |
 
 > ⚠️ **Do not resubmit an unchanged app.** Apple's rejection carried an Extended
@@ -114,7 +114,8 @@ Tabs: **Places → Soulmate → Couple → Insights → You.**
 | **Couple Map** (replaced sun-sign compatibility) | Enter a partner's birth date, time and city → shared love city, both people's lines on one map, cities where both thrive. **Partner data stays on the device** and is wiped on account deletion. | `app/(app)/compatibility/index.tsx` |
 | **Soulmate** | Portrait, Venus sign, cities to meet. | `app/(app)/soulmate/index.tsx` |
 | **Insights** | Reports (World Map, Love Cities, Career Cities, Home & Peace, Travel Timing) + Birth chart + Daily forecast. | `app/(app)/insights/index.tsx` |
-| **Forecast** | Personal daily reading. **Off the tab bar**; reachable from Insights and by tapping the daily reminder. | `app/(app)/horoscope/` |
+| **Forecast** | Personal daily reading, opening with a **"Switched on today"** card (which of the user's life areas are active now, and the city where each is loudest). **Off the tab bar**; reachable from Insights and by tapping the daily reminder. | `app/(app)/horoscope/`, `components/SwitchedOnToday.tsx` |
+| **When to go** (timing engine) | Scans the real sky a year ahead for supportive aspects (conjunction, trine, sextile) from Jupiter, Venus, the Sun and Mars to the natal planet behind a line, and turns them into dated windows: "Best time to go: Mar 4 – 19 · Jupiter flows with your Venus", or "Switched on now · until …". Shown on the Power City, each life area, "Check a city", Soulmate, and — for couples — **"Best time to go together"**, the days both people's Venus lines are active at once. | `services/places-timing.ts`, `components/TimingNote.tsx` |
 
 Engine accuracy (verified, not assumed): the Sun's Midheaven line lands within
 0.05° (~3 mi) of the published solar-noon longitude; solstice declinations within
@@ -145,7 +146,10 @@ planets within that distance of a cusp.
 | `0d3c3dc` | Power City, relocated rising sign, world map, sharing |
 | `a4d973b` | Couple Map replaces sun-sign compatibility |
 | `75886cf` | Remove generic astrology surfaces from the first impression (welcome, tabs, reminder, report names, paywall copy) |
-| *this commit* | Handoff, listing copy, tools |
+| `5949888` | Handoff, listing copy, tools |
+| `76d0781` | Fix a crash on web after sign-in (notification deep-link hook); map labels sized for real phone screens |
+| `5b16faa` | Forecast stayed almost invisible after switching Daily/Weekly/Monthly on web; VoiceOver labels on Couple city results |
+| *this commit* | "When to go" timing engine on Places, Soulmate, Couple and Forecast; tests |
 
 Earlier history (auth hardening, PocketBase migration, forecast engine, welcome tour,
 light mode) is in `git log`; other contributors committed as `tech-god-704`,
@@ -255,6 +259,8 @@ bun tools/places.test.ts     # astrocartography engine vs published solar-noon l
 bun tools/places2.test.ts    # power city (brute-force), relocated rising, map geometry
 bun tools/tz.test.ts         # all 111 city time zones valid and plausible
 bun tools/fmt.test.ts        # report Markdown renderer
+bun tools/timing.test.ts     # when-to-go windows: solar return lands on the birthday,
+                             # 2,600+ random windows bounded correctly, couple overlaps
 ```
 
 These cover the pure modules. The deletion and couple suites need React Native
@@ -264,7 +270,16 @@ them if you change `lib/pocketbase.ts` `runDelete()` or `deleteAccount()`.
 **Visual checks.** The line map was rendered to PNG with headless Chromium
 (`/opt/pw-browsers/...headless_shell`) using the real `lib/lineMapLayout.ts`, which
 is how label overlaps were caught. Type checks don't see those; render after
-touching the map.
+touching the map. Labels are sized for a real phone (≈10 px); the last check ran 1,500
+random charts with no label overlapping another label, dot or the map edge.
+
+**Walkthrough.** Before each push the web build was driven with Playwright against a
+mock PocketBase, as the demo user, at iPhone size: sign in → Places (all five life
+areas, Check a city, timing notes) → Soulmate → Couple (rejects Feb 30, maps a
+partner, survives reload, edit, remove) → Insights (opens all five reports) →
+Forecast → Birth chart → You (edit + save, survives reload). All steps pass with no
+app errors. That harness lives outside the repo; it found two real bugs (a sign-in
+crash and an invisible forecast) that type checks and unit tests did not.
 
 ---
 

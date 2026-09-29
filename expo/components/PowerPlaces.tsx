@@ -10,6 +10,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import GlassCard from '@/components/GlassCard';
 import LineMap from '@/components/LineMap';
+import TimingNote from '@/components/TimingNote';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { CITIES, type City } from '@/data/cities';
@@ -28,6 +29,7 @@ import {
   type PlacePlanet,
 } from '@/services/places';
 import { birthMomentFromProfile } from '@/services/places-birth';
+import { placeTiming, describeWindow, type PlaceTiming } from '@/services/places-timing';
 
 const THEME_STYLE: Record<Theme, { color: string; Icon: typeof Heart }> = {
   love: { color: Colors.accent, Icon: Heart },
@@ -76,6 +78,32 @@ export default function PowerPlaces() {
     [birth, picked],
   );
   const headline = useMemo(() => (birth ? powerCity(birth) : null), [birth]);
+
+  // When each line is switched on, from the real sky over the next year. Recomputed per
+  // day at most; each planet is a few milliseconds.
+  const dayKey = new Date().toDateString();
+  const timingFor = useMemo(() => {
+    const cache = new Map<PlacePlanet, PlaceTiming>();
+    return (planet: PlacePlanet): PlaceTiming | null => {
+      if (!birth) return null;
+      if (!cache.has(planet)) cache.set(planet, placeTiming(birth, planet));
+      return cache.get(planet)!;
+    };
+    // dayKey is deliberately a dependency: the windows move with today's date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [birth, dayKey]);
+  // The Power City has several lines; show whichever of them is switched on now, else the
+  // strongest upcoming window among them.
+  const headlineTiming = useMemo(() => {
+    if (!headline) return null;
+    const options = [...new Set(headline.hits.map((h) => h.planet))].map((planet) => ({ planet, t: timingFor(planet)! }));
+    const live = options.filter((o) => o.t.now).sort((x, y) => y.t.now!.score - x.t.now!.score)[0];
+    if (live) return { planet: live.planet, now: live.t.now, best: null };
+    const next = options.filter((o) => o.t.best).sort((x, y) => y.t.best!.score - x.t.best!.score)[0];
+    return next ? { planet: next.planet, now: null, best: next.t.best } : null;
+  }, [headline, timingFor]);
+  const themeTiming = timingFor(THEMES.find((t) => t.key === theme)!.planet);
+  const pickedTiming = cityHits.length > 0 ? timingFor(cityHits[0].planet) : null;
   const headlineRising = useMemo(
     () => (birth && headline ? relocatedRising(birth, headline.city.lat, headline.city.lon) : null),
     [birth, headline],
@@ -208,6 +236,15 @@ export default function PowerPlaces() {
                   {headlineRising && (
                     <Text style={styles.powerRising}>Live here and you&apos;d rise as {headlineRising}.</Text>
                   )}
+                  {headlineTiming && (
+                    <View style={styles.timingWrap}>
+                      <TimingNote
+                        now={headlineTiming.now}
+                        best={headlineTiming.best}
+                        cause={(w) => describeWindow(w, headlineTiming.planet)}
+                      />
+                    </View>
+                  )}
                 </LinearGradient>
               )}
 
@@ -239,6 +276,17 @@ export default function PowerPlaces() {
               <Text style={styles.themeBlurb}>{activeTheme.blurb}</Text>
 
               <LineMap birth={birth} planet={activeTheme.planet} color={THEME_STYLE[theme].color} hits={places} />
+
+              {themeTiming && places.length > 0 && (
+                <View style={styles.themeTiming}>
+                  <TimingNote
+                    now={themeTiming.now}
+                    best={themeTiming.best}
+                    label={`Your ${THEME_LABEL_BY_PLANET[activeTheme.planet].toLowerCase()} places peak`}
+                    cause={(w) => describeWindow(w, activeTheme.planet)}
+                  />
+                </View>
+              )}
 
               {places.length === 0 ? (
                 <GlassCard style={styles.emptyCard}>
@@ -328,6 +376,13 @@ export default function PowerPlaces() {
                       );
                     })
                   )}
+                  {pickedTiming && (
+                    <TimingNote
+                      now={pickedTiming.now}
+                      best={pickedTiming.best}
+                      cause={(w) => describeWindow(w, cityHits[0].planet)}
+                    />
+                  )}
                 </GlassCard>
               )}
 
@@ -393,6 +448,8 @@ const createStyles = () => StyleSheet.create({
   powerTag: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1 },
   powerTagText: { color: Colors.textPrimary, fontSize: 12, fontWeight: '700' },
   powerRising: { color: Colors.lavenderIce, fontSize: 13, fontWeight: '700', marginTop: 12 },
+  timingWrap: { marginTop: 14 },
+  themeTiming: { marginTop: 12, marginBottom: 4 },
 
   missingCard: { gap: 10 },
   missingTitle: { color: Colors.textPrimary, fontSize: 18, fontFamily: Fonts.display, fontWeight: '800' },

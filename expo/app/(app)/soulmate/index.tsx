@@ -9,6 +9,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import GlassCard from '@/components/GlassCard';
 import LineMap from '@/components/LineMap';
+import TimingNote from '@/components/TimingNote';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { fetchUserReports } from '@/services/reports';
@@ -17,6 +18,7 @@ import { calculateNatalChart, getInterpretation } from '@/services/natal';
 import { resolveBirth, birthUtcOffsetMinutes } from '@/services/personal-horoscope';
 import { placesForTheme, meaningOf, ANGLE_LABEL, formatMiles } from '@/services/places';
 import { birthMomentFromProfile } from '@/services/places-birth';
+import { placeTiming, describeWindow } from '@/services/places-timing';
 
 export default function SoulmateScreen() {
   const styles = useThemedStyles(createStyles);
@@ -58,6 +60,13 @@ export default function SoulmateScreen() {
 
   const birthMoment = useMemo(() => birthMomentFromProfile(profile), [profile]);
   const lovePlaces = useMemo(() => (birthMoment ? placesForTheme(birthMoment, 'love', 3) : []), [birthMoment]);
+  const dayKey = new Date().toDateString();
+  const loveTiming = useMemo(
+    () => (birthMoment ? placeTiming(birthMoment, 'Venus') : null),
+    // dayKey is deliberately a dependency: the window moves with today's date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [birthMoment, dayKey],
+  );
 
   return (
     <View style={styles.container}>
@@ -131,6 +140,14 @@ export default function SoulmateScreen() {
           ) : (
             <View style={styles.list}>
               <LineMap birth={birthMoment} planet="Venus" color={Colors.accent} hits={lovePlaces} />
+              {loveTiming && (
+                <TimingNote
+                  now={loveTiming.now}
+                  best={loveTiming.best}
+                  label="Your love lines peak"
+                  cause={(w) => describeWindow(w, 'Venus')}
+                />
+              )}
               {lovePlaces.map((hit) => (
                 <GlassCard key={`${hit.city.name}-${hit.angle}`} style={styles.placeCard}>
                   <View style={styles.placeTop}>

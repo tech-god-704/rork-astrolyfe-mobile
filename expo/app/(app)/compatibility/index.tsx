@@ -11,6 +11,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import GlassCard from '@/components/GlassCard';
 import LineMap from '@/components/LineMap';
+import TimingNote from '@/components/TimingNote';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { CITIES, type City } from '@/data/cities';
@@ -18,6 +19,7 @@ import { couplePartnerKey } from '@/constants/storageKeys';
 import { getBirthDateError } from '@/lib/validation';
 import { coupleCities, type PlaceHit, type PlacePlanet } from '@/services/places';
 import { birthMomentFromProfile, birthMomentFromParts } from '@/services/places-birth';
+import { sharedWindow, formatWindow, type TimingWindow } from '@/services/places-timing';
 
 /**
  * Couple Map — the cities where two people's charts both light up.
@@ -107,6 +109,17 @@ export default function CoupleMapScreen() {
   const loveCity = loveShared[0] ?? null;
   const partnerLabel = partner?.name.trim() || 'Them';
 
+  // When both Venus lines are switched on at once — the time to go to that city together.
+  const dayKey = new Date().toDateString();
+  const { together, togetherLive } = useMemo<{ together: TimingWindow | null; togetherLive: boolean }>(() => {
+    const sw = me && them ? sharedWindow(me, them, 'Venus') : null;
+    return sw
+      ? { together: { ...sw.mine, start: sw.start, end: sw.end }, togetherLive: sw.live }
+      : { together: null, togetherLive: false };
+    // dayKey is deliberately a dependency: the window moves with today's date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me, them, dayKey]);
+
   const cityMatches = useMemo(() => {
     const q = cityQuery.trim().toLowerCase();
     if (q.length < 2) return [];
@@ -157,7 +170,9 @@ export default function CoupleMapScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     try {
       await Share.share({
-        message: `Our love city is ${loveCity.city.name}, ${loveCity.city.country}. It's where both our Venus lines meet. Found it with AstroLyfe.`,
+        message: `Our love city is ${loveCity.city.name}, ${loveCity.city.country}. It's where both our Venus lines meet${
+          together ? `, and our best time to go is ${formatWindow(together)}` : ''
+        }. Found it with AstroLyfe.`,
       });
     } catch {
       // Dismissed or unavailable.
@@ -321,6 +336,16 @@ export default function CoupleMapScreen() {
                   <Text style={styles.loveName}>{loveCity.city.name}</Text>
                   <Text style={styles.loveCountry}>{loveCity.city.country}</Text>
                   <Text style={styles.bodyText}>Both of your Venus lines run near here, the classic sign of a place where love comes easier for two.</Text>
+                  {together && (
+                    <View style={styles.timingWrap}>
+                      <TimingNote
+                        now={togetherLive ? together : null}
+                        best={togetherLive ? null : together}
+                        label="Best time to go together"
+                        cause={() => 'Both of your Venus lines are switched on'}
+                      />
+                    </View>
+                  )}
                 </LinearGradient>
               )}
 
@@ -387,6 +412,7 @@ const createStyles = () => StyleSheet.create({
 
   cardTitle: { color: Colors.textPrimary, fontSize: 18, fontFamily: Fonts.display, fontWeight: '800' },
   bodyText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21 },
+  timingWrap: { marginTop: 12 },
   label: { color: Colors.textPrimary, fontSize: 13, fontWeight: '700', marginTop: 6 },
   input: { borderWidth: 1, borderColor: Colors.bgInputBorder, backgroundColor: Colors.bgInput, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: Colors.textPrimary, fontSize: 15 },
   inputError: { borderColor: Colors.accent },
