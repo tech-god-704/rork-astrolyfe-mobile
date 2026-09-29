@@ -256,7 +256,7 @@ export default function CoupleMapScreen() {
                     />
                   </View>
                   {cityMatches.map((c) => (
-                    <Pressable key={c.name} style={({ pressed }) => [styles.matchRow, pressed && styles.pressed]} onPress={() => { setCity(c); setCityQuery(''); }} accessibilityRole="button">
+                    <Pressable key={c.name} style={({ pressed }) => [styles.matchRow, pressed && styles.pressed]} onPress={() => { setCity(c); setCityQuery(''); }} accessibilityRole="button" accessibilityLabel={`${c.name}, ${c.country}`}>
                       <MapPin size={14} color={Colors.purpleLight} />
                       <Text style={styles.matchName}>{c.name}</Text>
                       <Text style={styles.matchCountry}>{c.country}</Text>

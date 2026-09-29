@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -71,14 +71,22 @@ export default function HoroscopeScreen() {
   const displayCategories = useMemo(() => reading?.categories ?? [], [reading]);
   const isPersonal = reading ? reading.personalizationLevel !== 'sign-only' : false;
 
-  // Fade in content whenever period changes
+  // Fade in content when the period changes. Skipped on first mount so the reading is
+  // never hidden behind an animation that has not run yet, and skipped on web: there the
+  // JS-driven fallback stalls on its first frame while the new forecast is computed,
+  // leaving the reading almost invisible.
+  const firstPeriod = useRef(true);
   useEffect(() => {
+    if (firstPeriod.current || Platform.OS === 'web') {
+      firstPeriod.current = false;
+      return;
+    }
     contentAnim.setValue(0);
-    Animated.timing(contentAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    const anim = Animated.timing(contentAnim, { toValue: 1, duration: 300, useNativeDriver: true });
+    anim.start(({ finished }) => {
+      if (!finished) contentAnim.setValue(1);
+    });
+    return () => anim.stop();
   }, [contentAnim, period]);
 
   const handlePeriodChange = useCallback((p: PeriodType) => {
