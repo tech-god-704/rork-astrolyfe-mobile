@@ -11,7 +11,7 @@ import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { fetchUserReports, REPORT_META, type ReportType, type UserReport } from '@/services/reports';
 import GlassCard from '@/components/GlassCard';
-import { parseReport, type Inline } from '@/lib/reportFormat';
+import { parseReport, extractImageSrc, type Inline } from '@/lib/reportFormat';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
@@ -254,18 +254,6 @@ export default function InsightsScreen() {
       </Modal>
     </View>
   );
-}
-
-/** Strip HTML tags for plain-text display (reports come as HTML from the web) */
-/**
- * Pull the src out of the portrait row's <img> tag.
- *
- * The URL is absolute and carries an HMAC key rather than an email, so it is safe to
- * hand to <Image> directly.
- */
-function extractImageSrc(html: string): string | null {
-  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
-  return match ? match[1] : null;
 }
 
 type InsightsStyles = ReturnType<typeof createStyles>;

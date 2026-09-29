@@ -24,6 +24,17 @@ export type ReportBlock =
   | { kind: 'quote'; inlines: Inline[] }
   | { kind: 'rule' };
 
+/**
+ * Pull the src out of the soulmate portrait row's <img> tag.
+ *
+ * The URL is absolute and carries an HMAC key rather than an email, so it is safe to
+ * hand to <Image> directly.
+ */
+export function extractImageSrc(html: string): string | null {
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match ? match[1] : null;
+}
+
 export function htmlToText(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')

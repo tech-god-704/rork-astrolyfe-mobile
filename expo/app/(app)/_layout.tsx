@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
+import { Globe, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
 import { Platform, View, StyleSheet } from 'react-native';
 import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
@@ -19,7 +19,7 @@ function TabBarBackground() {
   );
 }
 
-function TabIcon({ Icon, color, focused }: { Icon: typeof Home; color: string; focused: boolean }) {
+function TabIcon({ Icon, color, focused }: { Icon: typeof Globe; color: string; focused: boolean }) {
   const tabStyles = useThemedStyles(createTabStyles);
   return (
     <View style={tabStyles.iconWrap}>
@@ -71,18 +71,20 @@ function AppTabs() {
         },
       }}
     >
+      {/* Places and Soulmate lead: they are what this app does that a horoscope app
+          does not. Forecast stays, one step back, as a calculated personal reading. */}
       <Tabs.Screen
         name="(home)"
         options={{
-          title: 'Today',
-          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Home} color={color} focused={focused} />,
+          title: 'Places',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Globe} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="horoscope"
+        name="soulmate"
         options={{
-          title: 'Forecast',
-          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Sun} color={color} focused={focused} />,
+          title: 'Soulmate',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Heart} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -110,6 +112,13 @@ function AppTabs() {
         options={{
           title: 'Insights',
           tabBarIcon: ({ color, focused }) => <TabIcon Icon={BookOpen} color={color} focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="horoscope"
+        options={{
+          title: 'Forecast',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Sun} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen

@@ -187,6 +187,23 @@ export function geocentricLon(planet: string, t: number): number {
   return norm360(Math.atan2(p.y - e.y, p.x - e.x) * RAD);
 }
 
+/**
+ * Geocentric ecliptic longitude and latitude together. Longitude alone is enough for
+ * a sign, but anything converted to Earth coordinates also needs the latitude: Venus
+ * can sit ~8° off the ecliptic, which moves where its lines cross the map.
+ */
+export function geocentricEcliptic(planet: string, t: number): { lon: number; lat: number } {
+  const p = helioXYZ(ELEMENTS[planet], t);
+  const e = helioXYZ(ELEMENTS.Earth, t);
+  const dx = p.x - e.x;
+  const dy = p.y - e.y;
+  const dz = p.z - e.z;
+  return {
+    lon: norm360(Math.atan2(dy, dx) * RAD),
+    lat: Math.atan2(dz, Math.hypot(dx, dy)) * RAD,
+  };
+}
+
 export function sunLon(t: number): number {
   const e = helioXYZ(ELEMENTS.Earth, t);
   return norm360(Math.atan2(-e.y, -e.x) * RAD);
