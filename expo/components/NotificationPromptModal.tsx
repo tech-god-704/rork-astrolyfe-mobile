@@ -30,10 +30,10 @@ export default function NotificationPromptModal({ visible, onEnable, onDismiss }
           <View style={styles.iconRing}>
             <Bell size={26} color={Colors.lavender} strokeWidth={1.8} />
           </View>
-          <Text style={styles.title}>Never miss your horoscope</Text>
+          <Text style={styles.title}>Your daily forecast, on time</Text>
           <Text style={styles.copy}>
-            Turn on a daily reminder and we'll nudge you the moment your reading is
-            ready. You'll pick the exact time next.
+            Turn on a daily reminder for today&apos;s forecast, worked out from your own
+            chart. You&apos;ll pick the exact time next.
           </Text>
           <Pressable
             onPress={onEnable}

@@ -127,7 +127,7 @@ export default function OnboardingScreen() {
       </View>
       <Text style={styles.stepKicker}>CREATE YOUR PROFILE</Text>
       <Text style={styles.stepTitle}>Let&apos;s make it personal.</Text>
-      <Text style={styles.stepDesc}>Create the private account that keeps your chart, guidance, and conversations together.</Text>
+      <Text style={styles.stepDesc}>Create the private account that keeps your places, soulmate and reports together.</Text>
       {formError && (
         <View style={styles.formErrorRow}>
           <Text style={styles.formErrorText}>{formError}</Text>

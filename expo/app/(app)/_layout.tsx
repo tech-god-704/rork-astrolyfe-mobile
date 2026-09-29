@@ -1,6 +1,7 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { Globe, Sun, Heart, BookOpen, MessageCircle, Compass, User } from 'lucide-react-native';
+import React, { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { Globe, Sun, Heart, BookOpen, MessageCircle, Users, Compass, User } from 'lucide-react-native';
 import { Platform, View, StyleSheet } from 'react-native';
 import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
@@ -8,6 +9,7 @@ import Colors from '@/constants/colors';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme, useThemedStyles } from '@/providers/ThemeProvider';
+import { DAILY_REMINDER_ROUTE } from '@/services/notifications';
 
 function TabBarBackground() {
   const tabStyles = useThemedStyles(createTabStyles);
@@ -35,7 +37,36 @@ function TabButton({ style, ...props }: BottomTabBarButtonProps) {
   return <PlatformPressable {...props} style={[style, tabStyles.tabButton]} />;
 }
 
+/**
+ * Tapping the daily reminder opens Forecast, which is no longer a tab.
+ *
+ * Mounted inside AppTabs, so it only acts once the user is signed in and subscribed —
+ * a tap from a signed-out state lands on sign-in as usual rather than racing the auth
+ * redirect. useLastNotificationResponse also reports the tap that cold-launched the
+ * app, and keeps returning it; the handled set stops a remount (e.g. a theme change)
+ * from navigating again. Only the reminder's own route is honoured.
+ */
+const handledReminderTaps = new Set<string>();
+
+function useReminderDeepLink() {
+  const router = useRouter();
+  const response = Notifications.useLastNotificationResponse();
+
+  useEffect(() => {
+    if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+    const { date, request } = response.notification;
+    const key = `${request.identifier}:${date}`;
+    if (handledReminderTaps.has(key)) return;
+    handledReminderTaps.add(key);
+
+    if (request.content.data?.url === DAILY_REMINDER_ROUTE) {
+      router.push(DAILY_REMINDER_ROUTE as never);
+    }
+  }, [response, router]);
+}
+
 function AppTabs() {
+  useReminderDeepLink();
   // Subscribes to theme so screenOptions below (which read Colors.tabBarActive /
   // Colors.tabBarInactive) recompute on a theme change — this component doesn't
   // otherwise re-render when the preference flips.
@@ -102,9 +133,8 @@ function AppTabs() {
       <Tabs.Screen
         name="compatibility"
         options={{
-          title: 'Match',
-          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Heart} color={color} focused={focused} />,
-          href: null,
+          title: 'Couple',
+          tabBarIcon: ({ color, focused }) => <TabIcon Icon={Users} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -119,6 +149,9 @@ function AppTabs() {
         options={{
           title: 'Forecast',
           tabBarIcon: ({ color, focused }) => <TabIcon Icon={Sun} color={color} focused={focused} />,
+          // Off the tab bar: a daily reading is what every app in the category leads
+          // with. Still reachable from Insights and from the daily reminder.
+          href: null,
         }}
       />
       <Tabs.Screen

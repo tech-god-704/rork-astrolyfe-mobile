@@ -99,7 +99,7 @@ export default function SignupScreen() {
               </View>
               <Text style={styles.eyebrow}>CREATE YOUR COSMIC PROFILE</Text>
               <Text style={styles.title}>Make AstroLyfe{'\n'}yours.</Text>
-              <Text style={styles.subtitle}>One private space for your chart, daily guidance, and cosmic conversations.</Text>
+              <Text style={styles.subtitle}>One private space for your places, your soulmate and your reports.</Text>
 
               {formError && (
                 <View style={styles.formErrorRow} accessibilityLiveRegion="polite">

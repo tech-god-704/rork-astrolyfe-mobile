@@ -95,7 +95,7 @@ export default function LoginScreen() {
               </View>
               <Text style={styles.eyebrow}>WELCOME BACK</Text>
               <Text style={styles.title}>Step back into{'\n'}your universe.</Text>
-              <Text style={styles.subtitle}>Your chart, conversations, and daily guidance are right where you left them.</Text>
+              <Text style={styles.subtitle}>Your places, your person and your reports are right where you left them.</Text>
 
               {formError && (
                 <View style={styles.formErrorRow} accessibilityLiveRegion="polite">

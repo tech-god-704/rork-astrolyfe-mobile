@@ -37,29 +37,31 @@ export const REPORT_META: Record<ReportType, { title: string; description: strin
     description: 'The face the stars drew for you, based on everything you told us.',
     icon: 'image',
   },
+  // Descriptions match what the reports actually contain: every one after the
+  // portrait is organised by place — which cities, and why — not by sign.
   full_map: {
-    title: 'Full Birth Map',
-    description: 'Your complete natal chart analysis covering all planetary placements and house positions.',
+    title: 'Your World Map',
+    description: 'Every planet’s line around the globe, and the cities where each one is strongest for you.',
     icon: 'map',
   },
   venus_love: {
-    title: 'Venus Love Report',
-    description: 'Deep dive into your Venus placement — love language, attraction style, and relationship patterns.',
+    title: 'Love Cities',
+    description: 'The places where your Venus lines make attraction, romance and connection come easier.',
     icon: 'heart',
   },
   sun_career: {
-    title: 'Sun Career Report',
-    description: 'Your Sun sign career blueprint — strengths, ideal roles, and professional growth paths.',
+    title: 'Career Cities',
+    description: 'Where your Sun lines put your work, reputation and leadership in the spotlight.',
     icon: 'briefcase',
   },
   moon_wellbeing: {
-    title: 'Moon Wellbeing Report',
-    description: 'Your Moon sign emotional landscape — self-care rituals, stress patterns, and inner needs.',
+    title: 'Home & Peace Cities',
+    description: 'The places where you feel most settled, safe and at ease, and how to recreate that anywhere.',
     icon: 'moon',
   },
   transit_forecast: {
-    title: 'Transit Forecast',
-    description: 'Current planetary transits and how they\'re activating your natal chart right now.',
+    title: 'Travel Timing',
+    description: 'Which of your places are switched on right now, and the best windows to go.',
     icon: 'trending-up',
   },
 };

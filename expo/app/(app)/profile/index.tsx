@@ -390,13 +390,13 @@ export default function ProfileScreen() {
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/compatibility')} accessibilityRole="button" accessibilityLabel="Open compatibility">
+            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.profileActionPressed]} onPress={() => router.push('/(app)/compatibility')} accessibilityRole="button" accessibilityLabel="Open your Couple Map">
               <View style={[styles.profileActionIcon, styles.profileActionIconAccent]}>
                 <Heart size={18} color={Colors.accentLight} />
               </View>
               <View style={styles.profileActionCopy}>
-                <Text style={styles.profileActionTitle}>Compatibility</Text>
-                <Text style={styles.profileActionText}>Explore a connection</Text>
+                <Text style={styles.profileActionTitle}>Couple Map</Text>
+                <Text style={styles.profileActionText}>Find your cities together</Text>
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>
@@ -556,7 +556,7 @@ export default function ProfileScreen() {
             <View style={styles.notifHeaderRow}>
               <View style={styles.notifHeaderCopy}>
                 <Text style={styles.sectionLabel}>DAILY NOTIFICATIONS</Text>
-                <Text style={styles.sectionDescription}>A gentle reminder to check your horoscope, once a day.</Text>
+                <Text style={styles.sectionDescription}>A daily reminder with your forecast, worked out from your own chart.</Text>
               </View>
               <Switch
                 value={notifEnabled}

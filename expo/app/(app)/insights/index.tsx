@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Unlock, BookOpen, Sparkles, ChevronRight, X, Compass, Heart, Clock3 } from 'lucide-react-native';
+import { Unlock, BookOpen, Sparkles, ChevronRight, X, Compass, Sun, Clock3 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -116,11 +116,11 @@ export default function InsightsScreen() {
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && styles.cardPressed]} onPress={() => router.push('/(app)/compatibility')} accessibilityRole="button" accessibilityLabel="Open compatibility">
-              <Heart size={20} color={Colors.accent} />
+            <Pressable style={({ pressed }) => [styles.discoveryCard, pressed && styles.cardPressed]} onPress={() => router.push('/(app)/horoscope')} accessibilityRole="button" accessibilityLabel="Open your daily forecast">
+              <Sun size={20} color={Colors.accent} />
               <View style={styles.discoveryCopy}>
-                <Text style={styles.discoveryTitle}>Compatibility</Text>
-                <Text style={styles.discoveryText}>Compare your rhythms</Text>
+                <Text style={styles.discoveryTitle}>Daily forecast</Text>
+                <Text style={styles.discoveryText}>From your exact chart</Text>
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>

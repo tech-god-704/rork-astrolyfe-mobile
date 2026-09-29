@@ -45,7 +45,7 @@ const STEPS: Step[] = [
     icons: [Sparkles],
     eyebrow: "You're in",
     title: 'Welcome to AstroLyfe',
-    copy: 'This is where your soulmate portrait and reading live, plus tools to explore your own chart any time.',
+    copy: 'Your power places, your soulmate portrait and your reports live here, all worked out from your exact birth moment.',
   },
   {
     icons: [Sparkles],
@@ -56,8 +56,8 @@ const STEPS: Step[] = [
   {
     icons: [Compass, Sun, Heart],
     eyebrow: 'Explore',
-    title: 'Chart, Forecast & Match',
-    copy: 'Your birth chart, a daily forecast built from your own transits, and compatibility with anyone you have in mind.',
+    title: 'Places, Soulmate & Couple',
+    copy: 'The cities your chart lights up, where you are likely to meet your person, and the places where you two thrive.',
   },
   {
     icons: [Sparkles],

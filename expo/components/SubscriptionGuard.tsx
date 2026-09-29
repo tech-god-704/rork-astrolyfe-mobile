@@ -83,9 +83,9 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
           <View style={styles.preview}>
             <Text style={styles.previewLabel}>WHAT AN ACTIVE ACCOUNT INCLUDES</Text>
             {[
-              'Your complete daily, weekly, and monthly readings',
-              'Birth chart patterns explained in plain language',
-              'Compatibility guidance and deeper personal reports',
+              'Your power places: the cities your chart lights up',
+              'Couple Map and your soulmate portrait',
+              'Personal city reports and a daily forecast',
             ].map((feature, index) => (
               <View key={feature} style={[styles.feature, index > 0 && styles.featureBorder]}>
                 <View style={styles.check}>

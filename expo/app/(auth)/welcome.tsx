@@ -60,7 +60,7 @@ export default function WelcomeScreen() {
           </View>
           <View style={styles.signal}>
             <Sparkles size={13} color={Colors.lavenderIce} />
-            <Text style={styles.signalText}>YOUR COSMIC PROFILE IS UNIQUE</Text>
+            <Text style={styles.signalText}>YOUR MAP IS ONE OF A KIND</Text>
           </View>
         </Animated.View>
 
@@ -73,10 +73,10 @@ export default function WelcomeScreen() {
             },
           ]}
         >
-          <Text style={styles.eyebrow}>PERSONAL ASTROLOGY, REIMAGINED</Text>
-          <Text style={styles.title}>Your universe.{'\n'}Decoded.</Text>
+          <Text style={styles.eyebrow}>WHERE IN THE WORLD YOU BELONG</Text>
+          <Text style={styles.title}>Your world.{'\n'}Mapped.</Text>
           <Text style={styles.subtitle}>
-            Daily guidance, relationship insight, and your complete birth chart—built around you, not a generic horoscope.
+            The cities where love, career and peace come easier for you, and the places you and your person both thrive.
           </Text>
         </Animated.View>
 
