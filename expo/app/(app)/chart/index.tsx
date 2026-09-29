@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
+import { resolveBirth, birthUtcOffsetMinutes } from '@/services/personal-horoscope';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 
@@ -85,15 +86,24 @@ export default function ChartScreen() {
       const hour = qd?.birth_hour ?? undefined;
       const minute = qd?.birth_minute ?? undefined;
 
+      // Birth time is a wall-clock reading in the birthplace's zone; the astronomy
+      // needs UT. Without the offset a 14:30 Los Angeles birth was computed as 14:30
+      // UT — seven hours off — which showed a Leo rising instead of Scorpio and put
+      // every planet in the wrong house. The horoscope already converts; this screen
+      // was the caller natal.ts's utcOffsetMinutes note warned about.
+      const resolved = resolveBirth(profile);
+      const utcOffsetMinutes = resolved ? birthUtcOffsetMinutes(profile, resolved) : undefined;
+
       return calculateNatalChart({
         year, month, day, hour, minute,
         latitude: profile.birth_lat ?? undefined,
         longitude: profile.birth_lon ?? undefined,
+        utcOffsetMinutes,
       });
     } catch {
       return null;
     }
-  }, [profile?.birth_date, profile?.birth_lat, profile?.birth_lon, profile?.quiz_data]);
+  }, [profile]);
 
   const planets = useMemo(() => chart?.planets ?? [], [chart?.planets]);
   const hasExactBirthTime = profile?.quiz_data?.birth_hour != null;
