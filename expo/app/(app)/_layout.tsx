@@ -48,7 +48,7 @@ function TabButton({ style, ...props }: BottomTabBarButtonProps) {
  */
 const handledReminderTaps = new Set<string>();
 
-function useReminderDeepLink() {
+function useReminderDeepLinkNative() {
   const router = useRouter();
   const response = Notifications.useLastNotificationResponse();
 
@@ -64,6 +64,15 @@ function useReminderDeepLink() {
     }
   }, [response, router]);
 }
+
+/**
+ * expo-notifications' getLastNotificationResponse is native-only: on web (RORK's
+ * preview) the hook throws, the ErrorBoundary catches it, and the entire signed-in
+ * app is replaced by the error screen. There are no notification taps on web to
+ * handle anyway. Chosen once at module load, so every render calls the same hooks
+ * in the same order.
+ */
+const useReminderDeepLink: () => void = Platform.OS === 'web' ? () => {} : useReminderDeepLinkNative;
 
 function AppTabs() {
   useReminderDeepLink();

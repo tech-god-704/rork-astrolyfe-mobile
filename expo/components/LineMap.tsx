@@ -1,10 +1,14 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Svg, { Rect, Line, Path, Circle, Text as SvgText } from 'react-native-svg';
 import Colors from '@/constants/colors';
 import { CITIES } from '@/data/cities';
 import { mapLines, type BirthMoment, type MapLines, type PlaceHit, type PlacePlanet } from '@/services/places';
-import { BOTTOM_LAT, HEIGHT, TOP_LAT, pickLabels, segmentPath, x, y } from '@/lib/lineMapLayout';
+import { BOTTOM_LAT, HEIGHT, HIT_RADIUS, LABEL_SIZE, TOP_LAT, pickLabels, segmentPath, x, y } from '@/lib/lineMapLayout';
+import { Fonts } from '@/constants/theme';
+
+// On web the SVG default is the browser's serif; native already uses the system face.
+const LABEL_FONT = Platform.OS === 'web' ? Fonts.body : undefined;
 
 /**
  * One planet's four lines across the world, on an equirectangular map.
@@ -34,10 +38,10 @@ interface Props {
 function PlanetLayer({ geometry, color, id }: { geometry: MapLines; color: string; id: string }) {
   return (
     <>
-      <Line x1={x(geometry.mc)} y1={0} x2={x(geometry.mc)} y2={HEIGHT} stroke={color} strokeWidth={0.9} />
-      <Line x1={x(geometry.ic)} y1={0} x2={x(geometry.ic)} y2={HEIGHT} stroke={color} strokeWidth={0.9} strokeDasharray="3,2" opacity={0.85} />
+      <Line x1={x(geometry.mc)} y1={0} x2={x(geometry.mc)} y2={HEIGHT} stroke={color} strokeWidth={1.3} />
+      <Line x1={x(geometry.ic)} y1={0} x2={x(geometry.ic)} y2={HEIGHT} stroke={color} strokeWidth={1.3} strokeDasharray="5,3" opacity={0.85} />
       {[...geometry.asc, ...geometry.dsc].map((seg, i) => (
-        <Path key={`${id}-h${i}`} d={segmentPath(seg)} stroke={color} strokeWidth={0.8} strokeDasharray="0.8,1.4" strokeLinecap="round" fill="none" />
+        <Path key={`${id}-h${i}`} d={segmentPath(seg)} stroke={color} strokeWidth={1.2} strokeDasharray="1.2,2.6" strokeLinecap="round" fill="none" />
       ))}
     </>
   );
@@ -60,7 +64,7 @@ export default function LineMap({ birth, planet, color, hits, hitColor, partner 
         <Rect x={0} y={0} width={360} height={HEIGHT} fill="rgba(9,5,27,0.9)" />
 
         {GRID_LONS.map((lon) => (
-          <Line key={`lon${lon}`} x1={x(lon)} y1={0} x2={x(lon)} y2={HEIGHT} stroke="rgba(218,200,242,0.07)" strokeWidth={0.3} />
+          <Line key={`lon${lon}`} x1={x(lon)} y1={0} x2={x(lon)} y2={HEIGHT} stroke="rgba(218,200,242,0.07)" strokeWidth={0.5} />
         ))}
         {GRID_LATS.map((lat) => (
           <Line
@@ -70,35 +74,40 @@ export default function LineMap({ birth, planet, color, hits, hitColor, partner 
             x2={360}
             y2={y(lat)}
             stroke={lat === 0 ? 'rgba(218,200,242,0.16)' : 'rgba(218,200,242,0.07)'}
-            strokeWidth={0.3}
+            strokeWidth={0.5}
           />
         ))}
 
         {CITIES.map((c) => (
-          <Circle key={c.name} cx={x(c.lon)} cy={y(c.lat)} r={0.9} fill="rgba(237,228,253,0.38)" />
+          <Circle key={c.name} cx={x(c.lon)} cy={y(c.lat)} r={1.3} fill="rgba(237,228,253,0.4)" />
         ))}
 
         {partner && partnerGeometry && <PlanetLayer geometry={partnerGeometry} color={partner.color} id="partner" />}
         <PlanetLayer geometry={geometry} color={color} id="self" />
 
         {hits.map((hit) => (
-          <Circle key={`hit-${hit.city.name}`} cx={x(hit.city.lon)} cy={y(hit.city.lat)} r={2.1} fill={hitColor ?? color} stroke={Colors.bg} strokeWidth={0.5} />
+          <Circle key={`hit-${hit.city.name}`} cx={x(hit.city.lon)} cy={y(hit.city.lat)} r={HIT_RADIUS} fill={hitColor ?? color} stroke={Colors.bg} strokeWidth={1} />
         ))}
-        {labelled.map(({ hit, lx, ly }) => {
-          return (
+        {labelled.map(({ hit, lx, ly }) =>
+          // Drawn twice: a background-coloured halo first keeps the name legible over lines.
+          (['halo', 'fill'] as const).map((layer) => (
             <SvgText
-              key={`label-${hit.city.name}`}
+              key={`label-${layer}-${hit.city.name}`}
               x={lx}
               y={ly}
-              fill={Colors.textPrimary}
-              fontSize={5.4}
+              fill={layer === 'fill' ? Colors.textPrimary : Colors.bg}
+              stroke={layer === 'halo' ? Colors.bg : undefined}
+              strokeWidth={layer === 'halo' ? 2.5 : 0}
+              strokeLinejoin="round"
+              fontSize={LABEL_SIZE}
+              fontFamily={LABEL_FONT}
               fontWeight="700"
               textAnchor="middle"
             >
               {hit.city.name}
             </SvgText>
-          );
-        })}
+          )),
+        )}
       </Svg>
       </View>
 
