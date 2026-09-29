@@ -8,6 +8,7 @@ import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import GlassCard from '@/components/GlassCard';
+import LineMap from '@/components/LineMap';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { fetchUserReports } from '@/services/reports';
@@ -129,6 +130,7 @@ export default function SoulmateScreen() {
             </GlassCard>
           ) : (
             <View style={styles.list}>
+              <LineMap birth={birthMoment} planet="Venus" color={Colors.accent} hits={lovePlaces} />
               {lovePlaces.map((hit) => (
                 <GlassCard key={`${hit.city.name}-${hit.angle}`} style={styles.placeCard}>
                   <View style={styles.placeTop}>

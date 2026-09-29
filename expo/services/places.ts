@@ -16,7 +16,7 @@
  * the profile-to-BirthMoment translation.
  */
 
-import { julianDay, T, norm360, sunLon, moonLon, geocentricEcliptic } from './natal';
+import { julianDay, T, norm360, sunLon, moonLon, geocentricEcliptic, calcAscendant, lonToSign } from './natal';
 import { CITIES, type City } from '@/data/cities';
 
 const DEG = Math.PI / 180;
@@ -256,4 +256,101 @@ export function formatMiles(km: number): string {
   const mi = km * 0.621371;
   if (mi < 10) return 'under 10 mi';
   return `${Math.round(mi / 5) * 5} mi`;
+}
+
+// ── Power city ─────────────────────────────────────────────
+
+const STRENGTH_WEIGHT: Record<Strength, number> = { exact: 3, strong: 2, near: 1 };
+
+export interface PowerCity {
+  city: City;
+  hits: PlaceHit[];
+}
+
+/**
+ * The single city where the most of a person's lines cross, weighted by how close
+ * each passes. Ties go to the city with the closest line. Null when nothing on the
+ * map is in range, which the screen treats as "no headline city" rather than
+ * promoting a weak match.
+ */
+export function powerCity(birth: BirthMoment, cities: City[] = CITIES): PowerCity | null {
+  const lines = planetLines(birth);
+  let best: { city: City; hits: PlaceHit[]; score: number; closest: number } | null = null;
+
+  for (const city of cities) {
+    const hits = lines
+      .map((line) => closestHit(line, city))
+      .filter((hit): hit is PlaceHit => hit !== null)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    if (hits.length === 0) continue;
+
+    const score = hits.reduce((sum, hit) => sum + STRENGTH_WEIGHT[hit.strength], 0);
+    const closest = hits[0].distanceKm;
+    if (!best || score > best.score || (score === best.score && closest < best.closest)) {
+      best = { city, hits, score, closest };
+    }
+  }
+
+  return best ? { city: best.city, hits: best.hits } : null;
+}
+
+// ── Relocated rising sign ──────────────────────────────────
+
+/**
+ * The rising sign a person would have if they had been born at the same instant in
+ * a different city — the "relocated chart" astrocartography rests on. Same instant,
+ * different horizon, so only the angles move; the planets' signs do not.
+ *
+ * Uses the same calcAscendant the Birth Chart screen does, so at the actual
+ * birthplace this agrees with the rising sign shown there.
+ */
+export function relocatedRising(birth: BirthMoment, lat: number, lon: number): string {
+  return lonToSign(calcAscendant(julianDayUT(birth), lat, lon)).sign;
+}
+
+// ── Map geometry ───────────────────────────────────────────
+
+/** A run of [lon, lat] points to draw as one stroke. */
+export type LineSegment = [number, number][];
+
+export interface MapLines {
+  mc: number;
+  ic: number;
+  asc: LineSegment[];
+  dsc: LineSegment[];
+}
+
+/**
+ * Geometry for drawing one planet's four lines on an equirectangular map.
+ *
+ * MC and IC are meridians, so a single longitude each. The horizon lines curve, and
+ * are broken into segments wherever the planet is circumpolar (no line at that
+ * latitude) or the curve wraps across the ±180° seam — drawing straight through
+ * either would streak a false line across the whole map.
+ */
+export function mapLines(birth: BirthMoment, planet: PlacePlanet, minLat = -60, maxLat = 75, step = 1.5): MapLines {
+  const line = planetLines(birth).find((l) => l.planet === planet)!;
+
+  const trace = (angle: 'ASC' | 'DSC'): LineSegment[] => {
+    const segments: LineSegment[] = [];
+    let current: LineSegment = [];
+    for (let lat = minLat; lat <= maxLat + 1e-9; lat += step) {
+      const lon = lineLonAt(line, angle, lat);
+      const prev = current[current.length - 1];
+      if (lon === null || (prev && Math.abs(lon - prev[0]) > 180)) {
+        if (current.length > 1) segments.push(current);
+        current = [];
+      }
+      if (lon !== null) current.push([lon, lat]);
+    }
+    if (current.length > 1) segments.push(current);
+    return segments;
+  };
+
+  return {
+    mc: line.mcLon,
+    ic: lineLonAt(line, 'IC', 0)!,
+    asc: trace('ASC'),
+    dsc: trace('DSC'),
+  };
 }

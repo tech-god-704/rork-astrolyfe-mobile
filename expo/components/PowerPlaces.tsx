@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Globe, Heart, Briefcase, Home, Sparkles, Flame, MapPin, Search, X, ChevronRight } from 'lucide-react-native';
+import { Globe, Heart, Briefcase, Home, Sparkles, Flame, MapPin, Search, X, ChevronRight, Crown, Share2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import GlassCard from '@/components/GlassCard';
+import LineMap from '@/components/LineMap';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { CITIES, type City } from '@/data/cities';
@@ -18,6 +19,8 @@ import {
   STRENGTH_LABEL,
   placesForTheme,
   readCity,
+  powerCity,
+  relocatedRising,
   meaningOf,
   formatMiles,
   type Theme,
@@ -42,6 +45,15 @@ const PLANET_THEME: Record<PlacePlanet, Theme> = {
   Mars: 'drive',
 };
 
+/** Short life-area names for tags and the share message. */
+const THEME_LABEL_BY_PLANET: Record<PlacePlanet, string> = {
+  Venus: 'Love',
+  Sun: 'Career',
+  Moon: 'Home',
+  Jupiter: 'Luck',
+  Mars: 'Drive',
+};
+
 export default function PowerPlaces() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
@@ -59,6 +71,28 @@ export default function PowerPlaces() {
 
   const places = useMemo(() => (birth ? placesForTheme(birth, theme, 5) : []), [birth, theme]);
   const cityHits = useMemo(() => (birth && picked ? readCity(birth, picked) : []), [birth, picked]);
+  const pickedRising = useMemo(
+    () => (birth && picked ? relocatedRising(birth, picked.lat, picked.lon) : null),
+    [birth, picked],
+  );
+  const headline = useMemo(() => (birth ? powerCity(birth) : null), [birth]);
+  const headlineRising = useMemo(
+    () => (birth && headline ? relocatedRising(birth, headline.city.lat, headline.city.lon) : null),
+    [birth, headline],
+  );
+
+  const shareHeadline = async () => {
+    if (!headline) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const areas = headline.hits.map((h) => THEME_LABEL_BY_PLANET[h.planet].toLowerCase()).join(', ');
+    try {
+      await Share.share({
+        message: `My power city is ${headline.city.name}, ${headline.city.country}. It's where my birth chart lines up for ${areas}. Found mine with AstroLyfe.`,
+      });
+    } catch {
+      // The customer dismissed the sheet, or sharing isn't available — nothing to do.
+    }
+  };
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -131,6 +165,52 @@ export default function PowerPlaces() {
             </GlassCard>
           ) : (
             <>
+              {headline && (
+                <LinearGradient
+                  colors={['rgba(217,148,242,0.20)', 'rgba(97,56,163,0.28)', Colors.bgCardSolid]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.powerCard}
+                >
+                  <View style={styles.powerTop}>
+                    <View style={styles.powerBadge}>
+                      <Crown size={12} color={Colors.accent} />
+                      <Text style={styles.powerBadgeText}>YOUR POWER CITY</Text>
+                    </View>
+                    <Pressable
+                      onPress={shareHeadline}
+                      hitSlop={10}
+                      style={({ pressed }) => [styles.shareBtn, pressed && styles.pressed]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Share your power city"
+                    >
+                      <Share2 size={16} color={Colors.textPrimary} />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.powerName}>{headline.city.name}</Text>
+                  <Text style={styles.powerCountry}>{headline.city.country}</Text>
+                  <Text style={styles.powerText}>
+                    {headline.hits.length === 1
+                      ? "One of your lines runs close by. It's the strongest spot on your map."
+                      : `${headline.hits.length} of your lines cross here. It's the strongest spot on your map.`}
+                  </Text>
+                  <View style={styles.powerTags}>
+                    {headline.hits.map((h) => {
+                      const { color, Icon } = THEME_STYLE[PLANET_THEME[h.planet]];
+                      return (
+                        <View key={`${h.planet}-${h.angle}`} style={[styles.powerTag, { borderColor: `${color}66` }]}>
+                          <Icon size={12} color={color} />
+                          <Text style={styles.powerTagText}>{THEME_LABEL_BY_PLANET[h.planet]}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  {headlineRising && (
+                    <Text style={styles.powerRising}>Live here and you&apos;d rise as {headlineRising}.</Text>
+                  )}
+                </LinearGradient>
+              )}
+
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -157,6 +237,8 @@ export default function PowerPlaces() {
               </ScrollView>
 
               <Text style={styles.themeBlurb}>{activeTheme.blurb}</Text>
+
+              <LineMap birth={birth} planet={activeTheme.planet} color={THEME_STYLE[theme].color} hits={places} />
 
               {places.length === 0 ? (
                 <GlassCard style={styles.emptyCard}>
@@ -221,6 +303,9 @@ export default function PowerPlaces() {
                     <Text style={styles.cityName}>{picked.name}</Text>
                     <Text style={styles.cityCountry}>{picked.country}</Text>
                   </View>
+                  {pickedRising && (
+                    <Text style={styles.cityRising}>Live here and you&apos;d rise as {pickedRising}.</Text>
+                  )}
                   {cityHits.length === 0 ? (
                     <Text style={styles.cityNeutral}>
                       None of your major lines pass close by. A neutral place for you: no strong pull either way.
@@ -296,6 +381,19 @@ const createStyles = () => StyleSheet.create({
   hero: { borderRadius: 22, borderWidth: 1, borderColor: 'rgba(192,154,235,0.26)', padding: 18, marginBottom: 22 },
   heroText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21 },
 
+  powerCard: { borderRadius: 22, borderWidth: 1, borderColor: 'rgba(217,148,242,0.35)', padding: 18, marginBottom: 24 },
+  powerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  powerBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(217,148,242,0.14)' },
+  powerBadgeText: { color: Colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
+  shareBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(237,228,253,0.10)' },
+  powerName: { color: Colors.textPrimary, fontSize: 32, fontFamily: Fonts.display, fontWeight: '800', letterSpacing: -0.8 },
+  powerCountry: { color: Colors.textMuted, fontSize: 13, marginTop: 2 },
+  powerText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 10 },
+  powerTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  powerTag: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1 },
+  powerTagText: { color: Colors.textPrimary, fontSize: 12, fontWeight: '700' },
+  powerRising: { color: Colors.lavenderIce, fontSize: 13, fontWeight: '700', marginTop: 12 },
+
   missingCard: { gap: 10 },
   missingTitle: { color: Colors.textPrimary, fontSize: 18, fontFamily: Fonts.display, fontWeight: '800' },
   missingText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21 },
@@ -337,6 +435,7 @@ const createStyles = () => StyleSheet.create({
   cityHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   cityName: { color: Colors.textPrimary, fontSize: 20, fontFamily: Fonts.display, fontWeight: '800' },
   cityCountry: { color: Colors.textMuted, fontSize: 13 },
+  cityRising: { color: Colors.lavenderIce, fontSize: 13, fontWeight: '700' },
   cityNeutral: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21 },
   cityHit: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   cityHitIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
