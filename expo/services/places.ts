@@ -354,3 +354,49 @@ export function mapLines(birth: BirthMoment, planet: PlacePlanet, minLat = -60, 
     dsc: trace('DSC'),
   };
 }
+
+// ── Couple map ─────────────────────────────────────────────
+
+export interface CoupleCity {
+  city: City;
+  mine: PlaceHit[];
+  theirs: PlaceHit[];
+}
+
+/**
+ * Cities where BOTH people's charts light up — each has at least one line in range.
+ * Ranked by the two people's combined strength, then by the closest line. Passing a
+ * planet restricts both charts to that planet's lines (Venus: where you two are
+ * likeliest to fall for each other).
+ */
+export function coupleCities(
+  a: BirthMoment,
+  b: BirthMoment,
+  opts: { planet?: PlacePlanet; limit?: number; cities?: City[] } = {},
+): CoupleCity[] {
+  const { planet, limit = 5, cities = CITIES } = opts;
+  const keep = (lines: PlanetLine[]) => (planet ? lines.filter((l) => l.planet === planet) : lines);
+  const linesA = keep(planetLines(a));
+  const linesB = keep(planetLines(b));
+
+  const hitsFor = (lines: PlanetLine[], city: City) =>
+    lines
+      .map((line) => closestHit(line, city))
+      .filter((hit): hit is PlaceHit => hit !== null)
+      .sort((x, y) => x.distanceKm - y.distanceKm);
+
+  const scored: (CoupleCity & { score: number; closest: number })[] = [];
+  for (const city of cities) {
+    const mine = hitsFor(linesA, city);
+    if (mine.length === 0) continue;
+    const theirs = hitsFor(linesB, city);
+    if (theirs.length === 0) continue;
+    const score = [...mine, ...theirs].reduce((sum, hit) => sum + STRENGTH_WEIGHT[hit.strength], 0);
+    scored.push({ city, mine, theirs, score, closest: Math.min(mine[0].distanceKm, theirs[0].distanceKm) });
+  }
+
+  return scored
+    .sort((x, y) => y.score - x.score || x.closest - y.closest)
+    .slice(0, limit)
+    .map(({ city, mine, theirs }) => ({ city, mine, theirs }));
+}

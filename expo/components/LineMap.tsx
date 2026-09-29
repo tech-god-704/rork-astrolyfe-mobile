@@ -3,7 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect, Line, Path, Circle, Text as SvgText } from 'react-native-svg';
 import Colors from '@/constants/colors';
 import { CITIES } from '@/data/cities';
-import { mapLines, type BirthMoment, type PlaceHit, type PlacePlanet } from '@/services/places';
+import { mapLines, type BirthMoment, type MapLines, type PlaceHit, type PlacePlanet } from '@/services/places';
+import { BOTTOM_LAT, HEIGHT, TOP_LAT, pickLabels, segmentPath, x, y } from '@/lib/lineMapLayout';
 
 /**
  * One planet's four lines across the world, on an equirectangular map.
@@ -14,12 +15,6 @@ import { mapLines, type BirthMoment, type PlaceHit, type PlacePlanet } from '@/s
  * lines are the point.
  */
 
-const TOP_LAT = 75;
-const BOTTOM_LAT = -60;
-const HEIGHT = TOP_LAT - BOTTOM_LAT; // 135
-const x = (lon: number) => lon + 180;
-const y = (lat: number) => TOP_LAT - lat;
-
 const GRID_LONS = [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150];
 const GRID_LATS = [60, 30, 0, -30];
 
@@ -29,16 +24,34 @@ interface Props {
   color: string;
   /** The cities to highlight; the first three are labelled. */
   hits: PlaceHit[];
+  /** Colour for the highlighted city dots; defaults to `color`. */
+  hitColor?: string;
+  /** A second person's lines for the same planet, drawn beneath the first. */
+  partner?: { birth: BirthMoment; color: string; label: string };
 }
 
-export default function LineMap({ birth, planet, color, hits }: Props) {
-  const geometry = useMemo(() => mapLines(birth, planet, BOTTOM_LAT, TOP_LAT), [birth, planet]);
+/** One person's four lines for one planet. */
+function PlanetLayer({ geometry, color, id }: { geometry: MapLines; color: string; id: string }) {
+  return (
+    <>
+      <Line x1={x(geometry.mc)} y1={0} x2={x(geometry.mc)} y2={HEIGHT} stroke={color} strokeWidth={0.9} />
+      <Line x1={x(geometry.ic)} y1={0} x2={x(geometry.ic)} y2={HEIGHT} stroke={color} strokeWidth={0.9} strokeDasharray="3,2" opacity={0.85} />
+      {[...geometry.asc, ...geometry.dsc].map((seg, i) => (
+        <Path key={`${id}-h${i}`} d={segmentPath(seg)} stroke={color} strokeWidth={0.8} strokeDasharray="0.8,1.4" strokeLinecap="round" fill="none" />
+      ))}
+    </>
+  );
+}
 
-  const segmentPath = (seg: [number, number][]) =>
-    seg.map(([lon, lat], i) => `${i === 0 ? 'M' : 'L'}${x(lon).toFixed(2)} ${y(lat).toFixed(2)}`).join(' ');
+export default function LineMap({ birth, planet, color, hits, hitColor, partner }: Props) {
+  const geometry = useMemo(() => mapLines(birth, planet, BOTTOM_LAT, TOP_LAT), [birth, planet]);
+  const partnerGeometry = useMemo(
+    () => (partner ? mapLines(partner.birth, planet, BOTTOM_LAT, TOP_LAT) : null),
+    [partner, planet],
+  );
 
   const labelled = useMemo(() => pickLabels(hits), [hits]);
-  const a11y = `Map of your ${planet} lines${hits.length ? `, passing near ${hits.slice(0, 3).map((h) => h.city.name).join(', ')}` : ''}.`;
+  const a11y = `Map of your${partner ? ` and ${partner.label}'s` : ''} ${planet} lines${hits.length ? `, passing near ${hits.slice(0, 3).map((h) => h.city.name).join(', ')}` : ''}.`;
 
   return (
     <View style={styles.wrap} accessible accessibilityLabel={a11y}>
@@ -65,14 +78,11 @@ export default function LineMap({ birth, planet, color, hits }: Props) {
           <Circle key={c.name} cx={x(c.lon)} cy={y(c.lat)} r={0.9} fill="rgba(237,228,253,0.38)" />
         ))}
 
-        <Line x1={x(geometry.mc)} y1={0} x2={x(geometry.mc)} y2={HEIGHT} stroke={color} strokeWidth={0.9} />
-        <Line x1={x(geometry.ic)} y1={0} x2={x(geometry.ic)} y2={HEIGHT} stroke={color} strokeWidth={0.9} strokeDasharray="3,2" opacity={0.85} />
-        {[...geometry.asc, ...geometry.dsc].map((seg, i) => (
-          <Path key={`h${i}`} d={segmentPath(seg)} stroke={color} strokeWidth={0.8} strokeDasharray="0.8,1.4" strokeLinecap="round" fill="none" />
-        ))}
+        {partner && partnerGeometry && <PlanetLayer geometry={partnerGeometry} color={partner.color} id="partner" />}
+        <PlanetLayer geometry={geometry} color={color} id="self" />
 
         {hits.map((hit) => (
-          <Circle key={`hit-${hit.city.name}`} cx={x(hit.city.lon)} cy={y(hit.city.lat)} r={2.1} fill={color} stroke={Colors.bg} strokeWidth={0.5} />
+          <Circle key={`hit-${hit.city.name}`} cx={x(hit.city.lon)} cy={y(hit.city.lat)} r={2.1} fill={hitColor ?? color} stroke={Colors.bg} strokeWidth={0.5} />
         ))}
         {labelled.map(({ hit, lx, ly }) => {
           return (
@@ -92,6 +102,12 @@ export default function LineMap({ birth, planet, color, hits }: Props) {
       </Svg>
       </View>
 
+      {partner && (
+        <View style={styles.legend}>
+          <LegendItem label="You" color={color} kind="solid" />
+          <LegendItem label={partner.label} color={partner.color} kind="solid" />
+        </View>
+      )}
       <View style={styles.legend}>
         <LegendItem label="Midheaven" color={color} kind="solid" />
         <LegendItem label="Home line" color={color} kind="dashed" />
@@ -99,35 +115,6 @@ export default function LineMap({ birth, planet, color, hits }: Props) {
       </View>
     </View>
   );
-}
-
-/** Where a city's label sits: clamped off the side edges, below the dot near the top. */
-function labelPosition(hit: PlaceHit): { lx: number; ly: number } {
-  const cy = y(hit.city.lat);
-  return { lx: Math.min(Math.max(x(hit.city.lon), 22), 338), ly: cy < 12 ? cy + 7.5 : cy - 4 };
-}
-
-/** Approximate rendered width at fontSize 5.4 bold — ~0.55em per character. */
-const labelWidth = (hit: PlaceHit) => hit.city.name.length * 3;
-
-/**
- * Up to three labels, closest city first, skipping any that would overprint one
- * already placed. Nearby cities (Zurich and Milan are 3° apart) otherwise stack
- * their names into an unreadable smear; the skipped city still gets its dot.
- */
-function pickLabels(hits: PlaceHit[]): { hit: PlaceHit; lx: number; ly: number }[] {
-  const placed: { hit: PlaceHit; lx: number; ly: number }[] = [];
-  for (const hit of hits) {
-    const pos = labelPosition(hit);
-    const clashes = placed.some(
-      (p) =>
-        Math.abs(p.lx - pos.lx) < (labelWidth(p.hit) + labelWidth(hit)) / 2 + 2 &&
-        Math.abs(p.ly - pos.ly) < 7,
-    );
-    if (!clashes) placed.push({ hit, ...pos });
-    if (placed.length === 3) break;
-  }
-  return placed;
 }
 
 function LegendItem({ label, color, kind }: { label: string; color: string; kind: 'solid' | 'dashed' | 'dotted' }) {

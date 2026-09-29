@@ -1,672 +1,432 @@
-import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Animated, Dimensions } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { Heart, Sparkles, Star, MessageCircle, Shield, Flame, Target, Lightbulb, Check, AlertTriangle, Zap, RefreshCw } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Users, Heart, MapPin, Search, X, Lock, Share2, ChevronRight, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
-import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
 import GlassCard from '@/components/GlassCard';
-import { getCompatibility, type CompatibilityResult } from '@/services/compatibility';
+import LineMap from '@/components/LineMap';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
+import { CITIES, type City } from '@/data/cities';
+import { couplePartnerKey } from '@/constants/storageKeys';
+import { getBirthDateError } from '@/lib/validation';
+import { coupleCities, type PlaceHit, type PlacePlanet } from '@/services/places';
+import { birthMomentFromProfile, birthMomentFromParts } from '@/services/places-birth';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const RING_SIZE = Math.min(200, SCREEN_W - 100);
-const RING_CENTER = RING_SIZE / 2;
-const RING_R = RING_SIZE / 2 - 12;
-const RING_STROKE = 8;
+/**
+ * Couple Map — the cities where two people's charts both light up.
+ *
+ * Replaces a sun-sign compatibility score ("Cancer + Leo = 85%"), the most common
+ * feature in the category. This needs both exact birth moments and gives a different
+ * answer for every pair, down to the minute.
+ *
+ * The partner's details are someone else's personal data, so they stay on this
+ * device (AsyncStorage, per account) and are cleared when the account is deleted.
+ */
 
-const CATEGORY_META = {
-  love: { label: 'Love', Icon: Heart, color: Colors.accent, emoji: '💕' },
-  communication: { label: 'Communication', Icon: MessageCircle, color: Colors.purpleLight, emoji: '💬' },
-  trust: { label: 'Trust', Icon: Shield, color: Colors.teal, emoji: '🛡️' },
-  emotions: { label: 'Emotions', Icon: Flame, color: '#D994F2', emoji: '🔥' },
-  values: { label: 'Values', Icon: Target, color: Colors.gold, emoji: '⭐' },
-} as const;
-
-type CategoryKey = keyof typeof CATEGORY_META;
-
-const ELEMENT_COMPAT_FLAVOR: Record<string, Record<string, string>> = {
-  Fire: {
-    Fire: 'A blazing, passionate connection full of energy and excitement',
-    Air: 'Air fans the flames — intellectually thrilling and dynamic',
-    Earth: 'Fire warms Earth — different speeds, but deep potential',
-    Water: 'Steam! Intense chemistry that requires careful balance',
-  },
-  Air: {
-    Fire: 'Air feeds the fire — ideas ignite and passions soar',
-    Air: 'A meeting of minds — endless conversation and shared vision',
-    Earth: 'Grounding meets flow — patience creates lasting harmony',
-    Water: 'Breeze over waves — poetic and deeply emotional when aligned',
-  },
-  Earth: {
-    Fire: 'Fire sparks Earth into action — growth through passion',
-    Air: 'Earth grounds Air\'s ideas — build something real together',
-    Earth: 'Rock solid — a fortress of trust, loyalty, and stability',
-    Water: 'A garden in bloom — nurturing, fertile, and deeply rooted',
-  },
-  Water: {
-    Fire: 'Steam rises — transformative when both honor their depths',
-    Air: 'Rain and wind — emotional depth meets intellectual breeze',
-    Earth: 'River and shore — a natural, life-giving partnership',
-    Water: 'An ocean of feeling — profound empathy and emotional union',
-  },
-};
-
-function getElementBySign(sign: string): string {
-  const elements: Record<string, string> = {
-    Aries: 'Fire', Taurus: 'Earth', Gemini: 'Air', Cancer: 'Water',
-    Leo: 'Fire', Virgo: 'Earth', Libra: 'Air', Scorpio: 'Water',
-    Sagittarius: 'Fire', Capricorn: 'Earth', Aquarius: 'Air', Pisces: 'Water',
-  };
-  return elements[sign] || 'Fire';
+interface SavedPartner {
+  name: string;
+  date: string;
+  time: string;
+  cityName: string;
 }
 
-const ELEMENT_COLORS: Record<string, string> = {
-  Fire: '#EF4444', Earth: '#22C55E', Air: '#06B6D4', Water: '#818CF8',
-};
+const PARTNER_COLOR = Colors.electricBlue;
+const LIFE_AREA: Record<PlacePlanet, string> = { Venus: 'Love', Sun: 'Career', Moon: 'Home', Jupiter: 'Luck', Mars: 'Drive' };
 
-function getDailyCosmicTip(sign1: string, sign2: string): string {
-  const tips = [
-    `Today is ideal for ${sign1} and ${sign2} to explore a new activity together — shared novelty strengthens your bond.`,
-    `The stars suggest a heartfelt conversation tonight. ${sign1}, lead with vulnerability. ${sign2}, listen deeply.`,
-    `Physical touch carries extra meaning today for this pairing. Small gestures — a hand squeeze, a shoulder touch — speak volumes.`,
-    `Today's energy favors creative collaboration. Try cooking together, starting a playlist, or planning an adventure.`,
-    `The cosmos highlight trust-building today. Share something you've never told anyone before.`,
-    `Laughter is your superpower today. ${sign1} and ${sign2} should seek out what makes the other smile.`,
-    `Today's alignment supports long-term planning. Dream big together — where do you both want to be in a year?`,
-  ];
-  const today = new Date();
-  const dayHash = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-  const pairHash = sign1.length * 31 + sign2.length * 17 + dayHash;
-  return tips[Math.abs(pairHash) % tips.length];
+const areas = (hits: PlaceHit[]) => [...new Set(hits.map((h) => LIFE_AREA[h.planet]))].join(', ');
+
+function parseTime(value: string): { hour: number; minute: number } | null {
+  const m = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hour = parseInt(m[1], 10);
+  const minute = parseInt(m[2], 10);
+  return hour <= 23 && minute <= 59 ? { hour, minute } : null;
 }
 
-export default function CompatibilityScreen() {
+export default function CoupleMapScreen() {
   const styles = useThemedStyles(createStyles);
-  const { profile } = useAuth();
-  const userZodiac = profile?.zodiac_sign ? getZodiacByName(profile.zodiac_sign) : null;
+  const router = useRouter();
+  const { user, profile } = useAuth();
+  const email = user?.email ?? '';
 
-  const [partnerSign, setPartnerSign] = useState<string>('');
-  const [expandedCategory, setExpandedCategory] = useState<CategoryKey | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'advice'>('overview');
+  const [partner, setPartner] = useState<SavedPartner | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const result = useMemo<CompatibilityResult | null>(() => {
-    if (!profile?.zodiac_sign || !partnerSign) return null;
-    return getCompatibility(profile.zodiac_sign, partnerSign);
-  }, [profile?.zodiac_sign, partnerSign]);
-
-  const partnerZodiac = partnerSign ? getZodiacByName(partnerSign) : null;
-
-  // Element info
-  const userElement = profile?.zodiac_sign ? getElementBySign(profile.zodiac_sign) : '';
-  const partnerElement = partnerSign ? getElementBySign(partnerSign) : '';
-
-  // Best/weakest categories
-  const { best, weakest } = useMemo(() => {
-    if (!result) return { best: null, weakest: null };
-    const entries = Object.entries(result.categories) as [CategoryKey, { score: number; text: string }][];
-    const sorted = entries.slice().sort((a, b) => b[1].score - a[1].score);
-    return { best: sorted[0], weakest: sorted[sorted.length - 1] };
-  }, [result]);
-
-  // Animations
-  const resultAnim = useRef(new Animated.Value(0)).current;
-  const scoreAnim = useRef(new Animated.Value(0)).current;
-  const ringAnim = useRef(new Animated.Value(0)).current;
-  const tabAnim = useRef(new Animated.Value(1)).current;
+  // Form state
+  const [name, setName] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [city, setCity] = useState<City | null>(null);
+  const [cityQuery, setCityQuery] = useState('');
+  const [errors, setErrors] = useState<{ date?: string; time?: string; city?: string }>({});
 
   useEffect(() => {
-    if (result) {
-      resultAnim.setValue(0);
-      scoreAnim.setValue(0);
-      ringAnim.setValue(0);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setActiveTab('overview');
-      Animated.sequence([
-        Animated.spring(resultAnim, { toValue: 1, friction: 8, tension: 50, useNativeDriver: true }),
-        Animated.parallel([
-          Animated.timing(scoreAnim, { toValue: result.overallScore, duration: 1200, useNativeDriver: false }),
-          Animated.timing(ringAnim, { toValue: result.overallScore, duration: 1200, useNativeDriver: false }),
-        ]),
-      ]).start();
+    if (!email) return;
+    let cancelled = false;
+    AsyncStorage.getItem(couplePartnerKey(email))
+      .then((raw) => {
+        if (cancelled) return;
+        if (raw) {
+          try {
+            setPartner(JSON.parse(raw) as SavedPartner);
+          } catch {
+            // Corrupt entry — behave as if none was saved.
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [email]);
+
+  const me = useMemo(() => birthMomentFromProfile(profile), [profile]);
+
+  const them = useMemo(() => {
+    if (!partner) return null;
+    const c = CITIES.find((x) => x.name === partner.cityName);
+    const t = parseTime(partner.time);
+    return c && t ? birthMomentFromParts(partner.date, t.hour, t.minute, c.tz) : null;
+  }, [partner]);
+
+  const shared = useMemo(() => (me && them ? coupleCities(me, them, { limit: 5 }) : []), [me, them]);
+  // The map draws Venus lines, so it highlights the cities where BOTH Venus lines run —
+  // highlighting all-planet shared cities put dots nowhere near the lines drawn.
+  const loveShared = useMemo(() => (me && them ? coupleCities(me, them, { planet: 'Venus', limit: 5 }) : []), [me, them]);
+  const loveCity = loveShared[0] ?? null;
+  const partnerLabel = partner?.name.trim() || 'Them';
+
+  const cityMatches = useMemo(() => {
+    const q = cityQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return CITIES.filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)).slice(0, 5);
+  }, [cityQuery]);
+
+  const startEditing = useCallback(() => {
+    setName(partner?.name ?? '');
+    setDate(partner?.date ?? '');
+    setTime(partner?.time ?? '');
+    setCity(partner ? CITIES.find((c) => c.name === partner.cityName) ?? null : null);
+    setCityQuery('');
+    setErrors({});
+    setEditing(true);
+  }, [partner]);
+
+  const save = async () => {
+    const next: typeof errors = {};
+    const dateError = date.trim() ? getBirthDateError(date) : 'Enter their birth date';
+    if (dateError) next.date = dateError;
+    const t = parseTime(time);
+    if (!t) next.time = 'Use 24-hour HH:MM, e.g. 14:30';
+    if (!city) next.city = 'Pick the city they were born in';
+    if (!next.date && t && city && !birthMomentFromParts(date.trim(), t.hour, t.minute, city.tz)) {
+      next.date = 'That date doesn’t exist';
     }
-  }, [result, resultAnim, ringAnim, scoreAnim]);
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return;
+    }
 
-  const handleSignSelect = useCallback((name: string) => {
+    const saved: SavedPartner = { name: name.trim(), date: date.trim(), time: time.trim(), cityName: city!.name };
+    setPartner(saved);
+    setEditing(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (email) await AsyncStorage.setItem(couplePartnerKey(email), JSON.stringify(saved)).catch(() => {});
+  };
+
+  const remove = async () => {
+    setPartner(null);
+    setEditing(false);
+    if (email) await AsyncStorage.removeItem(couplePartnerKey(email)).catch(() => {});
+  };
+
+  const shareLoveCity = async () => {
+    if (!loveCity) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setPartnerSign(name);
-    setExpandedCategory(null);
-  }, []);
+    try {
+      await Share.share({
+        message: `Our love city is ${loveCity.city.name}, ${loveCity.city.country}. It's where both our Venus lines meet. Found it with AstroLyfe.`,
+      });
+    } catch {
+      // Dismissed or unavailable.
+    }
+  };
 
-  const toggleCategory = useCallback((key: CategoryKey) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setExpandedCategory((prev: CategoryKey | null) => prev === key ? null : key);
-  }, []);
-
-  const scoreLabel = useMemo(() => {
-    if (!result) return '';
-    if (result.overallScore >= 85) return 'Cosmic Soulmates';
-    if (result.overallScore >= 75) return 'Strong Connection';
-    if (result.overallScore >= 65) return 'Great Potential';
-    if (result.overallScore >= 55) return 'Growth Together';
-    return 'Opposites Attract';
-  }, [result]);
-
-  const scoreColor = useMemo(() => {
-    if (!result) return Colors.accent;
-    if (result.overallScore >= 80) return '#22C55E';
-    if (result.overallScore >= 65) return Colors.gold;
-    if (result.overallScore >= 50) return Colors.purpleLight;
-    return Colors.accent;
-  }, [result]);
-
-  // SVG ring circumference
-  const circumference = 2 * Math.PI * RING_R;
+  const showForm = loaded && (editing || !partner);
 
   return (
     <View style={styles.container}>
       <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>COSMIC COMPATIBILITY</Text>
-          <Text style={styles.title}>How your energies connect</Text>
-          <Text style={styles.subtitle}>A thoughtful sun-sign snapshot—not a verdict on your relationship.</Text>
-
-          {/* Signs Display */}
-          <View style={styles.signsRow}>
-            <View style={styles.signDisplay}>
-              <LinearGradient
-                colors={userZodiac ? [userZodiac.color + '30', userZodiac.color + '08'] : [Colors.purpleDim, 'transparent']}
-                style={styles.signCircle}
-              >
-                <Text style={styles.signCircleSymbol}>{userZodiac?.symbol ?? '?'}</Text>
-              </LinearGradient>
-              <Text style={styles.signDisplayName}>{userZodiac?.name ?? 'You'}</Text>
-              {userElement && <Text style={[styles.signElement, { color: ELEMENT_COLORS[userElement] }]}>{userElement}</Text>}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <View style={styles.headerRow}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.eyebrow}>TWO CHARTS, ONE MAP</Text>
+              <Text style={styles.title}>Couple Map</Text>
+              <Text style={styles.subtitle}>The cities where you both light up.</Text>
             </View>
-
-            <View style={styles.heartContainer}>
-              <Animated.View style={result ? {
-                transform: [{
-                  scale: scoreAnim.interpolate({
-                    inputRange: [0, 50, 100],
-                    outputRange: [0.8, 1, 1.2],
-                    extrapolate: 'clamp',
-                  }),
-                }],
-              } : undefined}>
-                <Heart size={28} color={Colors.accent} fill={result ? Colors.accent : 'none'} />
-              </Animated.View>
-            </View>
-
-            <View style={styles.signDisplay}>
-              <LinearGradient
-                colors={partnerZodiac ? [partnerZodiac.color + '30', partnerZodiac.color + '08'] : [Colors.bgCard, 'transparent']}
-                style={[styles.signCircle, !partnerZodiac && { borderWidth: 2, borderColor: Colors.bgCardBorder }]}
-              >
-                <Text style={styles.signCircleSymbol}>{partnerZodiac?.symbol ?? '?'}</Text>
-              </LinearGradient>
-              <Text style={styles.signDisplayName}>{partnerZodiac?.name ?? 'Partner'}</Text>
-              {partnerElement && <Text style={[styles.signElement, { color: ELEMENT_COLORS[partnerElement] }]}>{partnerElement}</Text>}
+            <View style={styles.headerIcon}>
+              <Users size={24} color={Colors.accent} />
             </View>
           </View>
 
-          {/* Sign Picker Grid */}
-          <GlassCard style={styles.pickerCard}>
-            <Text style={styles.fieldLabel}>CHOOSE A SIGN TO COMPARE</Text>
-            <View style={styles.signGrid}>
-              {ZODIAC_SIGNS.map((sign) => {
-                const isSelected = partnerSign === sign.name;
-                return (
-                  <Pressable
-                    key={sign.name}
-                    style={({ pressed }) => [
-                      styles.signGridItem,
-                      isSelected && { backgroundColor: `${sign.color}18`, borderColor: sign.color },
-                      pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-                    ]}
-                    onPress={() => handleSignSelect(sign.name)}
-                    accessibilityRole="radio"
-                    accessibilityLabel={`Compare with ${sign.name}`}
-                    accessibilityState={{ selected: isSelected }}
-                  >
-                    <Text style={[styles.signGridSymbol, isSelected && { fontSize: 24 }]}>{sign.symbol}</Text>
-                    <Text style={[styles.signGridLabel, isSelected && { color: sign.color, fontWeight: '700' }]}>{sign.name}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </GlassCard>
+          {!me ? (
+            <GlassCard style={styles.gap}>
+              <Text style={styles.cardTitle}>Add your exact birth time first</Text>
+              <Text style={styles.bodyText}>Your map needs your own birth time and birthplace before it can be laid over anyone else&apos;s.</Text>
+              <Pressable
+                style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+                onPress={() => router.push('/(app)/profile')}
+                accessibilityRole="button"
+              >
+                <Text style={styles.primaryBtnText}>Add birth details</Text>
+                <ChevronRight size={16} color={Colors.paperInk} />
+              </Pressable>
+            </GlassCard>
+          ) : showForm ? (
+            <GlassCard style={styles.gap}>
+              <Text style={styles.cardTitle}>{partner ? 'Edit your person' : 'Add your person'}</Text>
+              <Text style={styles.bodyText}>A partner, a crush, a best friend. We&apos;ll find the places you both come alive.</Text>
 
-          {/* Prompt */}
-          {!result && (
-            <View style={styles.promptContainer}>
-              <Sparkles size={20} color={Colors.textMuted} />
-              <Text style={styles.promptText}>
-                {!profile?.zodiac_sign
-                  ? 'Set your zodiac sign in your profile to get started'
-                  : 'Tap a sign above to see your cosmic compatibility'}
-              </Text>
-            </View>
-          )}
+              <Text style={styles.label}>Their name (optional)</Text>
+              <TextInput value={name} onChangeText={setName} placeholder="e.g. Alex" placeholderTextColor={Colors.textMuted} style={styles.input} maxLength={40} accessibilityLabel="Their name" />
 
-          {/* Results */}
-          {result && (
-            <Animated.View style={{
-              opacity: resultAnim,
-              transform: [{ translateY: resultAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-            }}>
-              {/* Circular Score Ring */}
-              <GlassCard variant="glow" glowColor={scoreColor} style={styles.scoreRingCard}>
-                <View style={styles.scoreRingContainer}>
-                  <Svg width={RING_SIZE} height={RING_SIZE}>
-                    <Defs>
-                      <RadialGradient id="scoreGlow" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0%" stopColor={scoreColor} stopOpacity={0.08} />
-                        <Stop offset="100%" stopColor={scoreColor} stopOpacity={0} />
-                      </RadialGradient>
-                    </Defs>
-                    <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_R + 20} fill="url(#scoreGlow)" />
-                    {/* Track */}
-                    <Circle
-                      cx={RING_CENTER} cy={RING_CENTER} r={RING_R}
-                      fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={RING_STROKE}
+              <Text style={styles.label}>Birth date</Text>
+              <TextInput
+                value={date}
+                onChangeText={setDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={Colors.textMuted}
+                style={[styles.input, errors.date && styles.inputError]}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
+                accessibilityLabel="Their birth date, year month day"
+              />
+              {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
+
+              <Text style={styles.label}>Birth time</Text>
+              <TextInput
+                value={time}
+                onChangeText={setTime}
+                placeholder="HH:MM (24-hour)"
+                placeholderTextColor={Colors.textMuted}
+                style={[styles.input, errors.time && styles.inputError]}
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+                accessibilityLabel="Their birth time, 24 hour"
+              />
+              {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
+
+              <Text style={styles.label}>Birth city</Text>
+              {city ? (
+                <Pressable style={({ pressed }) => [styles.pickedCity, pressed && styles.pressed]} onPress={() => setCity(null)} accessibilityRole="button" accessibilityLabel={`${city.name}. Tap to change`}>
+                  <MapPin size={14} color={Colors.purpleLight} />
+                  <Text style={styles.pickedCityText}>{city.name}, {city.country}</Text>
+                  <X size={14} color={Colors.textMuted} />
+                </Pressable>
+              ) : (
+                <>
+                  <View style={[styles.searchBox, errors.city && styles.inputError]}>
+                    <Search size={16} color={Colors.textMuted} />
+                    <TextInput
+                      value={cityQuery}
+                      onChangeText={setCityQuery}
+                      placeholder="Search a city"
+                      placeholderTextColor={Colors.textMuted}
+                      style={styles.searchInput}
+                      autoCorrect={false}
+                      accessibilityLabel="Search their birth city"
                     />
-                    {/* Filled arc */}
-                    <AnimatedRing
-                      cx={RING_CENTER} cy={RING_CENTER} r={RING_R}
-                      stroke={scoreColor} strokeWidth={RING_STROKE}
-                      circumference={circumference}
-                      scoreAnim={ringAnim}
-                    />
-                  </Svg>
-                  <View style={styles.scoreRingInner}>
-                    <AnimatedScore score={scoreAnim} color={scoreColor} />
-                    <Text style={styles.scoreTagline}>{scoreLabel}</Text>
                   </View>
-                </View>
-
-                {/* Quick stats */}
-                <View style={styles.quickStats}>
-                  {best && (
-                    <View style={styles.quickStat}>
-                      <Text style={styles.quickStatLabel}>Strongest</Text>
-                      <View style={styles.quickStatRow}>
-                        {React.createElement(CATEGORY_META[best[0]].Icon, { size: 14, color: CATEGORY_META[best[0]].color })}
-                        <Text style={[styles.quickStatValue, { color: CATEGORY_META[best[0]].color }]}>
-                          {CATEGORY_META[best[0]].label} {best[1].score}%
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                  {weakest && (
-                    <View style={styles.quickStat}>
-                      <Text style={styles.quickStatLabel}>Needs Work</Text>
-                      <View style={styles.quickStatRow}>
-                        {React.createElement(CATEGORY_META[weakest[0]].Icon, { size: 14, color: CATEGORY_META[weakest[0]].color })}
-                        <Text style={[styles.quickStatValue, { color: CATEGORY_META[weakest[0]].color }]}>
-                          {CATEGORY_META[weakest[0]].label} {weakest[1].score}%
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </GlassCard>
-
-              {/* Element Harmony */}
-              {userElement && partnerElement && (
-                <GlassCard style={styles.elementCard}>
-                  <View style={styles.elementHeader}>
-                    <View style={[styles.elementBadge, { backgroundColor: `${ELEMENT_COLORS[userElement]}18` }]}>
-                      <Text style={[styles.elementBadgeText, { color: ELEMENT_COLORS[userElement] }]}>{userElement}</Text>
-                    </View>
-                    <Zap size={16} color={Colors.textMuted} />
-                    <View style={[styles.elementBadge, { backgroundColor: `${ELEMENT_COLORS[partnerElement]}18` }]}>
-                      <Text style={[styles.elementBadgeText, { color: ELEMENT_COLORS[partnerElement] }]}>{partnerElement}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.elementFlavor}>
-                    {ELEMENT_COMPAT_FLAVOR[userElement]?.[partnerElement] ?? 'A unique elemental pairing'}
-                  </Text>
-                </GlassCard>
+                  {cityMatches.map((c) => (
+                    <Pressable key={c.name} style={({ pressed }) => [styles.matchRow, pressed && styles.pressed]} onPress={() => { setCity(c); setCityQuery(''); }} accessibilityRole="button">
+                      <MapPin size={14} color={Colors.purpleLight} />
+                      <Text style={styles.matchName}>{c.name}</Text>
+                      <Text style={styles.matchCountry}>{c.country}</Text>
+                    </Pressable>
+                  ))}
+                  <Text style={styles.hint}>Not listed? Pick the nearest big city in the same time zone. It gives the same result.</Text>
+                </>
               )}
+              {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
 
-              {/* Tab Navigation */}
-              <View style={styles.tabRow}>
-                {(['overview', 'details', 'advice'] as const).map((tab) => (
-                  <Pressable
-                    key={tab}
-                    style={({ pressed }) => [styles.tab, activeTab === tab && styles.tabActive, pressed && { opacity: 0.75 }]}
-                    onPress={() => {
-                      if (activeTab === tab) return;
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      Animated.timing(tabAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
-                        setActiveTab(tab);
-                        Animated.timing(tabAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-                      });
-                    }}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: activeTab === tab }}
-                  >
-                    <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                      {tab === 'overview' ? 'Overview' : tab === 'details' ? 'Breakdown' : 'Advice'}
-                    </Text>
-                  </Pressable>
-                ))}
+              <View style={styles.privacyRow}>
+                <Lock size={12} color={Colors.textMuted} />
+                <Text style={styles.privacyText}>Their details stay on this phone. Nothing is sent anywhere.</Text>
               </View>
 
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
-                <Animated.View style={{ opacity: tabAnim }}>
-                  {/* Summary */}
-                  <GlassCard style={styles.summaryCard}>
-                    <View style={styles.summaryHeader}>
-                      <Sparkles size={16} color={Colors.gold} />
-                      <Text style={styles.summaryTitle}>Cosmic Overview</Text>
-                    </View>
-                    <Text style={styles.summaryText}>{result.summary}</Text>
-                  </GlassCard>
+              <View style={styles.formButtons}>
+                <Pressable style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]} onPress={save} accessibilityRole="button">
+                  <Text style={styles.primaryBtnText}>Map us</Text>
+                  <Heart size={14} color={Colors.paperInk} />
+                </Pressable>
+                {partner && (
+                  <Pressable onPress={() => setEditing(false)} style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} accessibilityRole="button">
+                    <Text style={styles.secondaryBtnText}>Cancel</Text>
+                  </Pressable>
+                )}
+              </View>
+            </GlassCard>
+          ) : partner && !them ? (
+            <GlassCard style={styles.gap}>
+              <Text style={styles.bodyText}>We couldn&apos;t read the saved details. Please enter them again.</Text>
+              <Pressable style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]} onPress={startEditing} accessibilityRole="button">
+                <Text style={styles.primaryBtnText}>Re-enter details</Text>
+              </Pressable>
+            </GlassCard>
+          ) : them ? (
+            <>
+              <View style={styles.pairRow}>
+                <Text style={styles.pairText}>You + {partnerLabel}</Text>
+                <Pressable onPress={startEditing} hitSlop={8} style={styles.pairAction} accessibilityRole="button" accessibilityLabel="Edit their details">
+                  <Pencil size={14} color={Colors.textMuted} />
+                  <Text style={styles.pairActionText}>Edit</Text>
+                </Pressable>
+                <Pressable onPress={remove} hitSlop={8} style={styles.pairAction} accessibilityRole="button" accessibilityLabel="Remove this person">
+                  <X size={14} color={Colors.textMuted} />
+                  <Text style={styles.pairActionText}>Remove</Text>
+                </Pressable>
+              </View>
 
-                  {/* Visual Category Bars */}
-                  <GlassCard style={styles.categoryVisualCard}>
-                    {(Object.keys(CATEGORY_META) as CategoryKey[]).map((key) => {
-                      const meta = CATEGORY_META[key];
-                      const cat = result.categories[key];
-                      return (
-                        <View key={key} style={styles.categoryVisualRow}>
-                          <View style={styles.categoryVisualLabel}>
-                            <meta.Icon size={14} color={meta.color} />
-                            <Text style={styles.categoryVisualName}>{meta.label}</Text>
-                          </View>
-                          <View style={styles.categoryVisualTrack}>
-                            <View style={[styles.categoryVisualFill, { width: `${cat.score}%`, backgroundColor: meta.color }]} />
-                          </View>
-                          <Text style={[styles.categoryVisualScore, { color: meta.color }]}>{cat.score}%</Text>
-                        </View>
-                      );
-                    })}
-                  </GlassCard>
-
-                  {/* Strengths */}
-                  <Text style={styles.sectionTitle}>Strengths</Text>
-                  <GlassCard style={styles.listCard}>
-                    {result.strengths.map((s, i) => (
-                      <View key={i} style={styles.listRow}>
-                        <View style={[styles.listIconCircle, { backgroundColor: Colors.successDim }]}>
-                          <Check size={12} color={Colors.success} />
-                        </View>
-                        <Text style={styles.listText}>{s}</Text>
-                      </View>
-                    ))}
-                  </GlassCard>
-
-                  {/* Challenges */}
-                  <Text style={styles.sectionTitle}>Challenges</Text>
-                  <GlassCard style={styles.listCard}>
-                    {result.challenges.map((c, i) => (
-                      <View key={i} style={styles.listRow}>
-                        <View style={[styles.listIconCircle, { backgroundColor: Colors.accentDim }]}>
-                          <AlertTriangle size={12} color={Colors.accent} />
-                        </View>
-                        <Text style={styles.listText}>{c}</Text>
-                      </View>
-                    ))}
-                  </GlassCard>
-                </Animated.View>
+              {loveCity && (
+                <LinearGradient
+                  colors={['rgba(217,148,242,0.20)', 'rgba(111,178,250,0.16)', Colors.bgCardSolid]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.loveCard}
+                >
+                  <View style={styles.loveTop}>
+                    <Text style={styles.loveBadge}>YOUR LOVE CITY TOGETHER</Text>
+                    <Pressable onPress={shareLoveCity} hitSlop={10} style={({ pressed }) => [styles.shareBtn, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Share your love city">
+                      <Share2 size={16} color={Colors.textPrimary} />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.loveName}>{loveCity.city.name}</Text>
+                  <Text style={styles.loveCountry}>{loveCity.city.country}</Text>
+                  <Text style={styles.bodyText}>Both of your Venus lines run near here, the classic sign of a place where love comes easier for two.</Text>
+                </LinearGradient>
               )}
 
-              {/* Details Tab */}
-              {activeTab === 'details' && (
-                <Animated.View style={{ opacity: tabAnim }}>
-                  <Text style={styles.sectionTitle}>Category Deep Dive</Text>
-                  {(Object.keys(CATEGORY_META) as CategoryKey[]).map((key) => {
-                    const meta = CATEGORY_META[key];
-                    const cat = result.categories[key];
-                    const isExpanded = expandedCategory === key;
-                    const IconComp = meta.Icon;
+              <Text style={styles.sectionLabel}>Your love lines, together</Text>
+              <LineMap
+                birth={me}
+                planet="Venus"
+                color={Colors.accent}
+                partner={{ birth: them, color: PARTNER_COLOR, label: partnerLabel }}
+                hits={loveShared.map((c) => c.mine[0])}
+                hitColor={Colors.textPrimary}
+              />
 
-                    return (
-                      <Pressable
-                        key={key}
-                        onPress={() => toggleCategory(key)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${meta.label} compatibility, ${cat.score} percent`}
-                        accessibilityState={{ expanded: isExpanded }}
-                      >
-                        <GlassCard style={[styles.categoryCard, isExpanded && { borderColor: `${meta.color}30` }]}>
-                          <View style={styles.categoryHeader}>
-                            <View style={[styles.categoryIconCircle, { backgroundColor: `${meta.color}15` }]}>
-                              <IconComp size={18} color={meta.color} />
-                            </View>
-                            <View style={styles.categoryInfo}>
-                              <Text style={styles.categoryLabel}>{meta.label}</Text>
-                              <View style={styles.categoryBarTrack}>
-                                <View style={[styles.categoryBarFill, { width: `${cat.score}%`, backgroundColor: meta.color }]} />
-                              </View>
-                            </View>
-                            <Text style={[styles.categoryScore, { color: meta.color }]}>{cat.score}%</Text>
-                          </View>
-                          {isExpanded && (
-                            <View style={styles.categoryExpanded}>
-                              <View style={[styles.categoryDivider, { backgroundColor: `${meta.color}20` }]} />
-                              <Text style={styles.categoryText}>{cat.text}</Text>
-                            </View>
-                          )}
-                        </GlassCard>
-                      </Pressable>
-                    );
-                  })}
-                </Animated.View>
-              )}
-
-              {/* Advice Tab */}
-              {activeTab === 'advice' && (
-                <Animated.View style={{ opacity: tabAnim }}>
-                  {/* Daily Cosmic Tip */}
-                  <GlassCard variant="glow" glowColor={Colors.indigo} style={styles.dailyTipCard}>
-                    <View style={styles.dailyTipHeader}>
-                      <RefreshCw size={14} color={Colors.indigoLight} />
-                      <Text style={styles.dailyTipLabel}>Today&apos;s Cosmic Tip</Text>
-                    </View>
-                    <Text style={styles.dailyTipText}>
-                      {getDailyCosmicTip(profile?.zodiac_sign ?? '', partnerSign)}
-                    </Text>
-                  </GlassCard>
-
-                  {/* Tips */}
-                  <Text style={styles.sectionTitle}>Relationship Tips</Text>
-                  <GlassCard variant="glow" glowColor={Colors.gold} style={styles.tipsCard}>
-                    <View style={styles.tipsHeader}>
-                      <Lightbulb size={16} color={Colors.gold} />
-                      <Text style={styles.tipsTitle}>Cosmic Advice</Text>
-                    </View>
-                    {result.tips.map((tip, i) => (
-                      <View key={i} style={styles.tipRow}>
-                        <Star size={12} color={Colors.gold} />
-                        <Text style={styles.tipText}>{tip}</Text>
+              <Text style={styles.sectionLabel}>Where you both thrive</Text>
+              {shared.length === 0 ? (
+                <GlassCard>
+                  <Text style={styles.bodyText}>None of the cities on our map sit on lines for both of you. Your strongest places are your own; see Places.</Text>
+                </GlassCard>
+              ) : (
+                <View style={styles.list}>
+                  {shared.map((c, i) => (
+                    <GlassCard key={c.city.name} style={styles.sharedCard}>
+                      <View style={styles.sharedTop}>
+                        <Text style={styles.rank}>{i + 1}</Text>
+                        <View style={styles.flex}>
+                          <Text style={styles.sharedName}>{c.city.name}</Text>
+                          <Text style={styles.sharedCountry}>{c.city.country}</Text>
+                        </View>
                       </View>
-                    ))}
-                  </GlassCard>
-
-                  {/* Strengths & challenges recap */}
-                  <GlassCard style={styles.recapCard}>
-                    <Text style={styles.recapTitle}>Key Takeaway</Text>
-                    <Text style={styles.recapText}>
-                      Your strongest area is {best ? CATEGORY_META[best[0]].label.toLowerCase() : 'love'} at {best ? best[1].score : 0}%.
-                      Focus growth energy on {weakest ? CATEGORY_META[weakest[0]].label.toLowerCase() : 'communication'} ({weakest ? weakest[1].score : 0}%)
-                      to unlock this pairing&apos;s full potential.
-                    </Text>
-                  </GlassCard>
-                </Animated.View>
+                      <View style={styles.personRow}>
+                        <View style={[styles.dot, { backgroundColor: Colors.accent }]} />
+                        <Text style={styles.personText}>You: {areas(c.mine)}</Text>
+                      </View>
+                      <View style={styles.personRow}>
+                        <View style={[styles.dot, { backgroundColor: PARTNER_COLOR }]} />
+                        <Text style={styles.personText}>{partnerLabel}: {areas(c.theirs)}</Text>
+                      </View>
+                    </GlassCard>
+                  ))}
+                </View>
               )}
-            </Animated.View>
-          )}
+            </>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
 
-// Animated circular score ring
-function AnimatedRing({ cx, cy, r, stroke, strokeWidth, circumference, scoreAnim }: {
-  cx: number; cy: number; r: number; stroke: string; strokeWidth: number;
-  circumference: number; scoreAnim: Animated.Value;
-}) {
-  const [dashOffset, setDashOffset] = useState(circumference);
-
-  useEffect(() => {
-    const id = scoreAnim.addListener(({ value }) => {
-      const offset = circumference - (circumference * value) / 100;
-      setDashOffset(offset);
-    });
-    return () => scoreAnim.removeListener(id);
-  }, [scoreAnim, circumference]);
-
-  return (
-    <Circle
-      cx={cx} cy={cy} r={r}
-      fill="none" stroke={stroke} strokeWidth={strokeWidth}
-      strokeDasharray={`${circumference}`}
-      strokeDashoffset={dashOffset}
-      strokeLinecap="round"
-      transform={`rotate(-90 ${cx} ${cy})`}
-    />
-  );
-}
-
-// Animated score display
-function AnimatedScore({ score, color }: { score: Animated.Value; color: string }) {
-  const styles = useThemedStyles(createStyles);
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => {
-    const id = score.addListener(({ value }) => {
-      setDisplay(Math.round(value));
-    });
-    return () => score.removeListener(id);
-  }, [score]);
-
-  return <Text style={[styles.scoreValue, { color }]}>{display}%</Text>;
-}
-
 const createStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginTop: 8, marginBottom: 7 },
-  title: { fontSize: 38, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1.1 },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, marginTop: 7, marginBottom: 26, maxWidth: 330 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },
+  pressed: { opacity: 0.78 },
+  flex: { flex: 1 },
+  gap: { gap: 10 },
 
-  // Signs display
-  signsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 24 },
-  signDisplay: { alignItems: 'center', gap: 6 },
-  signCircle: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center' },
-  signCircleSymbol: { fontSize: 32 },
-  signDisplayName: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  signElement: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  heartContainer: { marginTop: -16 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 20, gap: 12 },
+  headerCopy: { flex: 1 },
+  eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
+  title: { fontSize: 36, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },
+  headerIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.accentDim, alignItems: 'center', justifyContent: 'center' },
 
-  // Sign picker
-  pickerCard: { marginBottom: 22, borderRadius: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: Colors.textMuted, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
-  signGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
-  signGridItem: {
-    width: '30%' as unknown as number, flexDirection: 'row', alignItems: 'center',
-    gap: 6, paddingHorizontal: 10, paddingVertical: 11, borderRadius: 14,
-    backgroundColor: Colors.bgInput, borderWidth: 1.5, borderColor: Colors.bgInputBorder,
-  },
-  signGridSymbol: { fontSize: 16 },
-  signGridLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+  cardTitle: { color: Colors.textPrimary, fontSize: 18, fontFamily: Fonts.display, fontWeight: '800' },
+  bodyText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21 },
+  label: { color: Colors.textPrimary, fontSize: 13, fontWeight: '700', marginTop: 6 },
+  input: { borderWidth: 1, borderColor: Colors.bgInputBorder, backgroundColor: Colors.bgInput, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: Colors.textPrimary, fontSize: 15 },
+  inputError: { borderColor: Colors.accent },
+  errorText: { color: Colors.accent, fontSize: 12, fontWeight: '600' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: Colors.bgInputBorder, backgroundColor: Colors.bgInput, borderRadius: 12, paddingHorizontal: 14 },
+  searchInput: { flex: 1, color: Colors.textPrimary, fontSize: 15, paddingVertical: 12 },
+  matchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.bgCardBorder },
+  matchName: { color: Colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  matchCountry: { color: Colors.textMuted, fontSize: 13, flex: 1 },
+  hint: { color: Colors.textMuted, fontSize: 12, lineHeight: 17 },
+  pickedCity: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: Colors.bgInputBorder, backgroundColor: Colors.bgInput, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  pickedCityText: { flex: 1, color: Colors.textPrimary, fontSize: 15, fontWeight: '600' },
+  privacyRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  privacyText: { color: Colors.textMuted, fontSize: 12, flex: 1 },
+  formButtons: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, backgroundColor: Colors.purple, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 999 },
+  primaryBtnText: { color: Colors.paperInk, fontSize: 14, fontWeight: '800' },
+  secondaryBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder },
+  secondaryBtnText: { color: Colors.textSecondary, fontSize: 14, fontWeight: '700' },
 
-  // Prompt
-  promptContainer: { alignItems: 'center', gap: 12, paddingVertical: 36 },
-  promptText: { fontSize: 15, color: Colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
+  pairRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  pairText: { flex: 1, color: Colors.textPrimary, fontSize: 17, fontWeight: '800' },
+  pairAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pairActionText: { color: Colors.textMuted, fontSize: 13, fontWeight: '700' },
 
-  // Score ring card
-  scoreRingCard: { marginBottom: 16, alignItems: 'center', paddingVertical: 28, borderRadius: 24 },
-  scoreRingContainer: { position: 'relative', width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' },
-  scoreRingInner: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { fontSize: 46, fontFamily: Fonts.display, fontWeight: '800', letterSpacing: -2 },
-  scoreTagline: { fontSize: 12, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
+  loveCard: { borderRadius: 22, borderWidth: 1, borderColor: 'rgba(217,148,242,0.35)', padding: 18, marginBottom: 24, gap: 4 },
+  loveTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  loveBadge: { color: Colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
+  shareBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(237,228,253,0.10)' },
+  loveName: { color: Colors.textPrimary, fontSize: 30, fontFamily: Fonts.display, fontWeight: '800', letterSpacing: -0.7 },
+  loveCountry: { color: Colors.textMuted, fontSize: 13, marginBottom: 8 },
 
-  // Quick stats
-  quickStats: { flexDirection: 'row', gap: 24, marginTop: 16 },
-  quickStat: { alignItems: 'center', gap: 4 },
-  quickStatLabel: { fontSize: 11, fontWeight: '600', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
-  quickStatRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  quickStatValue: { fontSize: 13, fontWeight: '700' },
-
-  // Element harmony
-  elementCard: { marginBottom: 16, alignItems: 'center', gap: 10, paddingVertical: 16 },
-  elementHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  elementBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
-  elementBadgeText: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  elementFlavor: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21, paddingHorizontal: 8 },
-
-  // Tabs
-  tabRow: { flexDirection: 'row', marginBottom: 20, backgroundColor: 'rgba(218,200,242,0.045)', borderRadius: 16, borderWidth: 1, borderColor: Colors.bgCardBorder, padding: 4 },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  tabActive: { backgroundColor: 'rgba(150,98,198,0.24)' },
-  tabText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
-  tabTextActive: { color: Colors.purpleLight },
-
-  // Summary
-  summaryCard: { marginBottom: 20 },
-  summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  summaryTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
-
-  // Visual category bars (overview)
-  categoryVisualCard: { marginBottom: 20, gap: 12 },
-  categoryVisualRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  categoryVisualLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, width: 120 },
-  categoryVisualName: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  categoryVisualTrack: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
-  categoryVisualFill: { height: 6, borderRadius: 3 },
-  categoryVisualScore: { fontSize: 14, fontWeight: '700', width: 36, textAlign: 'right' },
-
-  // Section titles
-  sectionTitle: { fontSize: 24, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, marginBottom: 12, letterSpacing: -0.55 },
-
-  // Category cards (details tab)
-  categoryCard: { marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },
-  categoryHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  categoryIconCircle: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  categoryInfo: { flex: 1, gap: 6 },
-  categoryLabel: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  categoryBarTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
-  categoryBarFill: { height: 4, borderRadius: 2 },
-  categoryScore: { fontSize: 18, fontWeight: '800', letterSpacing: -0.5 },
-  categoryExpanded: { marginTop: 14 },
-  categoryDivider: { height: 1, marginBottom: 12 },
-  categoryText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
-
-  // Lists
-  listCard: { marginBottom: 16, gap: 12 },
-  listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  listIconCircle: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  listText: { flex: 1, fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
-
-  // Daily tip
-  dailyTipCard: { marginBottom: 20, gap: 10 },
-  dailyTipHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dailyTipLabel: { fontSize: 12, fontWeight: '700', color: Colors.indigoLight, textTransform: 'uppercase', letterSpacing: 0.5 },
-  dailyTipText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
-
-  // Tips
-  tipsCard: { marginBottom: 20, gap: 12 },
-  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  tipsTitle: { fontSize: 14, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingLeft: 2 },
-  tipText: { flex: 1, fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
-
-  // Recap card
-  recapCard: { marginBottom: 20, gap: 8 },
-  recapTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  recapText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
+  sectionLabel: { color: Colors.textPrimary, fontFamily: Fonts.display, fontSize: 22, fontWeight: '800', letterSpacing: -0.45, marginBottom: 12 },
+  list: { gap: 12 },
+  sharedCard: { gap: 8 },
+  sharedTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rank: { color: Colors.textMuted, fontSize: 15, fontWeight: '900', width: 16 },
+  sharedName: { color: Colors.textPrimary, fontSize: 19, fontFamily: Fonts.display, fontWeight: '800' },
+  sharedCountry: { color: Colors.textMuted, fontSize: 12 },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 28 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  personText: { color: Colors.textSecondary, fontSize: 13 },
 });

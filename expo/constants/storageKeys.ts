@@ -40,3 +40,12 @@ export function markOnboardingDoneThisSession(email: string): void {
 export function isOnboardingDoneThisSession(email: string): boolean {
   return sessionOnboardingDone.has(email);
 }
+
+/**
+ * The partner entered on the Couple Map, per account. Kept only on this device: it is
+ * someone else's birth data, and nothing server-side needs it. Cleared by
+ * deleteAccount() alongside the rest of the account's local state.
+ */
+export function couplePartnerKey(email: string): string {
+  return `astrolyfe:couple_partner:${email}`;
+}
