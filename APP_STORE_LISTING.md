@@ -37,9 +37,9 @@ Find the cities your birth chart lights up for love, career and home, see your s
 ## Keywords — 100 max, comma-separated
 
 ```
-astrocartography,soulmate,love map,couple,relocation,travel,cities,birth chart,where to live,lines
+astrocartography,soulmate,love map,couple,relocation,travel,cities,birth chart,where to live,compass
 ```
-98/100. Deliberately leaves out `horoscope` and `zodiac` — those are the words
+100/100. Deliberately leaves out `horoscope` and `zodiac` — those are the words
 that put the app in the saturated bucket. Don't repeat words from the name; Apple
 indexes those already.
 
@@ -56,6 +56,11 @@ POWER PLACES
 • A live map of your lines across the world
 • Check any city and see what it does for you, including the rising sign you would have if you lived there
 • When to go: the dates each place is switched on, worked out from the real movement of the planets
+
+FROM HOME COMPASS
+• Stand where you live and see which direction each part of your life lies in
+• The real cities along each line, how far away they are, and what time it is there now
+• Change home whenever you move; it stays on your phone
 
 COUPLE MAP
 • Add your partner, crush or best friend
@@ -115,11 +120,12 @@ reviewer compares against the saturated category.
 | # | Screen | Caption |
 | --- | --- | --- |
 | 1 | Places — Power City card with the map below | The cities your chart lights up |
-| 2 | Places — map with the Love chip selected | Your lines, around the world |
-| 3 | Places — "Check a city" result with "you'd rise as…" and its "Best time to go" | Check any city on Earth — and when to go |
-| 4 | Couple — love city together + two-colour map | Where you two thrive |
-| 5 | Soulmate — portrait and love cities | Your soulmate, and where you'll meet |
-| 6 | Insights — the city reports list | Personal city reports |
+| 2 | Places — "From home" compass rose and the first direction card | Which way to go from home |
+| 3 | Places — map with the Love chip selected | Your lines, around the world |
+| 4 | Places — "Check a city" result with "you'd rise as…" and its "Best time to go" | Check any city on Earth — and when to go |
+| 5 | Couple — love city together + two-colour map | Where you two thrive |
+| 6 | Soulmate — portrait and love cities | Your soulmate, and where you'll meet |
+| 7 | Insights — the city reports list | Personal city reports |
 
 Capture them from the **demo account** so the content is consistent (its reports
 were generated from its own chart — see `HANDOFF.md`). Required size is the 6.9"
@@ -130,9 +136,9 @@ display (1320 × 2868); a 6.5" set is still accepted.
 Paste into **App Review Information → Notes**:
 
 ```
-AstroLyfe is a relocation and relationship-mapping app. Its core features — Power Places, the world line map, Couple Map, and "the rising sign you'd have if you lived here" — calculate where on Earth each planet sat at the user's exact birth moment (astrocartography) and match those lines to real cities. A timing engine then scans the real sky a year ahead to date when each place is "switched on" (including, for couples, the days both people's lines are active together). All of it is computed on the device from planetary positions, not from per-sign text.
+AstroLyfe is a relocation and relationship-mapping app. Its core features — Power Places, the world line map, Couple Map, and "the rising sign you'd have if you lived here" — calculate where on Earth each planet sat at the user's exact birth moment (astrocartography) and match those lines to real cities. A timing engine then scans the real sky a year ahead to date when each place is "switched on" (including, for couples, the days both people's lines are active together). A "From home" compass (local space) shows the direction each planet lay in from where the user lives now, with the real cities along each line, their distance and local time. All of it is computed on the device from planetary positions, not from per-sign text.
 
-Demo account: the sign-in above has an active subscription and full birth details, so every feature is unlocked. Suggested path: Places tab (Power City, map, "Check a city") → Couple tab (enter any birth date, time and city to see a shared map) → Soulmate → Insights (city reports).
+Demo account: the sign-in above has an active subscription and full birth details, so every feature is unlocked. Suggested path: Places tab (Power City, map, "Check a city", then the "From home" switch) → Couple tab (enter any birth date, time and city to see a shared map) → Soulmate → Insights (city reports).
 
 The app is a free companion to our web service. Subscriptions are purchased only on our website; the app contains no purchasing and no links or calls to action to buy (Guideline 3.1.3(f)).
 

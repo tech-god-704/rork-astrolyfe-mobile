@@ -108,6 +108,7 @@ Tabs: **Places → Soulmate → Couple → Insights → You.**
 | Feature | What it does | Where |
 | --- | --- | --- |
 | **Power Places** (landing tab) | Cities where the user's planet lines run, by life area (Venus love, Sun career, Moon home, Jupiter luck, Mars drive). Astrocartography computed on-device from the exact birth moment. | `components/PowerPlaces.tsx`, `services/places.ts` |
+| **From home compass** (Places → "From home") | Local space: the compass direction each planet lay in, seen from where the person lives now, at their birth moment. A compass rose plus, for each life area, the full great-circle line through home and the real cities on it (within 350 km of the line *and* 15° of its direction), with distance and the local time there now. Home defaults to the birthplace when one of our cities is within 300 km; otherwise the person picks it. **Stored only on the device** and wiped on account deletion. As of Oct 2026 none of the consumer astrocartography apps we checked (Maphrodite, Pathfinder, Linea, Astro-Cartography) list this. | `components/HomeCompass.tsx`, `services/compass.ts` |
 | **Power City** | The single city where the lines cross most strongly, with a share button. | same |
 | **"Live here and you'd rise as…"** | Relocated rising sign for any city. Agrees with the Birth Chart at the birthplace. | `relocatedRising()` |
 | **World line map** | SVG map of a planet's Midheaven / home / rising / partner lines, top cities labelled without overlaps. | `components/LineMap.tsx`, `lib/lineMapLayout.ts` |
@@ -149,7 +150,8 @@ planets within that distance of a cusp.
 | `5949888` | Handoff, listing copy, tools |
 | `76d0781` | Fix a crash on web after sign-in (notification deep-link hook); map labels sized for real phone screens |
 | `5b16faa` | Forecast stayed almost invisible after switching Daily/Weekly/Monthly on web; VoiceOver labels on Couple city results |
-| *this commit* | "When to go" timing engine on Places, Soulmate, Couple and Forecast; tests |
+| `e15248f` | "When to go" timing engine on Places, Soulmate, Couple and Forecast; tests |
+| *this commit* | From home compass (local space) on Places; tests |
 
 Earlier history (auth hardening, PocketBase migration, forecast engine, welcome tour,
 light mode) is in `git log`; other contributors committed as `tech-god-704`,
@@ -259,6 +261,8 @@ bun tools/places.test.ts     # astrocartography engine vs published solar-noon l
 bun tools/places2.test.ts    # power city (brute-force), relocated rising, map geometry
 bun tools/tz.test.ts         # all 111 city time zones valid and plausible
 bun tools/fmt.test.ts        # report Markdown renderer
+bun tools/compass.test.ts    # compass: Sun due south at noon, equinox sunrise due east,
+                             # NY→London bearing/distance, cities on a line (brute force)
 bun tools/timing.test.ts     # when-to-go windows: solar return lands on the birthday,
                              # 2,600+ random windows bounded correctly, couple overlaps
 ```
@@ -277,7 +281,8 @@ random charts with no label overlapping another label, dot or the map edge.
 mock PocketBase, as the demo user, at iPhone size: sign in → Places (all five life
 areas, Check a city, timing notes) → Soulmate → Couple (rejects Feb 30, maps a
 partner, survives reload, edit, remove) → Insights (opens all five reports) →
-Forecast → Birth chart → You (edit + save, survives reload). All steps pass with no
+Forecast → Birth chart → You (edit + save, survives reload), plus the From home
+compass (defaults to the birthplace, change home, survives reload, cancel). All steps pass with no
 app errors. That harness lives outside the repo; it found two real bugs (a sign-in
 crash and an invisible forecast) that type checks and unit tests did not.
 

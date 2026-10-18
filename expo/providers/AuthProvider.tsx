@@ -10,7 +10,7 @@ import { supabase, getFileUrl } from '@/lib/supabase';
 import { verifySubscriptionLive, deleteAccountServer } from '@/lib/backend';
 import { normalizeBirthDate } from '@/lib/validation';
 import { syncDailyReminder, cancelDailyReminder } from '@/services/notifications';
-import { onboardingDoneKey, couplePartnerKey } from '@/constants/storageKeys';
+import { onboardingDoneKey, couplePartnerKey, homeCityKey } from '@/constants/storageKeys';
 
 export interface QuizData {
   birth_year?: number;
@@ -501,6 +501,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         await cancelDailyReminder().catch(() => {});
         await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
         await AsyncStorage.removeItem(couplePartnerKey(email)).catch(() => {});
+        await AsyncStorage.removeItem(homeCityKey(email)).catch(() => {});
         await signOut();
         return { subscriptionNeedsManualCancel: false };
       }
@@ -582,6 +583,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // of the PocketBase record it was standing in for.
     await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
     await AsyncStorage.removeItem(couplePartnerKey(email)).catch(() => {});
+    await AsyncStorage.removeItem(homeCityKey(email)).catch(() => {});
 
     // Delegates to signOut() rather than duplicating its session-clearing steps, so a
     // future change there (e.g. clearing a query cache) doesn't need to be kept in

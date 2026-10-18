@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share } from 
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Globe, Heart, Briefcase, Home, Sparkles, Flame, MapPin, Search, X, ChevronRight, Crown, Share2 } from 'lucide-react-native';
+import { Globe, MapPin, Search, X, ChevronRight, Crown, Share2, Navigation } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
@@ -11,6 +11,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import GlassCard from '@/components/GlassCard';
 import LineMap from '@/components/LineMap';
 import TimingNote from '@/components/TimingNote';
+import HomeCompass from '@/components/HomeCompass';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { CITIES, type City } from '@/data/cities';
@@ -29,38 +30,15 @@ import {
   type PlacePlanet,
 } from '@/services/places';
 import { birthMomentFromProfile } from '@/services/places-birth';
+import { THEME_STYLE, PLANET_THEME, THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
 import { placeTiming, describeWindow, type PlaceTiming } from '@/services/places-timing';
-
-const THEME_STYLE: Record<Theme, { color: string; Icon: typeof Heart }> = {
-  love: { color: Colors.accent, Icon: Heart },
-  career: { color: Colors.purpleLight, Icon: Briefcase },
-  home: { color: Colors.teal, Icon: Home },
-  luck: { color: Colors.success, Icon: Sparkles },
-  drive: { color: Colors.nebulaMagenta, Icon: Flame },
-};
-
-const PLANET_THEME: Record<PlacePlanet, Theme> = {
-  Venus: 'love',
-  Sun: 'career',
-  Moon: 'home',
-  Jupiter: 'luck',
-  Mars: 'drive',
-};
-
-/** Short life-area names for tags and the share message. */
-const THEME_LABEL_BY_PLANET: Record<PlacePlanet, string> = {
-  Venus: 'Love',
-  Sun: 'Career',
-  Moon: 'Home',
-  Jupiter: 'Luck',
-  Mars: 'Drive',
-};
 
 export default function PowerPlaces() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { profile } = useAuth();
   const [theme, setTheme] = useState<Theme>('love');
+  const [view, setView] = useState<'world' | 'home'>('world');
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<City | null>(null);
 
@@ -169,8 +147,9 @@ export default function PowerPlaces() {
             style={styles.hero}
           >
             <Text style={styles.heroText}>
-              The moment you were born, every planet sat overhead somewhere on Earth. Those spots trace lines
-              around the globe. Where a line crosses a city, that part of your life gets louder there.
+              {view === 'home'
+                ? 'Stand at home and turn: at the moment you were born, each planet lay in one direction from you. Head that way, and the cities along the line, to bring that part of your life forward.'
+                : 'The moment you were born, every planet sat overhead somewhere on Earth. Those spots trace lines around the globe. Where a line crosses a city, that part of your life gets louder there.'}
             </Text>
           </LinearGradient>
 
@@ -193,6 +172,35 @@ export default function PowerPlaces() {
             </GlassCard>
           ) : (
             <>
+              <View style={styles.segment} accessibilityRole="tablist">
+                {([
+                  { key: 'world', label: 'World map', Icon: Globe },
+                  { key: 'home', label: 'From home', Icon: Navigation },
+                ] as const).map(({ key, label, Icon }) => {
+                  const active = view === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setView(key);
+                      }}
+                      style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={label}
+                    >
+                      <Icon size={15} color={active ? Colors.textPrimary : Colors.textMuted} />
+                      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {view === 'home' ? (
+                <HomeCompass birth={birth} birthLat={profile?.birth_lat} birthLon={profile?.birth_lon} />
+              ) : (
+              <>
               {headline && (
                 <LinearGradient
                   colors={['rgba(217,148,242,0.20)', 'rgba(97,56,163,0.28)', Colors.bgCardSolid]}
@@ -386,6 +394,9 @@ export default function PowerPlaces() {
                 </GlassCard>
               )}
 
+              </>
+              )}
+
               <Text style={styles.footnote}>
                 Calculated on your phone from the planets&apos; exact positions at the moment you were born.
               </Text>
@@ -450,6 +461,12 @@ const createStyles = () => StyleSheet.create({
   powerRising: { color: Colors.lavenderIce, fontSize: 13, fontWeight: '700', marginTop: 12 },
   timingWrap: { marginTop: 14 },
   themeTiming: { marginTop: 12, marginBottom: 4 },
+
+  segment: { flexDirection: 'row', padding: 4, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard, marginBottom: 18 },
+  segmentBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, borderRadius: 999 },
+  segmentBtnActive: { backgroundColor: 'rgba(150,98,198,0.42)' },
+  segmentText: { color: Colors.textMuted, fontSize: 14, fontWeight: '800' },
+  segmentTextActive: { color: Colors.textPrimary },
 
   missingCard: { gap: 10 },
   missingTitle: { color: Colors.textPrimary, fontSize: 18, fontFamily: Fonts.display, fontWeight: '800' },

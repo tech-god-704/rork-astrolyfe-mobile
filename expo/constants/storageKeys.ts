@@ -49,3 +49,12 @@ export function isOnboardingDoneThisSession(email: string): boolean {
 export function couplePartnerKey(email: string): string {
   return `astrolyfe:couple_partner:${email}`;
 }
+
+/**
+ * The city the person says they live in now, for the From Home compass, per account.
+ * Kept only on this device. Cleared by deleteAccount() with the rest of the account's
+ * local state.
+ */
+export function homeCityKey(email: string): string {
+  return `astrolyfe:home_city:${email}`;
+}
