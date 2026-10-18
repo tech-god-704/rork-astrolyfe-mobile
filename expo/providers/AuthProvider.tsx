@@ -10,7 +10,7 @@ import { supabase, getFileUrl } from '@/lib/supabase';
 import { verifySubscriptionLive, deleteAccountServer } from '@/lib/backend';
 import { normalizeBirthDate } from '@/lib/validation';
 import { syncDailyReminder, cancelDailyReminder } from '@/services/notifications';
-import { onboardingDoneKey, couplePartnerKey, homeCityKey } from '@/constants/storageKeys';
+import { accountLocalKeys } from '@/constants/storageKeys';
 
 export interface QuizData {
   birth_year?: number;
@@ -162,7 +162,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     const timer = setTimeout(() => controller.abort(), 8000);
     try {
       // Try profiles table first (keyed by auth.users.id, has subscription data)
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('id, email, display_name, avatar, zodiac_sign, date_of_birth, birth_city, birth_lat, birth_lon, timezone, quiz_data, onboarding_completed, notifications_enabled, notification_hour, notification_minute, subscription_status, subscription_product, subscription_period_end, trial_end_date, is_admin')
         .eq('email', email)
@@ -499,9 +499,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       const res = await deleteAccountServer(hasLiveBilling);
       if (res?.success) {
         await cancelDailyReminder().catch(() => {});
-        await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
-        await AsyncStorage.removeItem(couplePartnerKey(email)).catch(() => {});
-        await AsyncStorage.removeItem(homeCityKey(email)).catch(() => {});
+        await AsyncStorage.multiRemove(accountLocalKeys(email)).catch(() => {});
         await signOut();
         return { subscriptionNeedsManualCancel: false };
       }
@@ -578,12 +576,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // itself changes.
     await cancelDailyReminder().catch(() => {});
 
-    // Otherwise this account signing up again later would read as having already
-    // finished onboarding, since the flag is keyed by email and survives independently
-    // of the PocketBase record it was standing in for.
-    await AsyncStorage.removeItem(onboardingDoneKey(email)).catch(() => {});
-    await AsyncStorage.removeItem(couplePartnerKey(email)).catch(() => {});
-    await AsyncStorage.removeItem(homeCityKey(email)).catch(() => {});
+    // Every per-account key on this device: the partner and home city are personal
+    // data, and the onboarding flag would otherwise make this email, signing up again
+    // later, read as having already finished onboarding.
+    await AsyncStorage.multiRemove(accountLocalKeys(email)).catch(() => {});
 
     // Delegates to signOut() rather than duplicating its session-clearing steps, so a
     // future change there (e.g. clearing a query cache) doesn't need to be kept in

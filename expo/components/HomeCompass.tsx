@@ -11,8 +11,8 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { homeCityKey } from '@/constants/storageKeys';
 import { THEME_STYLE, PLANET_THEME, THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
-import { CITIES, type City } from '@/data/cities';
-import { THEMES, type BirthMoment, type PlacePlanet } from '@/services/places';
+import { CITIES, searchCities, type City } from '@/data/cities';
+import { THEMES, formatMiles, type BirthMoment, type PlacePlanet } from '@/services/places';
 import {
   planetDirections,
   citiesOnLine,
@@ -20,7 +20,7 @@ import {
   compassWords,
   nearestCity,
   localTimeIn,
-  formatDistance,
+  assignRings,
   type PlanetDirection,
 } from '@/services/compass';
 
@@ -87,11 +87,7 @@ export default function HomeCompass({ birth, birthLat, birthLon }: { birth: Birt
 
   const home = saved ?? fallback;
 
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return CITIES.filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)).slice(0, 6);
-  }, [query]);
+  const matches = useMemo(() => searchCities(query), [query]);
 
   const pickHome = async (city: City) => {
     Haptics.selectionAsync().catch(() => {});
@@ -209,17 +205,18 @@ export default function HomeCompass({ birth, birthLat, birthLon }: { birth: Birt
 }
 
 function CompassRose({ directions, homeName }: { directions: PlanetDirection[]; homeName: string }) {
-  // Planets a few degrees apart would sit on top of each other at the rim; step the
-  // later ones inward so every marker stays readable.
+  // Planets a few degrees apart would sit on top of each other at the rim. Markers go on
+  // one of three rings: the outermost ring with room, judged by actual on-screen
+  // distance. With all three crowded (a tight stellium), the ring with the most room
+  // wins — markers may touch, but every one stays on its own true bearing and never
+  // crosses the centre.
   const placed = useMemo(() => {
-    const sorted = [...directions].sort((a, b) => a.azimuth - b.azimuth);
-    const out: { dir: PlanetDirection; r: number }[] = [];
-    for (const dir of sorted) {
-      let r = R - MARKER - 4;
-      while (out.some((o) => o.r === r && Math.abs(((o.dir.azimuth - dir.azimuth + 540) % 360) - 180) < 14)) r -= MARKER * 2 + 4;
-      out.push({ dir, r });
-    }
-    return out;
+    const radii = assignRings(
+      directions.map((d) => d.azimuth),
+      [R - MARKER - 4, R - MARKER * 3 - 8, R - MARKER * 5 - 12],
+      MARKER * 2 + 2,
+    );
+    return directions.map((dir, i) => ({ dir, r: radii[i] }));
   }, [directions]);
 
   const summary = directions
@@ -332,7 +329,7 @@ function DirectionCard({
                 key={city.name}
                 style={styles.cityRow}
                 accessible
-                accessibilityLabel={`${city.name}, ${city.country}, ${formatDistance(distanceKm)} ${compassWords(bearing)}${time ? `, ${time} there now` : ''}`}
+                accessibilityLabel={`${city.name}, ${city.country}, ${formatMiles(distanceKm)} ${compassWords(bearing)}${time ? `, ${time} there now` : ''}`}
               >
                 <MapPin size={13} color={color} />
                 <View style={styles.flex}>
@@ -341,7 +338,7 @@ function DirectionCard({
                 </View>
                 <View style={styles.cityRight}>
                   <Text style={styles.cityDistance}>
-                    {formatDistance(distanceKm)} <Text style={styles.cityPoint}>{compassPoint(bearing)}</Text>
+                    {formatMiles(distanceKm)} <Text style={styles.cityPoint}>{compassPoint(bearing)}</Text>
                   </Text>
                   {time && (
                     <View style={styles.timeRow}>

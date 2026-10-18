@@ -34,6 +34,18 @@ const KM_PER_DEG = 111.32;
  */
 const PRECESSION_DEG_PER_CENTURY = 1.396971;
 
+/**
+ * Ecliptic longitude of date for any body. The Moon formula is already of date; the
+ * Sun and planets get the precession since J2000 added. Anything comparing a natal
+ * position with a later sky (the timing engine) must use this for both, or the Moon is
+ * off from the rest by the precession between birth and 2000.
+ */
+export function longitudeOfDate(planet: string, t: number): number {
+  if (planet === 'Moon') return norm360(moonLon(t));
+  const j2000 = planet === 'Sun' ? sunLon(t) : geocentricEcliptic(planet, t).lon;
+  return norm360(j2000 + PRECESSION_DEG_PER_CENTURY * t);
+}
+
 /** Beyond this a line is too far away to call a city "yours". */
 export const MAX_KM = 600;
 /**
@@ -252,10 +264,12 @@ export function readCity(birth: BirthMoment, city: City): PlaceHit[] {
     .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
+/** "under 10 mi", "95 mi", "2,450 mi" — to 5 miles, or 10 past a thousand. */
 export function formatMiles(km: number): string {
   const mi = km * 0.621371;
   if (mi < 10) return 'under 10 mi';
-  return `${Math.round(mi / 5) * 5} mi`;
+  const rounded = mi >= 1000 ? Math.round(mi / 10) * 10 : Math.round(mi / 5) * 5;
+  return `${String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} mi`;
 }
 
 // ── Power city ─────────────────────────────────────────────

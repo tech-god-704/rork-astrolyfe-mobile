@@ -29,6 +29,12 @@ export function chartFingerprint(parts: {
   latitude?: number | null;
   longitude?: number | null;
   sign?: string | null;
+  /**
+   * The birth time's offset from UT as actually resolved. A reading made before the
+   * zone was known (or under a different one) is a different chart and must not be
+   * served for this one.
+   */
+  utcOffsetMinutes?: number | null;
 }): string {
   const input = [
     parts.birthDate ?? '',
@@ -37,6 +43,7 @@ export function chartFingerprint(parts: {
     parts.latitude ?? '',
     parts.longitude ?? '',
     parts.sign ?? '',
+    parts.utcOffsetMinutes ?? '',
   ].join('|');
 
   let h1 = 0xdeadbeef;

@@ -1,7 +1,7 @@
 // Checks for services/compass.ts — directions from home (local space).
 // Run: bun tools/compass.test.ts
-import { planetDirections, distanceKm, bearingDeg, compassPoint, compassWords, citiesToward, nearestCity, localTimeIn, formatDistance, citiesOnLine, ON_LINE_KM, MAX_DEVIATION_DEG } from '../expo/services/compass.ts';
-import { planetLines, julianDayUT, gmstDeg, norm180, type BirthMoment } from '../expo/services/places.ts';
+import { planetDirections, distanceKm, bearingDeg, compassPoint, compassWords, citiesToward, nearestCity, localTimeIn, citiesOnLine, assignRings, ON_LINE_KM, MAX_DEVIATION_DEG } from '../expo/services/compass.ts';
+import { planetLines, julianDayUT, gmstDeg, norm180, formatMiles, type BirthMoment } from '../expo/services/places.ts';
 import { CITIES } from '../expo/data/cities.ts';
 
 let fail = 0;
@@ -82,13 +82,23 @@ const westFromLA = citiesOnLine(la, 270, CITIES, 20);
 ok('a west line from LA lists no city off-axis', westFromLA.every(c => Math.abs(norm180(c.bearing - (c.toward ? 270 : 90))) <= MAX_DEVIATION_DEG), westFromLA.map(c => `${c.city.name} ${c.bearing.toFixed(0)}°`).join(', '));
 ok('San Diego (SE of LA) is not on the LA west–east line', !westFromLA.some(c => c.city.name === 'San Diego'));
 
+// Marker rings: a five-planet stellium stays on real rings, never at or past the centre.
+const RINGS = [104, 72, 40];
+const stellium = assignRings([240, 241, 243, 247, 250], RINGS, 30);
+ok('stellium markers stay on the three rings', stellium.every(r => RINGS.includes(r)), stellium.join(','));
+ok('first three of a stellium use all three rings', new Set(stellium.slice(0, 3)).size === 3, stellium.join(','));
+const spread = assignRings([0, 72, 144, 216, 288], RINGS, 30);
+ok('well-spread planets all sit on the outer ring', spread.every(r => r === 104), spread.join(','));
+const pair = assignRings([10, 12], RINGS, 30);
+ok('two close planets split across rings', pair[0] !== pair[1], pair.join(','));
+
 // Nearest city and local time
 ok('nearest city to downtown LA is Los Angeles', nearestCity(34.05, -118.25)?.city.name === 'Los Angeles');
 ok('local time formats', /^\d{1,2}:\d{2}\s?[AP]M$/.test(localTimeIn('Asia/Tokyo', new Date(Date.UTC(2026, 0, 1, 3, 5))) ?? ''), localTimeIn('Asia/Tokyo', new Date(Date.UTC(2026, 0, 1, 3, 5))) ?? 'null');
 ok('local time is correct for Tokyo (UTC+9)', (localTimeIn('Asia/Tokyo', new Date(Date.UTC(2026, 0, 1, 3, 5))) ?? '').startsWith('12:05'));
 ok('bad zone gives null, not a crash', localTimeIn('Not/AZone') === null);
 
-ok('distance format', formatDistance(5570) === '3,460 mi' && formatDistance(150) === '95 mi' && formatDistance(16000) === '9,940 mi', `${formatDistance(5570)}, ${formatDistance(150)}, ${formatDistance(16000)}`);
+ok('distance format', formatMiles(5570) === '3,460 mi' && formatMiles(150) === '95 mi' && formatMiles(16000) === '9,940 mi' && formatMiles(5) === 'under 10 mi', `${formatMiles(5570)}, ${formatMiles(150)}, ${formatMiles(16000)}`);
 
 console.log(fail ? `\n${fail} FAILED` : '\nALL PASS');
 process.exit(fail ? 1 : 0);

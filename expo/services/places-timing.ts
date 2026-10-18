@@ -7,14 +7,15 @@
  * the same for Moon cities for a few days. This scans the real sky forward day by day
  * and returns those windows, so a place card can say when to go, not just where.
  *
- * Natal and transit longitudes come from the same functions (ephemeris.longitudeOf), so
- * both sit in one frame and the orbs compare like with like.
+ * Natal and transit longitudes both come from places.longitudeOfDate, so they sit in
+ * one frame (of date) and the orbs compare like with like — including the Moon, whose
+ * formula is in a different frame from the planets' raw elements.
  */
 
 import { T } from './natal';
-import { julianDayFromDate, longitudeOf, addDays } from './ephemeris';
+import { julianDayFromDate, addDays } from './ephemeris';
 import { angularSeparation } from './transit-aspects';
-import { julianDayUT, type BirthMoment, type PlacePlanet } from './places';
+import { julianDayUT, longitudeOfDate, type BirthMoment, type PlacePlanet } from './places';
 
 export type Activator = 'Sun' | 'Venus' | 'Mars' | 'Jupiter';
 export type TimingAspect = 'conjunction' | 'trine' | 'sextile';
@@ -61,6 +62,32 @@ function noon(d: Date): Date {
   return n;
 }
 
+interface Sky {
+  dates: Date[];
+  lon: Record<Activator, number[]>;
+}
+
+/**
+ * The activators' positions for each day of the scan. It depends only on the dates,
+ * not on whose chart is being read, so a screen timing five life areas (or two people)
+ * reads the same year of sky instead of recomputing it each time.
+ */
+let skyCache: { key: string; sky: Sky } | null = null;
+
+function skyFrom(first: Date, days: number): Sky {
+  const key = `${first.getTime()}:${days}`;
+  if (skyCache?.key === key) return skyCache.sky;
+  const sky: Sky = { dates: [], lon: { Jupiter: [], Venus: [], Sun: [], Mars: [] } };
+  for (let i = 0; i <= days; i++) {
+    const d = addDays(first, i);
+    sky.dates.push(d);
+    const t = T(julianDayFromDate(d));
+    for (const a of ACTIVATORS) sky.lon[a.planet].push(longitudeOfDate(a.planet, t));
+  }
+  skyCache = { key, sky };
+  return sky;
+}
+
 /**
  * Every supportive window for one natal planet over the next `days` days, soonest first.
  * A planet's own return (the Sun meeting your natal Sun, and so on) counts as a meeting.
@@ -71,18 +98,8 @@ export function activationWindows(
   from: Date = new Date(),
   days = 365,
 ): TimingWindow[] {
-  const natalLon = longitudeOf(natal, T(julianDayUT(birth)));
-  const first = noon(from);
-
-  // One pass over the calendar, reading every activator's position each day.
-  const sky: Record<Activator, number[]> = { Jupiter: [], Venus: [], Sun: [], Mars: [] };
-  const dates: Date[] = [];
-  for (let i = 0; i <= days; i++) {
-    const d = addDays(first, i);
-    dates.push(d);
-    const t = T(julianDayFromDate(d));
-    for (const a of ACTIVATORS) sky[a.planet].push(longitudeOf(a.planet, t));
-  }
+  const natalLon = longitudeOfDate(natal, T(julianDayUT(birth)));
+  const { dates, lon: sky } = skyFrom(noon(from), days);
 
   const windows: TimingWindow[] = [];
   for (const act of ACTIVATORS) {

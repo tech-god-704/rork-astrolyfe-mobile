@@ -58,3 +58,12 @@ export function couplePartnerKey(email: string): string {
 export function homeCityKey(email: string): string {
   return `astrolyfe:home_city:${email}`;
 }
+
+/**
+ * Every per-account key this device stores. Account deletion clears exactly this
+ * list, so a new per-account key only needs adding here to be wiped on both deletion
+ * paths.
+ */
+export function accountLocalKeys(email: string): string[] {
+  return [onboardingDoneKey(email), couplePartnerKey(email), homeCityKey(email)];
+}

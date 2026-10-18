@@ -7,11 +7,11 @@ import { Fonts } from '@/constants/theme';
 import GlassCard from '@/components/GlassCard';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { THEMES, placesForTheme, type Theme } from '@/services/places';
-import { birthMomentFromProfile } from '@/services/places-birth';
+import { THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
+import { birthMomentFromProfile, birthInputsKey } from '@/services/places-birth';
 import type { HoroscopeProfileInput } from '@/services/personal-horoscope';
 import { placeTiming, describeWindow, formatWindow, type TimingWindow } from '@/services/places-timing';
 
-const SHORT: Record<Theme, string> = { love: 'Love', career: 'Career', home: 'Home', luck: 'Luck', drive: 'Drive' };
 
 interface Row {
   theme: Theme;
@@ -54,7 +54,7 @@ export default function SwitchedOnToday({ profile }: { profile: HoroscopeProfile
     };
     // Only the fields the calculation reads, plus the day: windows move with the date.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.birth_date, profile?.timezone, profile?.quiz_data?.birth_hour, profile?.quiz_data?.birth_minute, dayKey]);
+  }, [birthInputsKey(profile), dayKey]);
 
   if (live.length === 0 && !next) return null;
 
@@ -77,7 +77,7 @@ export default function SwitchedOnToday({ profile }: { profile: HoroscopeProfile
             </View>
             <View style={styles.copy}>
               <Text style={styles.title}>
-                {SHORT[row.theme]} places ·{' '}
+                {THEME_LABEL_BY_PLANET[THEMES.find((t) => t.key === row.theme)!.planet]} places ·{' '}
                 {live.length > 0
                   ? `until ${formatWindow({ start: row.window.end, end: row.window.end })}`
                   : formatWindow(row.window)}

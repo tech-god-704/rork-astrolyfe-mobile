@@ -9,7 +9,7 @@ import Colors from '@/constants/colors';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme, useThemedStyles } from '@/providers/ThemeProvider';
-import { DAILY_REMINDER_ROUTE } from '@/services/notifications';
+import { DAILY_REMINDER_ROUTE, APP_STARTED_AT } from '@/services/notifications';
 
 function TabBarBackground() {
   const tabStyles = useThemedStyles(createTabStyles);
@@ -40,29 +40,61 @@ function TabButton({ style, ...props }: BottomTabBarButtonProps) {
 /**
  * Tapping the daily reminder opens Forecast, which is no longer a tab.
  *
- * Mounted inside AppTabs, so it only acts once the user is signed in and subscribed —
- * a tap from a signed-out state lands on sign-in as usual rather than racing the auth
- * redirect. useLastNotificationResponse also reports the tap that cold-launched the
- * app, and keeps returning it; the handled set stops a remount (e.g. a theme change)
- * from navigating again. Only the reminder's own route is honoured.
+ * Mounted inside AppTabs, so it only acts once the user is signed in and subscribed.
+ * Two sources:
+ * - a tap while the signed-in app is running or backgrounded arrives on the listener;
+ * - the tap that cold-launched the app is read once, and only if AppTabs mounts
+ *   shortly after launch (a restored session). A tap made while signed out is not
+ *   replayed after a later sign-in: it lands on sign-in as usual and is dropped.
+ * Each handled tap is cleared, so a remount (e.g. a theme change) doesn't navigate
+ * again. Only the reminder's own route is honoured.
  */
-const handledReminderTaps = new Set<string>();
+const COLD_LAUNCH_WINDOW_MS = 30_000;
+
+// Taps already acted on, by request id + delivery time. The native side can hand the
+// launch tap to the listener as well; this stops it opening Forecast twice.
+const handledTaps = new Set<string>();
 
 function useReminderDeepLinkNative() {
   const router = useRouter();
-  const response = Notifications.useLastNotificationResponse();
 
   useEffect(() => {
-    if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
-    const { date, request } = response.notification;
-    const key = `${request.identifier}:${date}`;
-    if (handledReminderTaps.has(key)) return;
-    handledReminderTaps.add(key);
+    const open = (response: Notifications.NotificationResponse | null) => {
+      if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+      const { request, date } = response.notification;
+      const key = `${request.identifier}:${date}`;
+      if (handledTaps.has(key)) return;
+      handledTaps.add(key);
+      if (request.content.data?.url === DAILY_REMINDER_ROUTE) {
+        router.push(DAILY_REMINDER_ROUTE as never);
+      }
+    };
+    // These are native calls; a build without them must not take the signed-in app down.
+    const clear = () => {
+      try {
+        Notifications.clearLastNotificationResponse();
+      } catch {
+        // Nothing to clear on this build.
+      }
+    };
 
-    if (request.content.data?.url === DAILY_REMINDER_ROUTE) {
-      router.push(DAILY_REMINDER_ROUTE as never);
+    try {
+      const launchTap = Notifications.getLastNotificationResponse();
+      if (launchTap) {
+        if (Date.now() - APP_STARTED_AT < COLD_LAUNCH_WINDOW_MS) open(launchTap);
+        else handledTaps.add(`${launchTap.notification.request.identifier}:${launchTap.notification.date}`);
+        clear();
+      }
+    } catch {
+      // No launch-tap support on this build; live taps below still work.
     }
-  }, [response, router]);
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      open(response);
+      clear();
+    });
+    return () => sub.remove();
+  }, [router]);
 }
 
 /**

@@ -14,12 +14,15 @@
  * the app against known sun positions and great-circle bearings.
  */
 
-import { CITIES, type City } from '@/data/cities';
+import { CITIES, nearestCity, type City } from '@/data/cities';
+import { distanceKm, bearingDeg, EARTH_KM } from '@/lib/geo';
+import { norm360 } from './natal';
 import { planetLines, julianDayUT, gmstDeg, norm180, type BirthMoment, type PlacePlanet } from './places';
+
+export { distanceKm, bearingDeg, nearestCity };
 
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
-const EARTH_KM = 6371;
 
 /** A cross-track distance under this counts as "on" the direction line… */
 export const ON_LINE_KM = 350;
@@ -29,8 +32,6 @@ export const ON_LINE_KM = 350;
  * the southeast); this keeps the listed cities honest to the compass point shown.
  */
 export const MAX_DEVIATION_DEG = 15;
-
-const norm360 = (d: number) => ((d % 360) + 360) % 360;
 
 export interface Home {
   name: string;
@@ -59,26 +60,6 @@ export function planetDirections(birth: BirthMoment, home: Pick<Home, 'lat' | 'l
     );
     return { planet, azimuth, altitude };
   });
-}
-
-/** Great-circle distance in km. */
-export function distanceKm(a: Pick<Home, 'lat' | 'lon'>, b: Pick<Home, 'lat' | 'lon'>): number {
-  const p1 = a.lat * DEG;
-  const p2 = b.lat * DEG;
-  const dp = p2 - p1;
-  const dl = (b.lon - a.lon) * DEG;
-  const s = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
-  return 2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(s)));
-}
-
-/** Initial great-circle bearing from a to b, degrees clockwise from north. */
-export function bearingDeg(a: Pick<Home, 'lat' | 'lon'>, b: Pick<Home, 'lat' | 'lon'>): number {
-  const p1 = a.lat * DEG;
-  const p2 = b.lat * DEG;
-  const dl = (b.lon - a.lon) * DEG;
-  const y = Math.sin(dl) * Math.cos(p2);
-  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
-  return norm360(Math.atan2(y, x) * RAD);
 }
 
 const POINTS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -122,16 +103,6 @@ export function citiesToward(home: Pick<Home, 'lat' | 'lon'>, azimuth: number, c
   return out.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, limit);
 }
 
-/** The listed city closest to a point — used to default "home" to the birthplace. */
-export function nearestCity(lat: number, lon: number, cities: City[] = CITIES): { city: City; distanceKm: number } | null {
-  let best: { city: City; distanceKm: number } | null = null;
-  for (const city of cities) {
-    const d = distanceKm({ lat, lon }, city);
-    if (!best || d < best.distanceKm) best = { city, distanceKm: d };
-  }
-  return best;
-}
-
 /** Current wall-clock time in a city, e.g. "3:42 PM", or null where Intl lacks the zone. */
 export function localTimeIn(tz: string, now: Date = new Date()): string | null {
   try {
@@ -139,13 +110,6 @@ export function localTimeIn(tz: string, now: Date = new Date()): string | null {
   } catch {
     return null;
   }
-}
-
-/** "95 mi", "2,450 mi" — rounded to 5 miles, or 10 past a thousand. */
-export function formatDistance(km: number): string {
-  const mi = km * 0.621371;
-  const rounded = mi >= 1000 ? Math.round(mi / 10) * 10 : Math.round(mi / 5) * 5;
-  return `${String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} mi`;
 }
 
 export interface CityOnFullLine extends CityOnLine {
@@ -167,4 +131,27 @@ export function citiesOnLine(home: Pick<Home, 'lat' | 'lon'>, azimuth: number, c
   ]
     .sort((a, b) => a.distanceKm - b.distanceKm)
     .slice(0, limit);
+}
+
+/**
+ * Ring (radius) for each compass marker so markers don't sit on top of each other.
+ * Each goes on the outermost ring where it clears every marker already placed by
+ * `gap` (centre to centre, in drawing units); with none clear, the ring with the most
+ * room. Bearings are never changed and a radius is always one of `rings`.
+ */
+export function assignRings(azimuths: number[], rings: number[], gap: number): number[] {
+  const at = (az: number, r: number) => ({ x: r * Math.sin(az * DEG), y: -r * Math.cos(az * DEG) });
+  const result: number[] = new Array(azimuths.length);
+  const placed: { x: number; y: number }[] = [];
+  const order = azimuths.map((az, i) => ({ az, i })).sort((a, b) => a.az - b.az);
+  for (const { az, i } of order) {
+    const room = (r: number) => {
+      const p = at(az, r);
+      return placed.reduce((m, q) => Math.min(m, Math.hypot(p.x - q.x, p.y - q.y)), Infinity);
+    };
+    const r = rings.find((ring) => room(ring) >= gap) ?? rings.reduce((best, ring) => (room(ring) > room(best) ? ring : best));
+    result[i] = r;
+    placed.push(at(az, r));
+  }
+  return result;
 }

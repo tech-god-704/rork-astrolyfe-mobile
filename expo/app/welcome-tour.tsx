@@ -231,7 +231,7 @@ export default function WelcomeTourScreen() {
             </Pressable>
             <Text style={styles.avatarCaption}>{avatarUri ? 'Tap to change' : 'Add a photo — optional'}</Text>
 
-            <Text style={styles.eyebrow}>Let's set up your profile</Text>
+            <Text style={styles.eyebrow}>Let&apos;s set up your profile</Text>
             <Text style={styles.title}>What should we call you?</Text>
             <TextInput
               style={styles.nameInput}

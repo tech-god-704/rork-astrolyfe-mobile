@@ -62,6 +62,7 @@ export default function HoroscopeScreen() {
       profile?.birth_lat ?? '', profile?.birth_lon ?? '',
       profile?.quiz_data?.birth_hour ?? '', profile?.quiz_data?.birth_minute ?? '',
       profile?.timezone ?? '',
+      profile?.birth_city ?? '',
     ],
     queryFn: () => getPersonalHoroscope({ profile, period }),
     staleTime: 1000 * 60 * 30,

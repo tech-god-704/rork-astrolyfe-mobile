@@ -14,7 +14,7 @@ import TimingNote from '@/components/TimingNote';
 import HomeCompass from '@/components/HomeCompass';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
-import { CITIES, type City } from '@/data/cities';
+import { searchCities, type City } from '@/data/cities';
 import {
   THEMES,
   ANGLE_LABEL,
@@ -29,7 +29,7 @@ import {
   type PlaceHit,
   type PlacePlanet,
 } from '@/services/places';
-import { birthMomentFromProfile } from '@/services/places-birth';
+import { birthMomentFromProfile, birthInputsKey } from '@/services/places-birth';
 import { THEME_STYLE, PLANET_THEME, THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
 import { placeTiming, describeWindow, type PlaceTiming } from '@/services/places-timing';
 
@@ -46,7 +46,7 @@ export default function PowerPlaces() {
     () => birthMomentFromProfile(profile),
     // Only the fields the calculation reads — a notification toggle must not recompute.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [profile?.birth_date, profile?.timezone, profile?.quiz_data?.birth_hour, profile?.quiz_data?.birth_minute],
+    [birthInputsKey(profile)],
   );
 
   const places = useMemo(() => (birth ? placesForTheme(birth, theme, 5) : []), [birth, theme]);
@@ -100,11 +100,7 @@ export default function PowerPlaces() {
     }
   };
 
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return CITIES.filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)).slice(0, 6);
-  }, [query]);
+  const matches = useMemo(() => searchCities(query), [query]);
 
   const activeTheme = THEMES.find((t) => t.key === theme)!;
 

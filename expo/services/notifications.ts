@@ -23,6 +23,13 @@ const DAILY_REMINDER_ID = 'astrolyfe-daily-reminder';
 /** Where tapping the daily reminder takes you. The only route a notification may open. */
 export const DAILY_REMINDER_ROUTE = '/(app)/horoscope';
 
+/**
+ * When the JS bundle started. This module is loaded at startup (via AuthProvider), so
+ * unlike a lazily loaded route file it marks the launch — used to tell a reminder tap
+ * that cold-launched the app from one left over from a signed-out session.
+ */
+export const APP_STARTED_AT = Date.now();
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,

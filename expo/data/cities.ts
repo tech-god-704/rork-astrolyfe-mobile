@@ -8,6 +8,8 @@
  * tolerance the line matching uses.
  */
 
+import { distanceKm } from '@/lib/geo';
+
 export interface City {
   name: string;
   country: string;
@@ -147,3 +149,78 @@ export const CITIES: City[] = [
   { name: 'Queenstown', country: 'New Zealand', lat: -45.03, lon: 168.66, tz: 'Pacific/Auckland' },
   { name: 'Nadi', country: 'Fiji', lat: -17.78, lon: 177.42, tz: 'Pacific/Fiji' },
 ];
+
+/** Cities whose name or country contains the query (2+ characters), in list order. */
+export function searchCities(query: string, limit = 6): City[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+  return CITIES.filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)).slice(0, limit);
+}
+
+/** The listed city closest to a point, optionally only within `maxKm`. */
+export function nearestCity(lat: number, lon: number, maxKm = Infinity): { city: City; distanceKm: number } | null {
+  let best: { city: City; distanceKm: number } | null = null;
+  for (const city of CITIES) {
+    const d = distanceKm({ lat, lon }, city);
+    if (!best || d < best.distanceKm) best = { city, distanceKm: d };
+  }
+  return best && best.distanceKm <= maxKm ? best : null;
+}
+
+/** State / province for the listed cities where a same-named place elsewhere is common. */
+const REGIONS: Record<string, string[]> = {
+  'New York': ['ny', 'new york'], 'Los Angeles': ['ca', 'california'], Chicago: ['il', 'illinois'],
+  Houston: ['tx', 'texas'], Miami: ['fl', 'florida'], 'San Francisco': ['ca', 'california'],
+  Seattle: ['wa', 'washington'], Portland: ['or', 'oregon'], 'San Diego': ['ca', 'california'],
+  'Las Vegas': ['nv', 'nevada'], Phoenix: ['az', 'arizona'], Denver: ['co', 'colorado'],
+  Austin: ['tx', 'texas'], Dallas: ['tx', 'texas'], Nashville: ['tn', 'tennessee'],
+  Atlanta: ['ga', 'georgia'], 'New Orleans': ['la', 'louisiana'], 'Washington, D.C.': ['dc'],
+  Boston: ['ma', 'massachusetts'], Philadelphia: ['pa', 'pennsylvania'], Minneapolis: ['mn', 'minnesota'],
+  'Salt Lake City': ['ut', 'utah'], Honolulu: ['hi', 'hawaii'], Anchorage: ['ak', 'alaska'],
+  Toronto: ['on', 'ontario'], Vancouver: ['bc', 'british columbia'], Montreal: ['qc', 'quebec'],
+  Calgary: ['ab', 'alberta'], Sydney: ['nsw', 'new south wales'], Melbourne: ['vic', 'victoria'],
+  Brisbane: ['qld', 'queensland'], Perth: ['wa', 'western australia'],
+};
+
+const COUNTRY_ALIASES: Record<string, string[]> = {
+  'United States': ['us', 'usa', 'u.s.', 'u.s.a.', 'united states of america', 'america'],
+  'United Kingdom': ['uk', 'u.k.', 'england', 'scotland', 'wales', 'great britain', 'britain'],
+};
+
+/**
+ * A free-text birthplace from the profile ("Los Angeles, CA", "london", "Paris,
+ * France") matched to a listed city. Anything after the name must be that city's own
+ * state, province or country: "Portland, ME" or "Birmingham, AL" are other places, in
+ * other time zones, and must not borrow a listed city's zone. Null when unsure.
+ */
+export function matchCity(text: string | null | undefined): City | null {
+  const t = (text ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!t) return null;
+  const hits = CITIES.filter((c) => {
+    const n = c.name.toLowerCase();
+    if (t === n) return true;
+    if (!t.startsWith(`${n},`)) return false;
+    const allowed = new Set([c.country.toLowerCase(), ...(COUNTRY_ALIASES[c.country] ?? []), ...(REGIONS[c.name] ?? [])]);
+    return t
+      .slice(n.length + 1)
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .every((part) => allowed.has(part));
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/**
+ * Time zone to read a birth time in when the profile has none, from the birth
+ * coordinates. Only when a listed city is close enough to be in the same zone: zone
+ * borders can sit 100 km from a big city (South Bend, Indiana is Eastern, 125 km from
+ * Chicago), and a wrong zone moves every line by 15° an hour. A read-time fallback
+ * only — never saved to the profile as if the person had given it.
+ */
+export const ZONE_FROM_COORDS_MAX_KM = 60;
+
+export function zoneNear(lat: number | null | undefined, lon: number | null | undefined): string | null {
+  if (lat == null || lon == null || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return nearestCity(lat, lon, ZONE_FROM_COORDS_MAX_KM)?.city.tz ?? null;
+}

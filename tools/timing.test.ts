@@ -4,7 +4,7 @@ import { activationWindows, placeTiming, formatWindow, describeWindow, sharedWin
 import { longitudeOf, julianDayFromDate } from '../expo/services/ephemeris.ts';
 import { T } from '../expo/services/natal.ts';
 import { angularSeparation } from '../expo/services/transit-aspects.ts';
-import { julianDayUT, type BirthMoment, type PlacePlanet } from '../expo/services/places.ts';
+import { julianDayUT, longitudeOfDate, type BirthMoment, type PlacePlanet } from '../expo/services/places.ts';
 
 let fail = 0;
 const ok = (n: string, c: boolean, d = '') => { if (!c) fail++; console.log(`${c ? 'PASS' : 'FAIL'}  ${n}${d ? ` — ${d}` : ''}`); };
@@ -21,11 +21,22 @@ ok('Sun window spans ~6-7 days (3° orb, ~1°/day)', sun.length === 1 && (() => 
 const jup = longitudeOf('Jupiter', T(julianDayFromDate(new Date(Date.UTC(2026, 8, 29, 12)))));
 ok('Jupiter in Leo on 2026-09-29', jup >= 120 && jup < 150, jup.toFixed(2));
 
+// One frame for everything: the June 2026 solstice (Jun 21 08:24 UT) puts the Sun at
+// exactly 90° of date, and at the Jan 18 2026 new moon (19:52 UT) the Moon matches it.
+const tSol = T(julianDayFromDate(new Date(Date.UTC(2026, 5, 21, 8, 24))));
+ok('Sun of date is 90° at the June solstice', Math.abs(longitudeOfDate('Sun', tSol) - 90) < 0.05, longitudeOfDate('Sun', tSol).toFixed(3));
+const tNew = T(julianDayFromDate(new Date(Date.UTC(2026, 0, 18, 19, 52))));
+const nm = angularSeparation(longitudeOfDate('Moon', tNew), longitudeOfDate('Sun', tNew));
+ok('Moon and Sun agree at a published new moon', nm < 0.5, `${nm.toFixed(3)}° apart`);
+const tOld = T(julianDayFromDate(new Date(Date.UTC(1960, 0, 1))));
+const rawGap = angularSeparation(longitudeOf('Sun', tOld), longitudeOfDate('Sun', tOld));
+ok('1960 positions are corrected by the precession since 2000 (~0.56°)', Math.abs(rawGap - 0.56) < 0.02, rawGap.toFixed(3));
+
 // Every window is genuinely in orb, and the days either side are not (unless at the scan edge).
 const ORB = { Jupiter: 2, Venus: 3, Sun: 3, Mars: 3 } as const;
 const ANG = { conjunction: 0, trine: 120, sextile: 60 } as const;
 const orbAt = (b: BirthMoment, natal: PlacePlanet, act: keyof typeof ORB, asp: keyof typeof ANG, d: Date) =>
-  Math.abs(angularSeparation(longitudeOf(act, T(julianDayFromDate(d))), longitudeOf(natal, T(julianDayUT(b)))) - ANG[asp]);
+  Math.abs(angularSeparation(longitudeOfDate(act, T(julianDayFromDate(d))), longitudeOfDate(natal, T(julianDayUT(b)))) - ANG[asp]);
 let rnd = 11; const r = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
 let checked = 0, bad = 0;
 for (let i = 0; i < 40; i++) {

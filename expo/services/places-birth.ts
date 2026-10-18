@@ -44,3 +44,20 @@ export function birthMomentFromParts(date: string, hour: number, minute: number,
   if (!Number.isInteger(minute) || minute < 0 || minute > 59) return null;
   return birthMomentFromProfile({ birth_date: date, timezone, quiz_data: { birth_hour: hour, birth_minute: minute } });
 }
+
+/**
+ * Every profile field that can change a BirthMoment, as one string — for memo and
+ * query dependencies, so a notification toggle or avatar change does not recompute a
+ * chart while a birth-time or birthplace edit always does.
+ */
+export function birthInputsKey(profile: HoroscopeProfileInput | null | undefined): string {
+  return JSON.stringify([
+    profile?.birth_date ?? null,
+    profile?.timezone ?? null,
+    profile?.birth_lat ?? null,
+    profile?.birth_lon ?? null,
+    profile?.birth_city ?? null,
+    profile?.quiz_data?.birth_hour ?? null,
+    profile?.quiz_data?.birth_minute ?? null,
+  ]);
+}

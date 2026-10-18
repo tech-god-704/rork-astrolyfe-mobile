@@ -17,7 +17,7 @@ import { extractImageSrc } from '@/lib/reportFormat';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
 import { resolveBirth, birthUtcOffsetMinutes } from '@/services/personal-horoscope';
 import { placesForTheme, meaningOf, ANGLE_LABEL, formatMiles } from '@/services/places';
-import { birthMomentFromProfile } from '@/services/places-birth';
+import { birthMomentFromProfile, birthInputsKey } from '@/services/places-birth';
 import { placeTiming, describeWindow } from '@/services/places-timing';
 
 export default function SoulmateScreen() {
@@ -56,9 +56,12 @@ export default function SoulmateScreen() {
     } catch {
       return null;
     }
-  }, [profile]);
+    // Birth fields only: unrelated profile refreshes must not recompute the chart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [birthInputsKey(profile)]);
 
-  const birthMoment = useMemo(() => birthMomentFromProfile(profile), [profile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const birthMoment = useMemo(() => birthMomentFromProfile(profile), [birthInputsKey(profile)]);
   const lovePlaces = useMemo(() => (birthMoment ? placesForTheme(birthMoment, 'love', 3) : []), [birthMoment]);
   const dayKey = new Date().toDateString();
   const loveTiming = useMemo(

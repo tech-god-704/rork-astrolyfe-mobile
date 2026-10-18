@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 
 export interface FetchWithRetryOptions {
   /** Max number of retry attempts (default: 3) */

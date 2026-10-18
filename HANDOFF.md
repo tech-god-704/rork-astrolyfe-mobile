@@ -151,7 +151,8 @@ planets within that distance of a cusp.
 | `76d0781` | Fix a crash on web after sign-in (notification deep-link hook); map labels sized for real phone screens |
 | `5b16faa` | Forecast stayed almost invisible after switching Daily/Weekly/Monthly on web; VoiceOver labels on Couple city results |
 | `e15248f` | "When to go" timing engine on Places, Soulmate, Couple and Forecast; tests |
-| *this commit* | From home compass (local space) on Places; tests |
+| `86237f2` | From home compass (local space) on Places; tests |
+| *this commit* | Code-review fixes: birth time zone resolved from coordinates or city name; Birth City is a picker that saves coordinates + zone; timing engine Moon frame; compass stellium layout; reminder tap handling; forecast cache keyed on the resolved zone; per-account keys cleared in one place |
 
 Earlier history (auth hardening, PocketBase migration, forecast engine, welcome tour,
 light mode) is in `git log`; other contributors committed as `tech-god-704`,
@@ -250,7 +251,7 @@ From `expo/`:
 ```sh
 bun install
 npx tsc --noEmit -p tsconfig.json     # expect 0 errors
-npx eslint .                           # 1 pre-existing error, 7 warnings
+npx eslint .                           # 0 errors, 4 warnings (deliberate hook deps)
 npx expo export --platform ios         # must bundle cleanly
 ```
 
@@ -261,6 +262,7 @@ bun tools/places.test.ts     # astrocartography engine vs published solar-noon l
 bun tools/places2.test.ts    # power city (brute-force), relocated rising, map geometry
 bun tools/tz.test.ts         # all 111 city time zones valid and plausible
 bun tools/fmt.test.ts        # report Markdown renderer
+bun tools/cities.test.ts     # birthplace text matching ("Portland, ME" is not Portland, OR)
 bun tools/compass.test.ts    # compass: Sun due south at noon, equinox sunrise due east,
                              # NY→London bearing/distance, cities on a line (brute force)
 bun tools/timing.test.ts     # when-to-go windows: solar return lands on the birthday,
@@ -296,6 +298,13 @@ crash and an invisible forecast) that type checks and unit tests did not.
   the date before treating them as `YYYY-MM-DD` — that caused the Profile save bug.
 - **Birth times are wall-clock.** Anything astronomical needs `utcOffsetMinutes`
   from `birthUtcOffsetMinutes()`; the Birth Chart shipped without it.
+- **`profiles.timezone` is the BIRTH time zone**, not where the person lives. Every
+  chart reads it through `birthUtcOffsetMinutes()`. When it is empty the app falls
+  back to a listed city within 60 km of the birth coordinates, then to an exact
+  birth-city name match (`matchCity`, which refuses "Portland, ME"-style lookalikes).
+  A zone guessed from coordinates is never written back. The profile's Birth City
+  field is a picker, and saving a new city writes its `birth_lat`, `birth_lon` and
+  `timezone` together.
 - **`is_admin` on the demo account is load-bearing** (section 7).
 - **Changing the store name**: the on-device name `AstroLyfe` is already a valid
   match for any `AstroLyfe: …` store name.

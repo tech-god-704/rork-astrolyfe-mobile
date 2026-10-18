@@ -18,6 +18,7 @@ import AppBackground from '@/components/AppBackground';
 import { NOTIFICATION_TIME_PRESETS, requestNotificationPermission } from '@/services/notifications';
 import { useThemedStyles, useTheme } from '@/providers/ThemeProvider';
 import { PRIVACY_POLICY_URL, TERMS_URL, SUPPORT_URL } from '@/constants/links';
+import { searchCities, matchCity, type City } from '@/data/cities';
 
 export default function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
@@ -30,7 +31,10 @@ export default function ProfileScreen() {
   const [birthCity, setBirthCity] = useState<string>('');
   const [selectedSign, setSelectedSign] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ birth?: string; time?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ birth?: string; time?: string; city?: string }>({});
+  // The listed city the birthplace text was picked from, if any. The charts need its
+  // coordinates and time zone, not just its name.
+  const [pickedCity, setPickedCity] = useState<City | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [notifEnabled, setNotifEnabled] = useState<boolean>(false);
   const [notifHour, setNotifHour] = useState<number>(8);
@@ -59,6 +63,7 @@ export default function ProfileScreen() {
       setBirthDate(profile.birth_date ?? '');
       setSelectedSign(profile.zodiac_sign ?? '');
       setBirthCity(profile.birth_city ?? '');
+      setPickedCity(null);
       // Reconstruct birth time from quiz_data if available
       const qd = profile.quiz_data;
       if (qd?.birth_hour != null && qd?.birth_minute != null) {
@@ -89,8 +94,18 @@ export default function ProfileScreen() {
     return { filled, total, percent: Math.round((filled / total) * 100) };
   }, [displayName, birthDate, birthTime, birthCity, selectedSign]);
 
+  const cityChanged = birthCity.trim() !== (profile?.birth_city ?? '').trim();
+  const resolvedCity = pickedCity ?? matchCity(birthCity);
+  const citySuggestions = useMemo(
+    () => (cityChanged && !resolvedCity ? searchCities(birthCity.split(',')[0], 5) : []),
+    [cityChanged, resolvedCity, birthCity],
+  );
+
   const validateProfile = (): boolean => {
-    const errors: { birth?: string; time?: string } = {};
+    const errors: { birth?: string; time?: string; city?: string } = {};
+    if (cityChanged && birthCity.trim() && !resolvedCity) {
+      errors.city = 'Pick your birth city from the list. The nearest big city in the same time zone gives the same result.';
+    }
     if (birthDate.trim()) {
       const err = getBirthDateError(birthDate);
       if (err) errors.birth = err;
@@ -132,6 +147,28 @@ export default function ProfileScreen() {
         ...(birthMinute != null ? { birth_minute: birthMinute } : {}),
       };
 
+      // A new birthplace brings its coordinates and time zone with it; without them the
+      // charts would keep using the old place. A cleared one clears them, rather than
+      // charts quietly staying at the old place. An unchanged one that names a listed
+      // city exactly fills in whatever older funnel rows lack. A zone guessed only from
+      // coordinates is never saved — it could be across a zone border.
+      const place: Record<string, unknown> = {};
+      if (cityChanged && resolvedCity) {
+        place.birth_lat = resolvedCity.lat;
+        place.birth_lon = resolvedCity.lon;
+        place.timezone = resolvedCity.tz;
+      } else if (cityChanged && !birthCity.trim()) {
+        place.birth_lat = null;
+        place.birth_lon = null;
+        place.timezone = null;
+      } else if (!cityChanged && resolvedCity) {
+        if (!profile?.timezone) place.timezone = resolvedCity.tz;
+        if (profile?.birth_lat == null || profile?.birth_lon == null) {
+          place.birth_lat = resolvedCity.lat;
+          place.birth_lon = resolvedCity.lon;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -140,6 +177,7 @@ export default function ProfileScreen() {
           zodiac_sign: selectedSign || null,
           birth_city: birthCity.trim() || null,
           quiz_data: Object.keys(updatedQuiz).length > 0 ? updatedQuiz : null,
+          ...place,
         })
         .eq('email', user.email);
       if (error) throw error;
@@ -468,13 +506,17 @@ export default function ProfileScreen() {
             {fieldErrors.time && <Text style={styles.fieldError}>{fieldErrors.time}</Text>}
 
             <Text style={styles.fieldLabel}>Birth City</Text>
-            <View style={[styles.inputWrap, focusedField === 'city' && styles.inputWrapFocused]}>
-              <MapPin size={16} color={focusedField === 'city' ? Colors.purpleLight : Colors.textMuted} />
+            <View style={[styles.inputWrap, focusedField === 'city' && styles.inputWrapFocused, !!fieldErrors.city && styles.inputWrapError]}>
+              <MapPin size={16} color={fieldErrors.city ? Colors.danger : focusedField === 'city' ? Colors.purpleLight : Colors.textMuted} />
               <TextInput
                 ref={cityRef}
                 style={styles.input}
                 value={birthCity}
-                onChangeText={setBirthCity}
+                onChangeText={(t) => {
+                  setBirthCity(t);
+                  setPickedCity(null);
+                  if (fieldErrors.city) setFieldErrors((p) => ({ ...p, city: undefined }));
+                }}
                 placeholder="City, State/Country"
                 placeholderTextColor={Colors.textMuted}
                 autoCapitalize="words"
@@ -484,6 +526,33 @@ export default function ProfileScreen() {
                 accessibilityLabel="Birth city"
               />
             </View>
+            {citySuggestions.map((c) => (
+              <Pressable
+                key={c.name}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setBirthCity(`${c.name}, ${c.country}`);
+                  setPickedCity(c);
+                  setFieldErrors((p) => ({ ...p, city: undefined }));
+                }}
+                style={({ pressed }) => [styles.cityOption, pressed && styles.cityOptionPressed]}
+                accessibilityRole="button"
+                accessibilityLabel={`${c.name}, ${c.country}`}
+              >
+                <MapPin size={13} color={Colors.purpleLight} />
+                <Text style={styles.cityOptionName}>{c.name}</Text>
+                <Text style={styles.cityOptionCountry}>{c.country}</Text>
+              </Pressable>
+            ))}
+            {fieldErrors.city ? (
+              <Text style={styles.fieldError}>{fieldErrors.city}</Text>
+            ) : cityChanged && birthCity.trim() ? (
+              <Text style={styles.cityHint}>
+                {resolvedCity
+                  ? `Your charts will be placed at ${resolvedCity.name}, ${resolvedCity.country}.`
+                  : 'Pick from the list. Not there? Choose the nearest big city in the same time zone.'}
+              </Text>
+            ) : null}
 
             <Text style={styles.fieldLabel}>Zodiac Sign</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.signScroll} contentContainerStyle={styles.signScrollContent}>
@@ -761,6 +830,11 @@ const createStyles = () => StyleSheet.create({
     height: 54,
     gap: 12,
   },
+  cityOption: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.bgCardBorder },
+  cityOptionPressed: { opacity: 0.7 },
+  cityOptionName: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700' },
+  cityOptionCountry: { color: Colors.textMuted, fontSize: 13, flex: 1 },
+  cityHint: { color: Colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: 6 },
   inputWrapFocused: { borderColor: Colors.purpleGlow, backgroundColor: Colors.bgInputFocused },
   inputWrapError: { borderColor: Colors.danger },
   input: { flex: 1, fontSize: 15, color: Colors.textPrimary },
@@ -816,5 +890,6 @@ const createStyles = () => StyleSheet.create({
     minHeight: 44,
     marginTop: 4,
   },
-  deleteAccountText: { fontSize: 13, fontWeight: '600', color: Colors.textFaint },
+  // Readable, not hidden: Apple requires account deletion to be easy to find (5.1.1(v)).
+  deleteAccountText: { fontSize: 14, fontWeight: '700', color: Colors.danger, textDecorationLine: 'underline' },
 });

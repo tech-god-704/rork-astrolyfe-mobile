@@ -14,11 +14,12 @@ import LineMap from '@/components/LineMap';
 import TimingNote from '@/components/TimingNote';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
-import { CITIES, type City } from '@/data/cities';
+import { CITIES, searchCities, type City } from '@/data/cities';
 import { couplePartnerKey } from '@/constants/storageKeys';
-import { getBirthDateError } from '@/lib/validation';
-import { coupleCities, type PlaceHit, type PlacePlanet } from '@/services/places';
-import { birthMomentFromProfile, birthMomentFromParts } from '@/services/places-birth';
+import { THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
+import { getBirthDateError, parseAndValidateBirthDate } from '@/lib/validation';
+import { coupleCities, type PlaceHit } from '@/services/places';
+import { birthMomentFromProfile, birthMomentFromParts, birthInputsKey } from '@/services/places-birth';
 import { sharedWindow, formatWindow, type TimingWindow } from '@/services/places-timing';
 
 /**
@@ -40,9 +41,7 @@ interface SavedPartner {
 }
 
 const PARTNER_COLOR = Colors.electricBlue;
-const LIFE_AREA: Record<PlacePlanet, string> = { Venus: 'Love', Sun: 'Career', Moon: 'Home', Jupiter: 'Luck', Mars: 'Drive' };
-
-const areas = (hits: PlaceHit[]) => [...new Set(hits.map((h) => LIFE_AREA[h.planet]))].join(', ');
+const areas = (hits: PlaceHit[]) => [...new Set(hits.map((h) => THEME_LABEL_BY_PLANET[h.planet]))].join(', ');
 
 function parseTime(value: string): { hour: number; minute: number } | null {
   const m = value.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -93,7 +92,10 @@ export default function CoupleMapScreen() {
     };
   }, [email]);
 
-  const me = useMemo(() => birthMomentFromProfile(profile), [profile]);
+  // Keyed on the birth fields only, so a profile refresh that changes nothing about the
+  // chart does not redo two all-city matches and a year of sky.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const me = useMemo(() => birthMomentFromProfile(profile), [birthInputsKey(profile)]);
 
   const them = useMemo(() => {
     if (!partner) return null;
@@ -120,11 +122,14 @@ export default function CoupleMapScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, them, dayKey]);
 
-  const cityMatches = useMemo(() => {
-    const q = cityQuery.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return CITIES.filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)).slice(0, 5);
-  }, [cityQuery]);
+  const cityMatches = useMemo(() => searchCities(cityQuery, 5), [cityQuery]);
+
+  // Stable inputs for the map, so typing in the form doesn't retrace both people's lines.
+  const partnerLayer = useMemo(
+    () => (them ? { birth: them, color: PARTNER_COLOR, label: partnerLabel } : null),
+    [them, partnerLabel],
+  );
+  const loveHits = useMemo(() => loveShared.map((c) => c.mine[0]), [loveShared]);
 
   const startEditing = useCallback(() => {
     setName(partner?.name ?? '');
@@ -144,7 +149,10 @@ export default function CoupleMapScreen() {
     if (!t) next.time = 'Use 24-hour HH:MM, e.g. 14:30';
     if (!city) next.city = 'Pick the city they were born in';
     if (!next.date && t && city && !birthMomentFromParts(date.trim(), t.hour, t.minute, city.tz)) {
-      next.date = 'That date doesn’t exist';
+      // Null either because the date isn't a real one, or because this device can't
+      // read the city's time zone — say which, so a correct date isn't called wrong.
+      if (!parseAndValidateBirthDate(date.trim())) next.date = 'That date doesn’t exist';
+      else next.city = 'This phone couldn’t read that city’s time zone. Try a nearby big city.';
     }
     setErrors(next);
     if (Object.keys(next).length > 0) {
@@ -354,8 +362,8 @@ export default function CoupleMapScreen() {
                 birth={me}
                 planet="Venus"
                 color={Colors.accent}
-                partner={{ birth: them, color: PARTNER_COLOR, label: partnerLabel }}
-                hits={loveShared.map((c) => c.mine[0])}
+                partner={partnerLayer ?? undefined}
+                hits={loveHits}
                 hitColor={Colors.textPrimary}
               />
 

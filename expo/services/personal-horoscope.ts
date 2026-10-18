@@ -27,6 +27,7 @@ import {
   type HoroscopePeriod,
 } from './forecast-builder';
 import { ENGINE_VERSION } from '@/data/horoscope/interpretations';
+import { zoneNear, matchCity } from '@/data/cities';
 import { chartFingerprint, cacheKey, readCache, writeCache } from './horoscope-cache';
 import { getHoroscope, fetchCuratedHoroscope, type HoroscopeReading } from './horoscope';
 
@@ -53,6 +54,8 @@ export interface HoroscopeProfileInput {
   zodiac_sign?: string | null;
   birth_lat?: number | null;
   birth_lon?: number | null;
+  /** Free text, e.g. "Los Angeles, CA" — used only to find a zone when none is stored. */
+  birth_city?: string | null;
   timezone?: string | null;
   quiz_data?: { birth_hour?: number | null; birth_minute?: number | null } | null;
 }
@@ -118,7 +121,11 @@ export function resolveBirth(profile: HoroscopeProfileInput | null | undefined):
  * presented as exact.
  */
 export function birthUtcOffsetMinutes(profile: HoroscopeProfileInput | null | undefined, birth: ResolvedBirth): number | undefined {
-  const zone = profile?.timezone;
+  // Profiles that came through a path that never recorded a zone (the users-table
+  // fallback, some funnel rows) still have birth coordinates or a birth city. A listed
+  // city that close, or of that name, is in the same zone, so read the clock there
+  // rather than refuse to place the chart.
+  const zone = profile?.timezone || zoneNear(profile?.birth_lat, profile?.birth_lon) || matchCity(profile?.birth_city)?.tz;
   if (!zone) return undefined;
 
   try {
@@ -316,6 +323,7 @@ export async function getPersonalHoroscope(args: {
       latitude: birth.latitude ?? null,
       longitude: birth.longitude ?? null,
       sign: profile.zodiac_sign ?? null,
+      utcOffsetMinutes: birthUtcOffsetMinutes(profile, birth) ?? null,
     });
     const key = cacheKey(fingerprint, period, periodStartKey(period, start));
 
