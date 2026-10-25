@@ -45,15 +45,26 @@ export interface TimingWindow {
   score: number;
 }
 
-const ASPECT_WORD: Record<TimingAspect, string> = {
-  conjunction: 'meets',
-  trine: 'flows with',
-  sextile: 'opens up',
+/** What each moving planet brings, in plain words. */
+const ACTIVATOR_PHRASE: Record<Activator, string> = {
+  Jupiter: 'Jupiter brings luck to',
+  Venus: 'Venus brings warmth to',
+  Sun: 'The Sun shines on',
+  Mars: 'Mars brings energy to',
 };
 
-/** Plain-English cause, e.g. "Jupiter flows with your Venus". */
+/** The life area each natal planet's places stand for. */
+const AREA: Record<PlacePlanet, string> = {
+  Venus: 'love',
+  Sun: 'career',
+  Moon: 'home',
+  Jupiter: 'growth',
+  Mars: 'drive',
+};
+
+/** Plain-English reason for a window, e.g. "Jupiter brings luck to your love places". */
 export function describeWindow(w: TimingWindow, natal: PlacePlanet): string {
-  return `${w.activator} ${ASPECT_WORD[w.aspect]} your ${natal}`;
+  return `${ACTIVATOR_PHRASE[w.activator]} your ${AREA[natal]} places`;
 }
 
 function noon(d: Date): Date {

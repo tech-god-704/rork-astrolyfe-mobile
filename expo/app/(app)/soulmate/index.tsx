@@ -16,7 +16,7 @@ import { fetchUserReports } from '@/services/reports';
 import { extractImageSrc } from '@/lib/reportFormat';
 import { calculateNatalChart, getInterpretation } from '@/services/natal';
 import { resolveBirth, birthUtcOffsetMinutes } from '@/services/personal-horoscope';
-import { placesForTheme, meaningOf, ANGLE_LABEL, formatMiles } from '@/services/places';
+import { placesForTheme, meaningOf, formatMiles } from '@/services/places';
 import { birthMomentFromProfile, birthInputsKey } from '@/services/places-birth';
 import { placeTiming, describeWindow } from '@/services/places-timing';
 
@@ -160,7 +160,7 @@ export default function SoulmateScreen() {
                   </View>
                   <Text style={styles.bodyText}>{meaningOf(hit.planet, hit.angle)}</Text>
                   <Text style={styles.placeMeta}>
-                    Venus {ANGLE_LABEL[hit.angle].toLowerCase()} · passes {formatMiles(hit.distanceKm)} away
+                    Your Venus line passes {formatMiles(hit.distanceKm)} away
                   </Text>
                 </GlassCard>
               ))}

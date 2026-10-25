@@ -152,7 +152,8 @@ planets within that distance of a cusp.
 | `5b16faa` | Forecast stayed almost invisible after switching Daily/Weekly/Monthly on web; VoiceOver labels on Couple city results |
 | `e15248f` | "When to go" timing engine on Places, Soulmate, Couple and Forecast; tests |
 | `86237f2` | From home compass (local space) on Places; tests |
-| *this commit* | Code-review fixes: birth time zone resolved from coordinates or city name; Birth City is a picker that saves coordinates + zone; timing engine Moon frame; compass stellium layout; reminder tap handling; forecast cache keyed on the resolved zone; per-account keys cleared in one place |
+| `300b68c` | Code-review fixes: birth time zone resolved from coordinates or city name; Birth City is a picker that saves coordinates + zone; timing engine Moon frame; compass stellium layout; reminder tap handling; forecast cache keyed on the resolved zone; per-account keys cleared in one place |
+| *this commit* | Plain-English pass: one-time "How AstroLyfe works" guide on Places (Where / Which way / When); timing reasons like "Jupiter brings luck to your love places"; compass titles "Love: head west or east" with a symbol legend; map legend "Public life / Home life / You & partners"; "Active now" instead of "switched on" |
 
 Earlier history (auth hardening, PocketBase migration, forecast engine, welcome tour,
 light mode) is in `git log`; other contributors committed as `tech-god-704`,

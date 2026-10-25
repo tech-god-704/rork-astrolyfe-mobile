@@ -155,3 +155,10 @@ export function assignRings(azimuths: number[], rings: number[], gap: number): n
   }
   return result;
 }
+
+const EIGHT = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+
+/** Nearest of the eight main directions, for headlines: "west", "northeast"… */
+export function mainDirection(azimuth: number): string {
+  return EIGHT[Math.round(norm360(azimuth) / 45) % 8];
+}

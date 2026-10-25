@@ -118,9 +118,9 @@ export default function LineMap({ birth, planet, color, hits, hitColor, partner 
         </View>
       )}
       <View style={styles.legend}>
-        <LegendItem label="Midheaven" color={color} kind="solid" />
-        <LegendItem label="Home line" color={color} kind="dashed" />
-        <LegendItem label="Rising & partner" color={color} kind="dotted" />
+        <LegendItem label="Public life" color={color} kind="solid" />
+        <LegendItem label="Home life" color={color} kind="dashed" />
+        <LegendItem label="You & partners" color={color} kind="dotted" />
       </View>
     </View>
   );

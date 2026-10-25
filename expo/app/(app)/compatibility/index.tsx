@@ -350,7 +350,7 @@ export default function CoupleMapScreen() {
                         now={togetherLive ? together : null}
                         best={togetherLive ? null : together}
                         label="Best time to go together"
-                        cause={() => 'Both of your Venus lines are switched on'}
+                        cause={() => 'Both of your love lines are active at once'}
                       />
                     </View>
                   )}

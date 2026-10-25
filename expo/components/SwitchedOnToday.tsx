@@ -67,7 +67,7 @@ export default function SwitchedOnToday({ profile }: { profile: HoroscopeProfile
     >
       <GlassCard style={styles.card}>
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>{live.length > 0 ? 'SWITCHED ON TODAY' : 'NEXT TO SWITCH ON'}</Text>
+          <Text style={styles.eyebrow}>{live.length > 0 ? 'ACTIVE FOR YOU TODAY' : 'COMING UP FOR YOU'}</Text>
           <ChevronRight size={16} color={Colors.textMuted} />
         </View>
         {(live.length > 0 ? live : [next!]).map((row) => (
@@ -77,16 +77,16 @@ export default function SwitchedOnToday({ profile }: { profile: HoroscopeProfile
             </View>
             <View style={styles.copy}>
               <Text style={styles.title}>
-                {THEME_LABEL_BY_PLANET[THEMES.find((t) => t.key === row.theme)!.planet]} places ·{' '}
+                {THEME_LABEL_BY_PLANET[THEMES.find((t) => t.key === row.theme)!.planet]} places
                 {live.length > 0
-                  ? `until ${formatWindow({ start: row.window.end, end: row.window.end })}`
-                  : formatWindow(row.window)}
+                  ? ` · until ${formatWindow({ start: row.window.end, end: row.window.end })}`
+                  : ` · ${formatWindow(row.window)}`}
               </Text>
               <Text style={styles.cause}>{row.cause}</Text>
               {row.city && (
                 <View style={styles.cityRow}>
                   <MapPin size={11} color={Colors.textMuted} />
-                  <Text style={styles.city}>Loudest in {row.city}</Text>
+                  <Text style={styles.city}>Strongest in {row.city}</Text>
                 </View>
               )}
             </View>

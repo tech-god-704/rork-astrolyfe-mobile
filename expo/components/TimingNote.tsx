@@ -31,14 +31,14 @@ export default function TimingNote({
     <View
       style={[styles.row, live && styles.rowLive]}
       accessible
-      accessibilityLabel={live ? `Switched on now, until ${until}. ${cause(w)}.` : `${label}: ${formatWindow(w)}. ${cause(w)}.`}
+      accessibilityLabel={live ? `Active now, until ${until}. ${cause(w)}.` : `${label}: ${formatWindow(w)}. ${cause(w)}.`}
     >
       <View style={[styles.icon, live && styles.iconLive]}>
         {live ? <Zap size={13} color={Colors.accent} /> : <CalendarClock size={13} color={Colors.purpleLight} />}
       </View>
       <View style={styles.copy}>
         <Text style={styles.title}>
-          {live ? `Switched on now · until ${until}` : `${label}: ${formatWindow(w)}`}
+          {live ? `Active now · until ${until}` : `${label}: ${formatWindow(w)}`}
         </Text>
         <Text style={styles.cause}>{cause(w)}</Text>
       </View>

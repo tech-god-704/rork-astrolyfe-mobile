@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,12 +13,13 @@ import GlassCard from '@/components/GlassCard';
 import LineMap from '@/components/LineMap';
 import TimingNote from '@/components/TimingNote';
 import HomeCompass from '@/components/HomeCompass';
+import PlacesIntro from '@/components/PlacesIntro';
+import { placesIntroSeenKey } from '@/constants/storageKeys';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
 import { searchCities, type City } from '@/data/cities';
 import {
   THEMES,
-  ANGLE_LABEL,
   STRENGTH_LABEL,
   placesForTheme,
   readCity,
@@ -36,8 +38,36 @@ import { placeTiming, describeWindow, type PlaceTiming } from '@/services/places
 export default function PowerPlaces() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const email = user?.email ?? '';
   const [theme, setTheme] = useState<Theme>('love');
+  // 'loading' renders neither the guide nor the paragraph, so the slot doesn't swap
+  // under the reader once storage answers.
+  const [intro, setIntro] = useState<'loading' | 'show' | 'hidden'>('loading');
+
+  useEffect(() => {
+    if (!email) {
+      setIntro('hidden');
+      return;
+    }
+    let cancelled = false;
+    AsyncStorage.getItem(placesIntroSeenKey(email))
+      .then((seen) => {
+        if (!cancelled) setIntro(seen ? 'hidden' : 'show');
+      })
+      .catch(() => {
+        if (!cancelled) setIntro('hidden');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [email]);
+
+  const dismissIntro = () => {
+    Haptics.selectionAsync().catch(() => {});
+    setIntro('hidden');
+    if (email) AsyncStorage.setItem(placesIntroSeenKey(email), '1').catch(() => {});
+  };
   const [view, setView] = useState<'world' | 'home'>('world');
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<City | null>(null);
@@ -136,18 +166,22 @@ export default function PowerPlaces() {
             </View>
           </View>
 
-          <LinearGradient
-            colors={[Colors.deepViolet, 'rgba(59,33,113,0.76)', Colors.bgCardSolid]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.hero}
-          >
-            <Text style={styles.heroText}>
-              {view === 'home'
-                ? 'Stand at home and turn: at the moment you were born, each planet lay in one direction from you. Head that way, and the cities along the line, to bring that part of your life forward.'
-                : 'The moment you were born, every planet sat overhead somewhere on Earth. Those spots trace lines around the globe. Where a line crosses a city, that part of your life gets louder there.'}
-            </Text>
-          </LinearGradient>
+          {intro === 'show' ? (
+            <PlacesIntro onDone={dismissIntro} />
+          ) : intro === 'hidden' ? (
+            <LinearGradient
+              colors={[Colors.deepViolet, 'rgba(59,33,113,0.76)', Colors.bgCardSolid]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.hero}
+            >
+              <Text style={styles.heroText}>
+                {view === 'home'
+                  ? 'From where you live, each part of your life points one way. Head that way, to the cities on its line, to bring that part of your life forward.'
+                  : 'Each line is where a planet was overhead when you were born. Where a line crosses a city, that part of your life is stronger there.'}
+              </Text>
+            </LinearGradient>
+          ) : null}
 
           {!birth ? (
             <GlassCard style={styles.missingCard}>
@@ -372,7 +406,7 @@ export default function PowerPlaces() {
                           </View>
                           <View style={styles.cityHitCopy}>
                             <Text style={styles.cityHitTitle}>
-                              {hit.planet} {ANGLE_LABEL[hit.angle].toLowerCase()} · {formatMiles(hit.distanceKm)}
+                              Your {hit.planet} line · {formatMiles(hit.distanceKm)} away
                             </Text>
                             <Text style={styles.cityHitText}>{meaningOf(hit.planet, hit.angle)}</Text>
                           </View>
@@ -421,7 +455,7 @@ function PlaceCard({ hit, rank, styles }: { hit: PlaceHit; rank: number; styles:
       </View>
       <Text style={styles.placeMeaning}>{meaningOf(hit.planet, hit.angle)}</Text>
       <Text style={styles.placeMeta}>
-        {hit.planet} {ANGLE_LABEL[hit.angle].toLowerCase()} · passes {formatMiles(hit.distanceKm)} away
+        Your {hit.planet} line passes {formatMiles(hit.distanceKm)} away
       </Text>
     </GlassCard>
   );

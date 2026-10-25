@@ -21,6 +21,7 @@ import {
   nearestCity,
   localTimeIn,
   assignRings,
+  mainDirection,
   type PlanetDirection,
 } from '@/services/compass';
 
@@ -188,9 +189,17 @@ export default function HomeCompass({ birth, birthLat, birthLon }: { birth: Birt
       {home && (
         <>
           <CompassRose directions={directions} homeName={home.name} />
+          <View style={styles.key}>
+            {directions.map((d) => (
+              <View key={d.planet} style={styles.keyItem}>
+                <Text style={[styles.keyGlyph, { color: THEME_STYLE[PLANET_THEME[d.planet]].color }]}>{GLYPH[d.planet]}</Text>
+                <Text style={styles.keyText}>{THEME_LABEL_BY_PLANET[d.planet]}</Text>
+              </View>
+            ))}
+          </View>
           <Text style={styles.roseNote}>
-            Where each planet sat in the sky, seen from {home.name}, at the moment you were born. Each line runs on through
-            home the other way too (faint). Dashed: the planet was below the horizon.
+            Each colour is one part of your life. Its line runs straight through {home.name}, both ways; the bright end
+            points to where its planet was when you were born.
           </Text>
 
           <View style={styles.list}>
@@ -220,7 +229,7 @@ function CompassRose({ directions, homeName }: { directions: PlanetDirection[]; 
   }, [directions]);
 
   const summary = directions
-    .map((d) => `${THEME_LABEL_BY_PLANET[d.planet]} line runs ${compassWords(d.azimuth)} to ${compassWords(d.azimuth + 180)}`)
+    .map((d) => `${THEME_LABEL_BY_PLANET[d.planet]}: ${compassWords(d.azimuth)} or ${compassWords(d.azimuth + 180)}`)
     .join(', ');
 
   return (
@@ -267,7 +276,6 @@ function CompassRose({ directions, homeName }: { directions: PlanetDirection[]; 
                 y2={end.y}
                 stroke={color}
                 strokeWidth={2}
-                strokeDasharray={dir.altitude < 0 ? '4,4' : undefined}
                 strokeLinecap="round"
                 opacity={0.9}
               />
@@ -310,10 +318,10 @@ function DirectionCard({
         </View>
         <View style={styles.flex}>
           <Text style={styles.dirTitle}>
-            {THEME_LABEL_BY_PLANET[dir.planet]} line · {compassPoint(dir.azimuth)}–{compassPoint(dir.azimuth + 180)}
+            {THEME_LABEL_BY_PLANET[dir.planet]}: head {mainDirection(dir.azimuth)} or {mainDirection(dir.azimuth + 180)}
           </Text>
           <Text style={styles.dirMeta}>
-            {dir.planet} lay {compassWords(dir.azimuth)} ({Math.round(dir.azimuth)}°); the line runs on through {home.name}
+            Your {dir.planet} line from {home.name}. Cities on it, nearest first:
           </Text>
         </View>
       </View>
@@ -383,6 +391,10 @@ const createStyles = () => StyleSheet.create({
   cancel: { alignSelf: 'flex-start', paddingVertical: 6 },
   cancelText: { color: Colors.textMuted, fontSize: 13, fontWeight: '700' },
 
+  key: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 6 },
+  keyItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  keyGlyph: { fontSize: 15, fontWeight: '700' },
+  keyText: { color: Colors.textSecondary, fontSize: 12, fontWeight: '700' },
   roseNote: { color: Colors.textMuted, fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: 8, marginBottom: 18, paddingHorizontal: 10 },
 
   list: { gap: 12, marginBottom: 8 },

@@ -59,11 +59,16 @@ export function homeCityKey(email: string): string {
   return `astrolyfe:home_city:${email}`;
 }
 
+/** Set once the person dismisses the "How AstroLyfe works" card on Places. */
+export function placesIntroSeenKey(email: string): string {
+  return `astrolyfe:places_intro_seen:${email}`;
+}
+
 /**
  * Every per-account key this device stores. Account deletion clears exactly this
  * list, so a new per-account key only needs adding here to be wiped on both deletion
  * paths.
  */
 export function accountLocalKeys(email: string): string[] {
-  return [onboardingDoneKey(email), couplePartnerKey(email), homeCityKey(email)];
+  return [onboardingDoneKey(email), couplePartnerKey(email), homeCityKey(email), placesIntroSeenKey(email)];
 }
