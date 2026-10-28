@@ -364,6 +364,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // Worked out from the birth details when not given, so nobody has to pick one.
     const sign = zodiacSign || (birthDate ? sunSignFromBirth({ birth_date: birthDate, ...birthFields }) : null);
 
+    // Merge into whatever quiz answers the row already has (a funnel lead, or a hook
+    // that copies them) rather than replacing them with just the birth time.
+    let existingQuiz: Record<string, unknown> = {};
+    if (hasTime) {
+      const { data: existing } = await supabase.from('profiles').select('quiz_data').eq('email', email).maybeSingle();
+      const q = (existing as { quiz_data?: unknown } | null)?.quiz_data;
+      if (q && typeof q === 'object') existingQuiz = q as Record<string, unknown>;
+    }
+
     const { data: profileRow, error: upsertError } = await supabase.from('profiles').upsert({
       email,
       user_id: data.user?.id,
@@ -372,7 +381,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       date_of_birth: birthFields.date_of_birth,
       birth_city: birthCity || null,
       ...(city ? { birth_lat: city.lat, birth_lon: city.lon, timezone: city.tz } : {}),
-      ...(hasTime ? { quiz_data: { ...(birthCity ? { birth_place: birthCity } : {}), birth_hour: extra!.birthHour, birth_minute: extra!.birthMinute } } : {}),
+      ...(hasTime ? { quiz_data: { ...existingQuiz, ...(birthCity ? { birth_place: birthCity } : {}), birth_hour: extra!.birthHour, birth_minute: extra!.birthMinute } } : {}),
     }, { onConflict: 'email' });
 
     if (upsertError) {

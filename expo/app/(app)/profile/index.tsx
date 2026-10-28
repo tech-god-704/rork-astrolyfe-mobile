@@ -188,10 +188,12 @@ export default function ProfileScreen() {
           display_name: displayName.trim(),
           date_of_birth: birthDate.trim() || null,
           zodiac_sign:
+            // `in`, not `??`: a cleared birthplace sets these to null on purpose, and
+            // the sign must not fall back to the old place's zone.
             signFor(
-              (place.timezone as string | null | undefined) ?? profile?.timezone,
-              place.birth_lat ?? profile?.birth_lat,
-              place.birth_lon ?? profile?.birth_lon,
+              ('timezone' in place ? place.timezone : profile?.timezone) as string | null | undefined,
+              'birth_lat' in place ? place.birth_lat : profile?.birth_lat,
+              'birth_lon' in place ? place.birth_lon : profile?.birth_lon,
             ) ?? profile?.zodiac_sign ?? null,
           birth_city: birthCity.trim() || null,
           quiz_data: Object.keys(updatedQuiz).length > 0 ? updatedQuiz : null,
@@ -851,7 +853,7 @@ const createStyles = () => StyleSheet.create({
   checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 2 },
 
   completenessRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, width: '88%' as unknown as number },
-  completenessBar: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  completenessBar: { flex: 1, height: 6, borderRadius: 3, backgroundColor: Colors.mapLineStrong, overflow: 'hidden' },
   completenessFill: { height: '100%' as unknown as number, borderRadius: 3, overflow: 'hidden' },
   completenessText: { fontSize: 12, color: Colors.textMuted, fontWeight: '600' },
   saveMessageRow: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },

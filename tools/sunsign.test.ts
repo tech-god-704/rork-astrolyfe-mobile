@@ -9,6 +9,10 @@ const cases: [any, string | null][] = [
   // cusp: 2026 June solstice 08:24 UT -> Cancer from then; 07:00 UT is still Gemini
   [{ birth_date: '2026-06-21', timezone: 'UTC', quiz_data: { birth_hour: 7, birth_minute: 0 } }, 'Gemini'],
   [{ birth_date: '2026-06-21', timezone: 'UTC', quiz_data: { birth_hour: 10, birth_minute: 0 } }, 'Cancer'],
+  // No time but a zone: noon in that zone. 2026-06-21 noon in Auckland is 00:00 UT, before the
+  // 08:24 UT solstice, so Gemini; noon UTC would have said Cancer.
+  [{ birth_date: '2026-06-21', timezone: 'Pacific/Auckland' }, 'Gemini'],
+  [{ birth_date: '2026-06-21', timezone: 'America/Los_Angeles' }, 'Cancer'],
   [{ birth_date: '1990-02-30' }, null], [{ birth_date: '' }, null], [null, null],
   [{ birth_date: '1990-07-15 00:00:00.000Z' }, 'Cancer'],
 ];

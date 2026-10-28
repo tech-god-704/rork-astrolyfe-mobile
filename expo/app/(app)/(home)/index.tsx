@@ -56,7 +56,7 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: Colors.bg }]}>
       <PowerPlaces />
       <NotificationPromptModal
         visible={showNotifPrompt}

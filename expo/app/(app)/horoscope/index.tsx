@@ -50,6 +50,7 @@ export default function HoroscopeScreen() {
   // A forecast built from this user's own chart. Computed on device and cached, so the
   // screen works with no network for anyone who has supplied a birth date.
   const signName = profile?.zodiac_sign || 'Aries';
+  const hasBirthBasis = !!(profile?.birth_date || profile?.zodiac_sign);
   const todayKey = new Date().toDateString(); // auto-invalidate at midnight
 
   const forecastQuery = useQuery<PersonalHoroscopeReading>({
@@ -66,6 +67,9 @@ export default function HoroscopeScreen() {
     ],
     queryFn: () => getPersonalHoroscope({ profile, period }),
     staleTime: 1000 * 60 * 30,
+    // With neither a birth date nor a sign there is nothing true to say; the engine's
+    // last resort would be an unlabelled Aries reading, so ask for the date instead.
+    enabled: hasBirthBasis,
   });
 
   const reading = forecastQuery.data;
@@ -137,7 +141,7 @@ export default function HoroscopeScreen() {
                 {isPersonal ? 'YOUR PERSONAL FORECAST' : `GENERAL FORECAST${zodiac ? ' · ' + zodiac.name.toUpperCase() : ''}`}
               </Text>
               <Text style={styles.title}>The sky ahead</Text>
-              {zodiac && !isPersonal && (
+              {zodiac && reading && !isPersonal && (
                 <View style={styles.signRow}>
                   <Text style={styles.signSymbol}>{zodiac.symbol}</Text>
                   <Text style={styles.signLabel}>{zodiac.name}</Text>
@@ -182,6 +186,25 @@ export default function HoroscopeScreen() {
 
           <SwitchedOnToday profile={profile} />
 
+          {!hasBirthBasis && (
+            <GlassCard style={styles.fullReadingCard}>
+              <Text style={styles.missingTitle}>Add your birth date</Text>
+              <Text style={styles.missingText}>
+                Your forecast is worked out from your own chart. Add your birth date (and time, for the most detail) to see it.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/(app)/profile')}
+                style={({ pressed }) => [styles.missingBtn, pressed && { opacity: 0.8 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Add your birth details in your profile"
+              >
+                <Text style={styles.missingBtnText}>Add birth details</Text>
+                <ArrowRight size={16} color={Colors.paperInk} />
+              </Pressable>
+            </GlassCard>
+          )}
+
+          {hasBirthBasis && (
           <Animated.View style={{ opacity: contentAnim, transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
             {/* Full reading card */}
             <GlassCard variant="elevated" style={styles.fullReadingCard}>
@@ -197,7 +220,7 @@ export default function HoroscopeScreen() {
                   {period === 'daily' ? 'Your Daily Reading' : period === 'weekly' ? 'Your Weekly Outlook' : 'Your Monthly Forecast'}
                 </Text>
               </View>
-              {zodiac && !isPersonal && (
+              {zodiac && reading && !isPersonal && (
                 <View style={styles.readingSignRow}>
                   <Text style={styles.readingSignSymbol}>{zodiac.symbol}</Text>
                   <Text style={styles.readingSignName}>{zodiac.name}</Text>
@@ -285,6 +308,7 @@ export default function HoroscopeScreen() {
                 the chat tab is hidden (see app/(app)/_layout.tsx) until real replies
                 are built. */}
           </Animated.View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -358,6 +382,10 @@ const createStyles = () => StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   dateText: { fontSize: 13, color: Colors.textMuted, fontWeight: '500' },
 
+  missingTitle: { color: Colors.textPrimary, fontSize: 20, fontFamily: Fonts.display, fontWeight: '800', marginBottom: 8 },
+  missingText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21, marginBottom: 14 },
+  missingBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, backgroundColor: Colors.purple, paddingHorizontal: 16, paddingVertical: 11, borderRadius: 999 },
+  missingBtnText: { color: Colors.paperInk, fontSize: 14, fontWeight: '800' },
   fullReadingCard: { marginBottom: 16, padding: 22, backgroundColor: Colors.paper, borderColor: 'rgba(192,154,235,0.30)' },
   fullReadingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   fullReadingTitle: { fontSize: 12, fontWeight: '800', color: Colors.paperInk, textTransform: 'uppercase', letterSpacing: 1.1 },

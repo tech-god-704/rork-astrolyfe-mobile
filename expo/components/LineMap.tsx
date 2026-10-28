@@ -141,7 +141,8 @@ function LegendItem({ label, color, kind }: { label: string; color: string; kind
           strokeDasharray={kind === 'solid' ? undefined : kind === 'dashed' ? '5,3' : '1,3'}
         />
       </Svg>
-      <Text style={styles.legendText}>{label}</Text>
+      {/* Colour read at render: the module-level StyleSheet would freeze the first theme. */}
+      <Text style={[styles.legendText, { color: Colors.textMuted }]}>{label}</Text>
     </View>
   );
 }

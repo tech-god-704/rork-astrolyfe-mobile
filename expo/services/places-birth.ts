@@ -65,14 +65,15 @@ export function birthInputsKey(profile: HoroscopeProfileInput | null | undefined
 
 /**
  * Sun sign from the birth details, so nobody has to pick (or mis-pick) one. Uses the
- * exact moment when time and zone are known; otherwise local noon, which is right for
- * every birthday except the few hours around the Sun changing sign. Null without a
- * valid birth date.
+ * exact moment when time and zone are known; without a time, noon in the birth zone
+ * (noon UTC if no zone is known either), which is right for every birthday except the
+ * few hours around the Sun changing sign. Null without a valid birth date.
  */
 export function sunSignFromBirth(profile: HoroscopeProfileInput | null | undefined): string | null {
   const birth = resolveBirth(profile);
   if (!birth || !parseAndValidateBirthDate(String(profile?.birth_date).slice(0, 10))) return null;
-  const offset = birth.hasTime ? birthUtcOffsetMinutes(profile, birth) ?? 0 : 0;
+  // The zone's offset applies with or without a time: noon there, not noon at Greenwich.
+  const offset = birthUtcOffsetMinutes(profile, birth) ?? 0;
   const hour = birth.hasTime ? (birth.hour ?? 12) : 12;
   const minute = birth.hasTime ? (birth.minute ?? 0) : 0;
   const jd = julianDayUT({ year: birth.year, month: birth.month, day: birth.day, hour, minute, utcOffsetMinutes: offset });
