@@ -61,10 +61,10 @@ export default function LineMap({ birth, planet, color, hits, hitColor, partner 
     <View style={styles.wrap} accessible accessibilityLabel={a11y}>
       <View style={styles.mapBox}>
       <Svg width="100%" height="100%" viewBox={`0 0 360 ${HEIGHT}`}>
-        <Rect x={0} y={0} width={360} height={HEIGHT} fill="rgba(9,5,27,0.9)" />
+        <Rect x={0} y={0} width={360} height={HEIGHT} fill={Colors.mapBg} />
 
         {GRID_LONS.map((lon) => (
-          <Line key={`lon${lon}`} x1={x(lon)} y1={0} x2={x(lon)} y2={HEIGHT} stroke="rgba(218,200,242,0.07)" strokeWidth={0.5} />
+          <Line key={`lon${lon}`} x1={x(lon)} y1={0} x2={x(lon)} y2={HEIGHT} stroke={Colors.mapLine} strokeWidth={0.5} />
         ))}
         {GRID_LATS.map((lat) => (
           <Line
@@ -73,13 +73,13 @@ export default function LineMap({ birth, planet, color, hits, hitColor, partner 
             y1={y(lat)}
             x2={360}
             y2={y(lat)}
-            stroke={lat === 0 ? 'rgba(218,200,242,0.16)' : 'rgba(218,200,242,0.07)'}
+            stroke={lat === 0 ? Colors.mapLineStrong : Colors.mapLine}
             strokeWidth={0.5}
           />
         ))}
 
         {CITIES.map((c) => (
-          <Circle key={c.name} cx={x(c.lon)} cy={y(c.lat)} r={1.3} fill="rgba(237,228,253,0.4)" />
+          <Circle key={c.name} cx={x(c.lon)} cy={y(c.lat)} r={1.3} fill={Colors.mapDot} />
         ))}
 
         {partner && partnerGeometry && <PlanetLayer geometry={partnerGeometry} color={partner.color} id="partner" />}

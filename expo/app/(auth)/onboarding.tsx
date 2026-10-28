@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, Pressable, TextInput, Animated, ScrollView, Key
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, ArrowLeft, Calendar, MapPin, Star, Check, User, Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
+import { ArrowRight, ArrowLeft, Calendar, Clock, MapPin, Star, Check, User, Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
-import { ZODIAC_SIGNS } from '@/constants/zodiac';
+import { searchCities, matchCity, type City } from '@/data/cities';
 import { useAuth } from '@/providers/AuthProvider';
 import { isValidEmail, getPasswordError, getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
@@ -16,9 +16,16 @@ import { useThemedStyles } from '@/providers/ThemeProvider';
 
 const STEP_META = [
   { label: 'ACCOUNT', detail: 'Your private space' },
-  { label: 'BIRTH', detail: 'Sharpen your readings' },
-  { label: 'SIGN', detail: 'Set your daily anchor' },
+  { label: 'BIRTH', detail: 'Where and when you were born' },
 ] as const;
+
+function parseTime(value: string): { hour: number; minute: number } | null {
+  const m = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hour = parseInt(m[1], 10);
+  const minute = parseInt(m[2], 10);
+  return hour <= 23 && minute <= 59 ? { hour, minute } : null;
+}
 
 export default function OnboardingScreen() {
   const styles = useThemedStyles(createStyles);
@@ -32,18 +39,23 @@ export default function OnboardingScreen() {
   const [password, setPassword] = useState<string>('');
   const [displayName, setDisplayName] = useState<string>('');
   const [birthDate, setBirthDate] = useState<string>('');
+  const [birthTime, setBirthTime] = useState<string>('');
   const [birthCity, setBirthCity] = useState<string>('');
-  const [selectedSign, setSelectedSign] = useState<string>('');
+  const [pickedCity, setPickedCity] = useState<City | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; password?: string; birth?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; password?: string; birth?: string; time?: string; city?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
 
   const nameRef = useRef<TextInputType>(null);
   const emailRef = useRef<TextInputType>(null);
   const passwordRef = useRef<TextInputType>(null);
   const birthRef = useRef<TextInputType>(null);
+  const timeRef = useRef<TextInputType>(null);
   const cityRef = useRef<TextInputType>(null);
+
+  const resolvedCity = pickedCity ?? matchCity(birthCity);
+  const cityMatches = !resolvedCity && birthCity.trim().length >= 2 ? searchCities(birthCity.split(',')[0], 5) : [];
 
   const animateStep = (next: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -81,20 +93,24 @@ export default function OnboardingScreen() {
   };
 
   const validateStep1 = (): boolean => {
+    const errors: { birth?: string; time?: string; city?: string } = {};
     if (birthDate.trim()) {
       const err = getBirthDateError(birthDate);
-      if (err) {
-        setFieldErrors({ birth: err });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-        return false;
-      }
+      if (err) errors.birth = err;
+    }
+    if (birthTime.trim() && !parseTime(birthTime)) errors.time = 'Use 24-hour HH:MM, e.g. 14:30';
+    if (birthCity.trim() && !resolvedCity) errors.city = 'Pick your birth city from the list. The nearest big city in the same time zone works.';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return false;
     }
     setFieldErrors({});
     return true;
   };
 
   const completeMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ skipBirth }: { skipBirth: boolean }) => {
       setFormError(null);
       const trimmedEmail = email.trim();
       const trimmedName = displayName.trim();
@@ -104,8 +120,15 @@ export default function OnboardingScreen() {
       if (!isValidEmail(trimmedEmail)) throw new Error('__validation__');
       const pwErr = getPasswordError(password);
       if (pwErr) throw new Error('__validation__');
-      if (!selectedSign) throw new Error('__validation__');
-      return signUp(trimmedEmail, password, trimmedName, selectedSign, birthDate, birthCity.trim());
+      if (skipBirth) return signUp(trimmedEmail, password, trimmedName, '', '', '');
+      if (!validateStep1()) throw new Error('__validation__');
+      const time = parseTime(birthTime);
+      // The sun sign is worked out from the birth date in signUp, not picked by hand.
+      return signUp(trimmedEmail, password, trimmedName, '', birthDate.trim(), resolvedCity ? `${resolvedCity.name}, ${resolvedCity.country}` : '', {
+        birthHour: time?.hour,
+        birthMinute: time?.minute,
+        city: resolvedCity,
+      });
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -170,15 +193,22 @@ export default function OnboardingScreen() {
   );
 
   const renderStep1 = () => (
-    <View style={styles.stepContent}>
+    <ScrollView style={styles.flex} contentContainerStyle={styles.stepScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.stepIconWrap}>
         <LinearGradient colors={[Colors.goldDim, 'rgba(111,178,250,0.03)']} style={styles.stepIcon}>
-          <Calendar size={30} color={Colors.gold} />
+          <MapPin size={30} color={Colors.gold} />
         </LinearGradient>
       </View>
-      <Text style={styles.stepKicker}>BIRTH DATA</Text>
-      <Text style={styles.stepTitle}>Sharpen your cosmic map.</Text>
-      <Text style={styles.stepDesc}>Birth details improve chart accuracy and timing. You can safely add or edit them later.</Text>
+      <Text style={styles.stepKicker}>BIRTH DETAILS</Text>
+      <Text style={styles.stepTitle}>Where and when were you born?</Text>
+      <Text style={styles.stepDesc}>
+        Your map, your compass and your best dates are all worked out from this moment. You can add or change it later.
+      </Text>
+      {formError && (
+        <View style={styles.formErrorRow}>
+          <Text style={styles.formErrorText}>{formError}</Text>
+        </View>
+      )}
       <View style={styles.form}>
         <View style={styles.optionalLabelRow}>
           <Text style={styles.fieldLabel}>Birth date</Text>
@@ -186,82 +216,76 @@ export default function OnboardingScreen() {
         </View>
         <View style={[styles.inputGroup, focusedField === 'birth' && styles.inputGroupFocused, !!fieldErrors.birth && styles.inputGroupError]}>
           <Calendar size={18} color={fieldErrors.birth ? Colors.danger : focusedField === 'birth' ? Colors.gold : Colors.textMuted} />
-          <TextInput ref={birthRef} style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textMuted} value={birthDate} onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }} keyboardType="numbers-and-punctuation" autoComplete="birthdate-full" returnKeyType="next" onSubmitEditing={() => cityRef.current?.focus()} onFocus={() => setFocusedField('birth')} onBlur={() => setFocusedField(null)} accessibilityLabel="Birth date, optional" />
+          <TextInput ref={birthRef} style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textMuted} value={birthDate} onChangeText={(t) => { setBirthDate(t); if (fieldErrors.birth) setFieldErrors((p) => ({ ...p, birth: undefined })); }} keyboardType="numbers-and-punctuation" autoComplete="birthdate-full" returnKeyType="next" onSubmitEditing={() => timeRef.current?.focus()} onFocus={() => setFocusedField('birth')} onBlur={() => setFocusedField(null)} accessibilityLabel="Birth date, optional" />
         </View>
         {fieldErrors.birth && <Text style={styles.fieldError}>{fieldErrors.birth}</Text>}
+
+        <View style={styles.optionalLabelRow}>
+          <Text style={styles.fieldLabel}>Birth time</Text>
+          <Text style={styles.optionalLabel}>OPTIONAL</Text>
+        </View>
+        <View style={[styles.inputGroup, focusedField === 'time' && styles.inputGroupFocused, !!fieldErrors.time && styles.inputGroupError]}>
+          <Clock size={18} color={fieldErrors.time ? Colors.danger : focusedField === 'time' ? Colors.gold : Colors.textMuted} />
+          <TextInput ref={timeRef} style={styles.input} placeholder="HH:MM (24-hour, e.g. 14:30)" placeholderTextColor={Colors.textMuted} value={birthTime} onChangeText={(t) => { setBirthTime(t); if (fieldErrors.time) setFieldErrors((p) => ({ ...p, time: undefined })); }} keyboardType="numbers-and-punctuation" returnKeyType="next" onSubmitEditing={() => cityRef.current?.focus()} onFocus={() => setFocusedField('time')} onBlur={() => setFocusedField(null)} accessibilityLabel="Birth time, optional" />
+        </View>
+        {fieldErrors.time && <Text style={styles.fieldError}>{fieldErrors.time}</Text>}
+
         <View style={styles.optionalLabelRow}>
           <Text style={styles.fieldLabel}>Birth city</Text>
           <Text style={styles.optionalLabel}>OPTIONAL</Text>
         </View>
-        <View style={[styles.inputGroup, focusedField === 'city' && styles.inputGroupFocused]}>
-          <MapPin size={18} color={focusedField === 'city' ? Colors.teal : Colors.textMuted} />
-          <TextInput ref={cityRef} style={styles.input} placeholder="City, State or Country" placeholderTextColor={Colors.textMuted} value={birthCity} onChangeText={setBirthCity} autoCapitalize="words" returnKeyType="next" onSubmitEditing={() => { if (validateStep1()) animateStep(2); }} onFocus={() => setFocusedField('city')} onBlur={() => setFocusedField(null)} accessibilityLabel="Birth city, optional" />
+        <View style={[styles.inputGroup, focusedField === 'city' && styles.inputGroupFocused, !!fieldErrors.city && styles.inputGroupError]}>
+          <MapPin size={18} color={fieldErrors.city ? Colors.danger : focusedField === 'city' ? Colors.teal : Colors.textMuted} />
+          <TextInput ref={cityRef} style={styles.input} placeholder="Search your birth city" placeholderTextColor={Colors.textMuted} value={birthCity} onChangeText={(t) => { setBirthCity(t); setPickedCity(null); if (fieldErrors.city) setFieldErrors((p) => ({ ...p, city: undefined })); }} autoCapitalize="words" autoCorrect={false} returnKeyType="done" onFocus={() => setFocusedField('city')} onBlur={() => setFocusedField(null)} accessibilityLabel="Birth city, optional" />
         </View>
+        {cityMatches.map((c) => (
+          <Pressable
+            key={c.name}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              setBirthCity(`${c.name}, ${c.country}`);
+              setPickedCity(c);
+              setFieldErrors((p) => ({ ...p, city: undefined }));
+            }}
+            style={({ pressed }) => [styles.cityOption, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`${c.name}, ${c.country}`}
+          >
+            <MapPin size={13} color={Colors.purpleLight} />
+            <Text style={styles.cityOptionName}>{c.name}</Text>
+            <Text style={styles.cityOptionCountry}>{c.country}</Text>
+          </Pressable>
+        ))}
+        {fieldErrors.city ? (
+          <Text style={styles.fieldError}>{fieldErrors.city}</Text>
+        ) : birthCity.trim() && !resolvedCity ? (
+          <Text style={styles.cityHint}>Pick from the list. Not there? Choose the nearest big city in the same time zone.</Text>
+        ) : null}
       </View>
       <View style={styles.valueNote}>
-        <Text style={styles.valueNoteTitle}>Why this matters</Text>
-        <Text style={styles.valueNoteText}>Date sets your planetary placements. Location helps calculate houses and rising sign.</Text>
+        <Text style={styles.valueNoteTitle}>Why the exact time matters</Text>
+        <Text style={styles.valueNoteText}>Every hour of birth time moves your lines about 1,000 miles. Without it you still get your sign and forecast, but not your map.</Text>
       </View>
-      <Pressable style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]} onPress={() => { if (validateStep1()) animateStep(2); }} accessibilityRole="button">
-        <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnInner}>
-          <Text style={styles.nextBtnText}>Choose my sign</Text>
-          <ArrowRight size={18} color="#fff" />
-        </LinearGradient>
-      </Pressable>
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepKicker}>YOUR SUN SIGN</Text>
-      <Text style={styles.stepTitle}>Your cosmic signature starts here.</Text>
-      <Text style={styles.stepDesc}>Choose the sun sign that anchors your daily guidance. You can change it from your profile.</Text>
-      <ScrollView style={styles.signGrid} contentContainerStyle={styles.signGridContent} showsVerticalScrollIndicator={false}>
-        {ZODIAC_SIGNS.map((sign) => {
-          const isSelected = selectedSign === sign.name;
-          return (
-            <Pressable
-              key={sign.name}
-              style={({ pressed }) => [styles.signCard, isSelected && { borderColor: sign.color, backgroundColor: `${sign.color}15` }, pressed && { opacity: 0.85 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setSelectedSign(sign.name);
-              }}
-              accessibilityLabel={`${sign.name} zodiac sign`}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Text style={[styles.signSymbol, isSelected && { fontSize: 32 }]}>{sign.symbol}</Text>
-              <Text style={[styles.signName, isSelected && { color: sign.color }]}>{sign.name}</Text>
-              {isSelected && (
-                <View style={[styles.checkMark, { backgroundColor: sign.color }]}>
-                  <Check size={10} color="#fff" />
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
       <Pressable
-        style={({ pressed }) => [styles.nextBtn, !selectedSign && styles.btnDisabled, pressed && selectedSign && styles.btnPressed]}
-        onPress={() => completeMutation.mutate()}
-        disabled={completeMutation.isPending || !selectedSign}
+        style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]}
+        onPress={() => completeMutation.mutate({ skipBirth: false })}
+        disabled={completeMutation.isPending}
         accessibilityRole="button"
-        accessibilityState={{ disabled: completeMutation.isPending || !selectedSign }}
+        accessibilityState={{ disabled: completeMutation.isPending }}
       >
         <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnInner}>
           {completeMutation.isPending ? <ActivityIndicator color="#fff" /> : (
             <>
-              <Text style={styles.nextBtnText}>{selectedSign ? `Create my ${selectedSign} profile` : 'Choose your sign to continue'}</Text>
-              {selectedSign && <ArrowRight size={18} color="#fff" />}
+              <Text style={styles.nextBtnText}>Create my map</Text>
+              <ArrowRight size={18} color="#fff" />
             </>
           )}
         </LinearGradient>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 
-  const steps = [renderStep0, renderStep1, renderStep2];
+  const steps = [renderStep0, renderStep1];
 
   return (
     <View style={styles.container}>
@@ -273,10 +297,10 @@ export default function OnboardingScreen() {
               <ArrowLeft size={18} color={Colors.textSecondary} />
             </Pressable>
             <View style={styles.progressMeta}>
-              <Text style={styles.progressLabel}>STEP {step + 1} OF 3 · {STEP_META[step].label}</Text>
+              <Text style={styles.progressLabel}>STEP {step + 1} OF 2 · {STEP_META[step].label}</Text>
               <Text style={styles.progressDetail}>{STEP_META[step].detail}</Text>
               <View style={styles.progressDots}>
-                {[0, 1, 2].map((i) => (
+                {[0, 1].map((i) => (
                   <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]}>
                     {i < step && (
                       <View style={styles.progressDotCompleted}>
@@ -288,7 +312,7 @@ export default function OnboardingScreen() {
               </View>
             </View>
             {step === 1 && (
-              <Pressable onPress={() => animateStep(2)} style={styles.skipBtn} hitSlop={8} accessibilityRole="button">
+              <Pressable onPress={() => completeMutation.mutate({ skipBirth: true })} disabled={completeMutation.isPending} style={styles.skipBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel="Skip birth details for now">
                 <Text style={styles.skipBtnText}>Skip</Text>
               </Pressable>
             )}
@@ -318,6 +342,7 @@ const createStyles = () => StyleSheet.create({
   skipBtn: { position: 'absolute', right: 24, top: 18 },
   skipBtnText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '600' },
   stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 20 },
+  stepScroll: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 },
   stepIconWrap: { marginBottom: 16 },
   stepIcon: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.bgCardBorder },
   stepKicker: { color: Colors.gold, fontSize: 10, fontWeight: '800', letterSpacing: 1.7, marginBottom: 10 },
@@ -361,29 +386,8 @@ const createStyles = () => StyleSheet.create({
   nextBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
   btnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   btnDisabled: { opacity: 0.44 },
-  signGrid: { flex: 1, marginBottom: 12 },
-  signGridContent: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingBottom: 16 },
-  signCard: {
-    width: '29%' as unknown as number,
-    aspectRatio: 1,
-    backgroundColor: Colors.bgCard,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.bgCardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  signSymbol: { fontSize: 28 },
-  signName: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
-  checkMark: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cityOption: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 11, paddingHorizontal: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.bgCardBorder },
+  cityOptionName: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700' },
+  cityOptionCountry: { color: Colors.textMuted, fontSize: 13, flex: 1 },
+  cityHint: { color: Colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: 6, marginLeft: 4 },
 });

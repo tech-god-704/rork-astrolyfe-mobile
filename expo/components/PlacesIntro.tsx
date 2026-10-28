@@ -32,7 +32,7 @@ export default function PlacesIntro({ onDone }: { onDone: () => void }) {
   const styles = useThemedStyles(createStyles);
   return (
     <LinearGradient
-      colors={[Colors.deepViolet, 'rgba(59,33,113,0.76)', Colors.bgCardSolid]}
+      colors={[Colors.deepViolet, Colors.heroMid, Colors.bgCardSolid]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.card}

@@ -235,15 +235,15 @@ function CompassRose({ directions, homeName }: { directions: PlanetDirection[]; 
   return (
     <View style={roseStyles.wrap} accessible accessibilityRole="image" accessibilityLabel={`Compass from ${homeName}. ${summary}.`}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <Circle cx={C} cy={C} r={R} fill="rgba(9,5,27,0.72)" stroke="rgba(192,154,235,0.35)" strokeWidth={1.2} />
-        <Circle cx={C} cy={C} r={R * 0.66} fill="none" stroke="rgba(192,154,235,0.14)" strokeWidth={1} />
-        <Circle cx={C} cy={C} r={R * 0.33} fill="none" stroke="rgba(192,154,235,0.10)" strokeWidth={1} />
+        <Circle cx={C} cy={C} r={R} fill={Colors.mapBg} stroke={Colors.dialRing} strokeWidth={1.2} />
+        <Circle cx={C} cy={C} r={R * 0.66} fill="none" stroke={Colors.mapLineStrong} strokeWidth={1} />
+        <Circle cx={C} cy={C} r={R * 0.33} fill="none" stroke={Colors.mapLine} strokeWidth={1} />
         {Array.from({ length: 16 }, (_, i) => {
           const az = i * 22.5;
           const major = i % 4 === 0;
           const a = point(az, R);
           const b = point(az, R - (major ? 10 : 5));
-          return <Line key={`t${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(237,228,253,0.45)" strokeWidth={major ? 1.6 : 1} />;
+          return <Line key={`t${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={Colors.dialTick} strokeWidth={major ? 1.6 : 1} />;
         })}
         {(['N', 'E', 'S', 'W'] as const).map((p, i) => {
           const at = point(i * 90, R + 14);
@@ -287,7 +287,7 @@ function CompassRose({ directions, homeName }: { directions: PlanetDirection[]; 
           );
         })}
         <Circle cx={C} cy={C} r={5} fill={Colors.textPrimary} />
-        <Circle cx={C} cy={C} r={9} fill="none" stroke="rgba(237,228,253,0.4)" strokeWidth={1} />
+        <Circle cx={C} cy={C} r={9} fill="none" stroke={Colors.dialTick} strokeWidth={1} />
       </Svg>
     </View>
   );
@@ -377,7 +377,7 @@ const createStyles = () => StyleSheet.create({
   homeIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(217,148,242,0.16)' },
   homeLabel: { color: Colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
   homeName: { color: Colors.textPrimary, fontSize: 17, fontFamily: Fonts.display, fontWeight: '800', marginTop: 2 },
-  changeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(237,228,253,0.08)' },
+  changeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: Colors.bgCard },
   changeText: { color: Colors.textMuted, fontSize: 12, fontWeight: '700' },
 
   picker: { gap: 10 },

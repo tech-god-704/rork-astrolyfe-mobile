@@ -130,14 +130,14 @@ export default function HoroscopeScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.purple} />}
         >
-          {/* Header with zodiac info */}
+          {/* Header. The sign shows only on the general reading, which is the one it drives. */}
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>
                 {isPersonal ? 'YOUR PERSONAL FORECAST' : `GENERAL FORECAST${zodiac ? ' · ' + zodiac.name.toUpperCase() : ''}`}
               </Text>
               <Text style={styles.title}>The sky ahead</Text>
-              {zodiac && (
+              {zodiac && !isPersonal && (
                 <View style={styles.signRow}>
                   <Text style={styles.signSymbol}>{zodiac.symbol}</Text>
                   <Text style={styles.signLabel}>{zodiac.name}</Text>
@@ -197,7 +197,7 @@ export default function HoroscopeScreen() {
                   {period === 'daily' ? 'Your Daily Reading' : period === 'weekly' ? 'Your Weekly Outlook' : 'Your Monthly Forecast'}
                 </Text>
               </View>
-              {zodiac && (
+              {zodiac && !isPersonal && (
                 <View style={styles.readingSignRow}>
                   <Text style={styles.readingSignSymbol}>{zodiac.symbol}</Text>
                   <Text style={styles.readingSignName}>{zodiac.name}</Text>

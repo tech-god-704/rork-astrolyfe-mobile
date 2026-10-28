@@ -108,7 +108,7 @@ Tabs: **Places → Soulmate → Couple → Insights → You.**
 | Feature | What it does | Where |
 | --- | --- | --- |
 | **Power Places** (landing tab) | Cities where the user's planet lines run, by life area (Venus love, Sun career, Moon home, Jupiter luck, Mars drive). Astrocartography computed on-device from the exact birth moment. | `components/PowerPlaces.tsx`, `services/places.ts` |
-| **From home compass** (Places → "From home") | Local space: the compass direction each planet lay in, seen from where the person lives now, at their birth moment. A compass rose plus, for each life area, the full great-circle line through home and the real cities on it (within 350 km of the line *and* 15° of its direction), with distance and the local time there now. Home defaults to the birthplace when one of our cities is within 300 km; otherwise the person picks it. **Stored only on the device** and wiped on account deletion. As of Oct 2026 none of the consumer astrocartography apps we checked (Maphrodite, Pathfinder, Linea, Astro-Cartography) list this. | `components/HomeCompass.tsx`, `services/compass.ts` |
+| **From home compass** (Places → "From home") | Local space: the compass direction each planet lay in, seen from where the person lives now, at their birth moment. A compass rose plus, for each life area, the full great-circle line through home and the real cities on it (within 350 km of the line *and* 15° of its direction), with distance and the local time there now. Home defaults to the birthplace when one of our cities is within 300 km; otherwise the person picks it. **Stored only on the device** and wiped on account deletion. Local space itself is also offered by CartoStar and Astro Gold (see the competitor table below); what they don't do is frame it as directions from where you live, with the cities that way. | `components/HomeCompass.tsx`, `services/compass.ts` |
 | **Power City** | The single city where the lines cross most strongly, with a share button. | same |
 | **"Live here and you'd rise as…"** | Relocated rising sign for any city. Agrees with the Birth Chart at the birthplace. | `relocatedRising()` |
 | **World line map** | SVG map of a planet's Midheaven / home / rising / partner lines, top cities labelled without overlaps. | `components/LineMap.tsx`, `lib/lineMapLayout.ts` |
@@ -117,6 +117,33 @@ Tabs: **Places → Soulmate → Couple → Insights → You.**
 | **Insights** | Reports (World Map, Love Cities, Career Cities, Home & Peace, Travel Timing) + Birth chart + Daily forecast. | `app/(app)/insights/index.tsx` |
 | **Forecast** | Personal daily reading, opening with a **"Switched on today"** card (which of the user's life areas are active now, and the city where each is loudest). **Off the tab bar**; reachable from Insights and by tapping the daily reminder. | `app/(app)/horoscope/`, `components/SwitchedOnToday.tsx` |
 | **When to go** (timing engine) | Scans the real sky a year ahead for supportive aspects (conjunction, trine, sextile) from Jupiter, Venus, the Sun and Mars to the natal planet behind a line, and turns them into dated windows: "Best time to go: Mar 4 – 19 · Jupiter flows with your Venus", or "Switched on now · until …". Shown on the Power City, each life area, "Check a city", Soulmate, and — for couples — **"Best time to go together"**, the days both people's Venus lines are active at once. | `services/places-timing.ts`, `components/TimingNote.tsx` |
+
+**Removed from first impressions (Oct 2026):** the sign picker in signup and on the
+You tab (the sun sign is now worked out from the birth date by `sunSignFromBirth`),
+the "♋ Cancer · WATER" badges on the personal Forecast, and wording such as "cosmic
+profile", "cosmic blueprint", "Cosmic Insights". Signup (`app/(auth)/onboarding.tsx`)
+now asks for birth date, **time** and a picked city, so a new account can use Places
+straight away — note that nothing in the app links to signup today (accounts are made
+on the web funnel), so it is reachable only by URL.
+
+**Competitors (store descriptions of 17 iOS apps, checked Oct 2026 via appgazers):**
+
+| Feature | Who else has it |
+| --- | --- |
+| Astrocartography lines + best cities | Maphrodite, Pathfinder, Linea, CartoStar, Relocation AI, Vibe Travel, Astro Gold |
+| Local space lines | CartoStar (with compass/AR), Astro Gold (paid add-on) — neither framed as "from where you live" |
+| Dated travel windows from transits | Maphrodite ("Journey"); Pathfinder hints at it |
+| Couple map / shared cities | Maphrodite, CartoStar ("Duo"), Vibe Travel, Linea |
+| **Best dates for two people together** | **None found** |
+| Daily horoscope as a main feature | Co–Star, CHANI, TimePassages, Nebula, Astro Future, Sanctuary, Astromatrix, Linea (AstroLyfe: not on the tab bar) |
+
+Do not claim to be the only app with any one feature; the honest case is the
+combination (where + which way from home + when, for one person or a couple) and
+that it is a relocation tool, not a horoscope feed. Ids checked: 6744463310,
+6744743546, 1636472913, 6759610673, 6756307815, 6773780596, 6745014753, 430270438,
+1264782561, 1071085727, 1532791252, 488946918, 1459969523, 1119123378, 1417411962,
+1065636826, 1092841332. The catalog search matches app names only, so differently
+named apps may have been missed.
 
 Engine accuracy (verified, not assumed): the Sun's Midheaven line lands within
 0.05° (~3 mi) of the published solar-noon longitude; solstice declinations within
@@ -153,7 +180,8 @@ planets within that distance of a cusp.
 | `e15248f` | "When to go" timing engine on Places, Soulmate, Couple and Forecast; tests |
 | `86237f2` | From home compass (local space) on Places; tests |
 | `300b68c` | Code-review fixes: birth time zone resolved from coordinates or city name; Birth City is a picker that saves coordinates + zone; timing engine Moon frame; compass stellium layout; reminder tap handling; forecast cache keyed on the resolved zone; per-account keys cleared in one place |
-| *this commit* | Plain-English pass: one-time "How AstroLyfe works" guide on Places (Where / Which way / When); timing reasons like "Jupiter brings luck to your love places"; compass titles "Love: head west or east" with a symbol legend; map legend "Public life / Home life / You & partners"; "Active now" instead of "switched on" |
+| `bb4b67b` | Plain-English pass: one-time "How AstroLyfe works" guide on Places (Where / Which way / When); timing reasons like "Jupiter brings luck to your love places"; compass titles "Love: head west or east" with a symbol legend; map legend "Public life / Home life / You & partners"; "Active now" instead of "switched on" |
+| *this commit* | Light mode fixed on the map, compass, chart wheel and hero cards (new palette keys); sign picker removed (signup + You tab) in favour of a sign worked out from the birth date; signup asks for birth time and a picked city; horoscope-style wording removed; personal Forecast no longer shows the sign badge; dead `services/compatibility.ts` removed; competitor check |
 
 Earlier history (auth hardening, PocketBase migration, forecast engine, welcome tour,
 light mode) is in `git log`; other contributors committed as `tech-god-704`,
@@ -264,6 +292,7 @@ bun tools/places2.test.ts    # power city (brute-force), relocated rising, map g
 bun tools/tz.test.ts         # all 111 city time zones valid and plausible
 bun tools/fmt.test.ts        # report Markdown renderer
 bun tools/cities.test.ts     # birthplace text matching ("Portland, ME" is not Portland, OR)
+bun --preload ./tools/rn-stubs.ts tools/sunsign.test.ts   # sun sign from birth details (incl. solstice cusp)
 bun tools/compass.test.ts    # compass: Sun due south at noon, equinox sunrise due east,
                              # NY→London bearing/distance, cities on a line (brute force)
 bun tools/timing.test.ts     # when-to-go windows: solar return lands on the birthday,

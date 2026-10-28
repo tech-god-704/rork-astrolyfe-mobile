@@ -61,7 +61,7 @@ export const REPORT_META: Record<ReportType, { title: string; description: strin
   },
   transit_forecast: {
     title: 'Travel Timing',
-    description: 'Which of your places are switched on right now, and the best windows to go.',
+    description: 'Which of your places are active right now, and the best windows to go.',
     icon: 'trending-up',
   },
 };

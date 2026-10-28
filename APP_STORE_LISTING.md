@@ -113,13 +113,14 @@ Connect must point at the **same** pages:
 
 ## Screenshots
 
-Lead with what no other app in the category has. **No daily-horoscope or
-zodiac-sign screens anywhere in the set** — screenshots are the first thing a
-reviewer compares against the saturated category.
+Lead with what sets it apart from horoscope apps: places, directions and dates.
+**No daily-horoscope or zodiac-sign screens anywhere in the set** — screenshots are
+the first thing a reviewer compares against the saturated category.
 
 | # | Screen | Caption |
 | --- | --- | --- |
-| 1 | Places — Power City card with the map below | The cities your chart lights up |
+| 1 | Places — first open, with the "How AstroLyfe works" card (Where / Which way / When) | Where you belong, which way to go, and when |
+| 1b | Places — Power City card with the map below (alternative first shot) | The cities your chart lights up |
 | 2 | Places — "From home" compass rose and the first direction card | Which way to go from home |
 | 3 | Places — map with the Love chip selected | Your lines, around the world |
 | 4 | Places — "Check a city" result with "you'd rise as…" and its "Best time to go" | Check any city on Earth — and when to go |
@@ -131,12 +132,29 @@ Capture them from the **demo account** so the content is consistent (its reports
 were generated from its own chart — see `HANDOFF.md`). Required size is the 6.9"
 display (1320 × 2868); a 6.5" set is still accepted.
 
+## How to describe the difference (checked Oct 2026)
+
+A check of 17 iOS astrology apps' store descriptions (see `HANDOFF.md`, section 4)
+found that astrocartography maps, couple map overlays and dated travel windows
+each already exist in at least one app (Maphrodite, CartoStar, Linea, Vibe
+Travel). Local space lines exist in CartoStar and Astro Gold. So **never claim
+AstroLyfe is the "only" or "first" app** with any single feature — a reviewer
+can check, and an untrue claim hurts more than it helps.
+
+What is accurate, and is the case to make:
+- It is a **relocation and travel-timing tool**, not a horoscope app: no daily
+  sign feed, no sign picker, no compatibility score.
+- It combines **where** (map), **which way from where you live** (compass) and
+  **when** (dates) in one place, for one person or a couple.
+- **Best dates for two people together** — no examined listing offers it.
+- Everything is calculated on the device from the exact birth moment.
+
 ## App Review notes
 
 Paste into **App Review Information → Notes**:
 
 ```
-AstroLyfe is a relocation and relationship-mapping app. Its core features — Power Places, the world line map, Couple Map, and "the rising sign you'd have if you lived here" — calculate where on Earth each planet sat at the user's exact birth moment (astrocartography) and match those lines to real cities. A timing engine then scans the real sky a year ahead to date when each place is "switched on" (including, for couples, the days both people's lines are active together). A "From home" compass (local space) shows the direction each planet lay in from where the user lives now, with the real cities along each line, their distance and local time. All of it is computed on the device from planetary positions, not from per-sign text.
+AstroLyfe is a relocation and relationship-mapping app. Its core features — Power Places, the world line map, Couple Map, and "the rising sign you'd have if you lived here" — calculate where on Earth each planet sat at the user's exact birth moment (astrocartography) and match those lines to real cities. A timing engine then scans the real sky a year ahead to date when each place is most active (including, for couples, the days both people's lines are active together). A "From home" compass (local space) shows the direction each planet lay in from where the user lives now, with the real cities along each line, their distance and local time. All of it is computed on the device from planetary positions, not from per-sign text. There is no daily horoscope feed and no zodiac-sign picker: the sun sign is worked out from the birth date.
 
 Demo account: the sign-in above has an active subscription and full birth details, so every feature is unlocked. Suggested path: Places tab (Power City, map, "Check a city", then the "From home" switch) → Couple tab (enter any birth date, time and city to see a shared map) → Soulmate → Insights (city reports).
 

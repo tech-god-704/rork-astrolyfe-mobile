@@ -8,7 +8,7 @@ import * as Device from 'expo-device';
  * This is intentionally local-only: expo-notifications schedules the notification on
  * the device itself, so it fires reliably at the chosen time with no server, no push
  * credentials, and no cron. The tradeoff is that the notification body is a fixed
- * reminder ("Your daily horoscope is ready"), not that day's actual generated
+ * reminder ("Your forecast for today"), not that day's actual generated
  * content — there is no round trip to the server at delivery time to ask.
  *
  * registerPushToken() stores an Expo push token on the profile for later use, but

@@ -52,10 +52,10 @@ export default function LoadingScreen() {
         <Text style={styles.wordmark}>AstroLyfe</Text>
         <View style={styles.statusRow}>
           <Animated.View style={[styles.statusDot, { opacity: pulse, transform: [{ scale: pulse }] }]} />
-          <Text style={styles.status}>Aligning your universe</Text>
+          <Text style={styles.status}>Mapping your places</Text>
         </View>
       </Animated.View>
-      <Text style={styles.meta}>PERSONAL · PRIVATE · COSMIC</Text>
+      <Text style={styles.meta}>PERSONAL · PRIVATE · PRECISE</Text>
     </View>
   );
 }

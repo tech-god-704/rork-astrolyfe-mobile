@@ -170,7 +170,7 @@ export default function ChartScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.eyebrow}>YOUR BIRTH CHART</Text>
-          <Text style={styles.title}>Your cosmic blueprint</Text>
+          <Text style={styles.title}>The sky when you were born</Text>
           <View style={styles.subtitleRow}>
             {userSign && <Text style={styles.signSymbol}>{userSign.symbol}</Text>}
             <Text style={styles.subtitle}>
@@ -203,8 +203,8 @@ export default function ChartScreen() {
               </Defs>
 
               <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="url(#centerGlow)" />
-              <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke="rgba(192,154,235,0.48)" strokeWidth={1.5} />
-              <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke="rgba(218,200,242,0.20)" strokeWidth={1} />
+              <Circle cx={CENTER} cy={CENTER} r={OUTER_R} fill="none" stroke={Colors.dialRing} strokeWidth={1.5} />
+              <Circle cx={CENTER} cy={CENTER} r={INNER_R} fill="none" stroke={Colors.mapLineStrong} strokeWidth={1} />
               <Circle cx={CENTER} cy={CENTER} r={Math.round(60 * SCALE)} fill="none" stroke="rgba(97,56,163,0.24)" strokeWidth={0.5} />
 
               {/* Zodiac sign segments */}
@@ -220,10 +220,10 @@ export default function ChartScreen() {
                 const isUser = userSign?.name === sign.name;
                 return (
                   <G key={sign.name}>
-                    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(218,200,242,0.16)" strokeWidth={0.5} />
+                    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={Colors.mapLineStrong} strokeWidth={0.5} />
                     <SvgText
                       x={sx} y={sy}
-                      fill={isUser ? sign.color : 'rgba(255,255,255,0.45)'}
+                      fill={isUser ? sign.color : Colors.textMuted}
                       fontSize={isUser ? 18 : 14}
                       fontWeight={isUser ? 'bold' : 'normal'}
                       textAnchor="middle"
@@ -244,7 +244,7 @@ export default function ChartScreen() {
                     x1={CENTER} y1={CENTER}
                     x2={CENTER + Math.cos(a) * Math.round(58 * SCALE)}
                     y2={CENTER + Math.sin(a) * Math.round(58 * SCALE)}
-                    stroke={deg % 90 === 0 ? 'rgba(150,98,198,0.38)' : 'rgba(218,200,242,0.09)'}
+                    stroke={deg % 90 === 0 ? 'rgba(150,98,198,0.38)' : Colors.mapLine}
                     strokeWidth={deg % 90 === 0 ? 1 : 0.5}
                   />
                 );
@@ -587,7 +587,7 @@ const createStyles = () => StyleSheet.create({
     borderRadius: CHART_SIZE / 2,
     borderWidth: 1,
     borderColor: 'rgba(192,154,235,0.20)',
-    backgroundColor: 'rgba(9,5,27,0.56)',
+    backgroundColor: Colors.mapBg,
   },
   chartGlow: {
     position: 'absolute', width: CHART_SIZE + 20, height: CHART_SIZE + 20,
@@ -606,10 +606,10 @@ const createStyles = () => StyleSheet.create({
   distBarRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   distBarLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, width: 80 },
   distBarName: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  distBarTrack: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
+  distBarTrack: { flex: 1, height: 6, backgroundColor: Colors.mapLine, borderRadius: 3, overflow: 'hidden' },
   distBarFill: { height: 6, borderRadius: 3 },
   distBarCount: { fontSize: 14, fontWeight: '700', width: 20, textAlign: 'right' },
-  dominantRow: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  dominantRow: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: Colors.mapLine },
   dominantText: { fontSize: 14, fontWeight: '600', color: Colors.purpleLight, textAlign: 'center' },
 
   // Aspect legend

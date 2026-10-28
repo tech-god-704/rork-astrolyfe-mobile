@@ -11,6 +11,8 @@ import { verifySubscriptionLive, deleteAccountServer } from '@/lib/backend';
 import { normalizeBirthDate } from '@/lib/validation';
 import { syncDailyReminder, cancelDailyReminder } from '@/services/notifications';
 import { accountLocalKeys } from '@/constants/storageKeys';
+import { sunSignFromBirth } from '@/services/places-birth';
+import type { City } from '@/data/cities';
 
 export interface QuizData {
   birth_year?: number;
@@ -328,6 +330,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     zodiacSign: string,
     birthDate: string,
     birthCity = '',
+    // Optional so existing callers keep working. With a picked city the profile gets
+    // the coordinates and birth time zone every chart needs, not just a place name.
+    extra?: { birthHour?: number; birthMinute?: number; city?: City | null },
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -349,13 +354,25 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // do the same patch but could silently no-op if the hook's write raced with this
     // one, which upsert's insert-or-patch semantics don't depend on.
 
+    const hasTime = extra?.birthHour != null && extra?.birthMinute != null;
+    const city = extra?.city ?? null;
+    const birthFields = {
+      date_of_birth: birthDate || null,
+      timezone: city?.tz ?? null,
+      quiz_data: hasTime ? { birth_hour: extra!.birthHour, birth_minute: extra!.birthMinute } : null,
+    };
+    // Worked out from the birth details when not given, so nobody has to pick one.
+    const sign = zodiacSign || (birthDate ? sunSignFromBirth({ birth_date: birthDate, ...birthFields }) : null);
+
     const { data: profileRow, error: upsertError } = await supabase.from('profiles').upsert({
       email,
       user_id: data.user?.id,
       display_name: displayName,
-      zodiac_sign: zodiacSign || null,
-      date_of_birth: birthDate || null,
+      zodiac_sign: sign || null,
+      date_of_birth: birthFields.date_of_birth,
       birth_city: birthCity || null,
+      ...(city ? { birth_lat: city.lat, birth_lon: city.lon, timezone: city.tz } : {}),
+      ...(hasTime ? { quiz_data: { ...(birthCity ? { birth_place: birthCity } : {}), birth_hour: extra!.birthHour, birth_minute: extra!.birthMinute } } : {}),
     }, { onConflict: 'email' });
 
     if (upsertError) {

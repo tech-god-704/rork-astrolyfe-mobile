@@ -68,10 +68,10 @@ export default function InsightsScreen() {
         >
           {/* Header */}
           <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.eyebrow}>EXPLORE YOUR UNIVERSE</Text>
-              <Text style={styles.title}>Cosmic Insights</Text>
-              <Text style={styles.subtitle}>Deep-dive reports built from your cosmic profile.</Text>
+            <View style={styles.headerCopy}>
+              <Text style={styles.eyebrow}>YOUR CITY REPORTS</Text>
+              <Text style={styles.title}>Insights</Text>
+              <Text style={styles.subtitle}>In-depth reports on your places, from your exact birth moment.</Text>
             </View>
             <View style={styles.headerIcon}>
               <Sparkles size={24} color={Colors.gold} />
@@ -79,14 +79,14 @@ export default function InsightsScreen() {
           </View>
 
           <LinearGradient
-            colors={[Colors.deepViolet, 'rgba(59,33,113,0.76)', Colors.bgCardSolid]}
+            colors={[Colors.deepViolet, Colors.heroMid, Colors.bgCardSolid]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.toolkitHero}
           >
             <View style={styles.toolkitTop}>
               <View>
-                <Text style={styles.toolkitEyebrow}>YOUR COSMIC TOOLKIT</Text>
+                <Text style={styles.toolkitEyebrow}>YOUR REPORTS</Text>
                 <Text style={styles.toolkitTitle}>{availableCount} of {REPORT_ORDER.length} insights ready</Text>
               </View>
               <View style={styles.reportCount}>
@@ -323,6 +323,7 @@ const createStyles = () => StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
 
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, marginBottom: 24, gap: 12 },
+  headerCopy: { flex: 1 },
   eyebrow: { color: Colors.gold, fontSize: 9, fontWeight: '900', letterSpacing: 1.55, marginBottom: 6 },
   title: { fontSize: 36, fontFamily: Fonts.display, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },

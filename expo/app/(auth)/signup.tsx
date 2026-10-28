@@ -97,7 +97,7 @@ export default function SignupScreen() {
                   <Text style={styles.authBrandText}>ASTROLYFE</Text>
                 </View>
               </View>
-              <Text style={styles.eyebrow}>CREATE YOUR COSMIC PROFILE</Text>
+              <Text style={styles.eyebrow}>CREATE YOUR PROFILE</Text>
               <Text style={styles.title}>Make AstroLyfe{'\n'}yours.</Text>
               <Text style={styles.subtitle}>One private space for your places, your soulmate and your reports.</Text>
 

@@ -11,7 +11,7 @@ import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/theme';
 import { useAuth, hasBillableSubscription } from '@/providers/AuthProvider';
 import { supabase, uploadFile } from '@/lib/supabase';
-import { ZODIAC_SIGNS, getZodiacByName } from '@/constants/zodiac';
+import { sunSignFromBirth } from '@/services/places-birth';
 import GlassCard from '@/components/GlassCard';
 import { getBirthDateError } from '@/lib/validation';
 import AppBackground from '@/components/AppBackground';
@@ -29,7 +29,6 @@ export default function ProfileScreen() {
   const [birthDate, setBirthDate] = useState<string>('');
   const [birthTime, setBirthTime] = useState<string>('');
   const [birthCity, setBirthCity] = useState<string>('');
-  const [selectedSign, setSelectedSign] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ birth?: string; time?: string; city?: string }>({});
   // The listed city the birthplace text was picked from, if any. The charts need its
@@ -61,7 +60,6 @@ export default function ProfileScreen() {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
       setBirthDate(profile.birth_date ?? '');
-      setSelectedSign(profile.zodiac_sign ?? '');
       setBirthCity(profile.birth_city ?? '');
       setPickedCity(null);
       // Reconstruct birth time from quiz_data if available
@@ -81,24 +79,39 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  const zodiac = selectedSign ? getZodiacByName(selectedSign) : null;
-
   const completeness = useMemo(() => {
     let filled = 0;
-    const total = 5;
+    const total = 4;
     if (displayName.trim()) filled++;
     if (birthDate.trim()) filled++;
     if (birthTime.trim()) filled++;
     if (birthCity.trim()) filled++;
-    if (selectedSign) filled++;
     return { filled, total, percent: Math.round((filled / total) * 100) };
-  }, [displayName, birthDate, birthTime, birthCity, selectedSign]);
+  }, [displayName, birthDate, birthTime, birthCity]);
 
   const cityChanged = birthCity.trim() !== (profile?.birth_city ?? '').trim();
   const resolvedCity = pickedCity ?? matchCity(birthCity);
   const citySuggestions = useMemo(
     () => (cityChanged && !resolvedCity ? searchCities(birthCity.split(',')[0], 5) : []),
     [cityChanged, resolvedCity, birthCity],
+  );
+
+  // The sun sign is worked out from the birth details, never picked: a hand-picked sign
+  // could disagree with the chart every other screen calculates.
+  const signFor = (zone: string | null | undefined, lat: unknown, lon: unknown) => {
+    const tm = birthTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+    return sunSignFromBirth({
+      birth_date: birthDate.trim(),
+      timezone: zone ?? null,
+      birth_lat: typeof lat === 'number' ? lat : null,
+      birth_lon: typeof lon === 'number' ? lon : null,
+      quiz_data: tm ? { birth_hour: parseInt(tm[1], 10), birth_minute: parseInt(tm[2], 10) } : null,
+    });
+  };
+  const liveSign = signFor(
+    cityChanged ? resolvedCity?.tz : profile?.timezone ?? resolvedCity?.tz,
+    cityChanged ? resolvedCity?.lat : profile?.birth_lat,
+    cityChanged ? resolvedCity?.lon : profile?.birth_lon,
   );
 
   const validateProfile = (): boolean => {
@@ -174,7 +187,12 @@ export default function ProfileScreen() {
         .update({
           display_name: displayName.trim(),
           date_of_birth: birthDate.trim() || null,
-          zodiac_sign: selectedSign || null,
+          zodiac_sign:
+            signFor(
+              (place.timezone as string | null | undefined) ?? profile?.timezone,
+              place.birth_lat ?? profile?.birth_lat,
+              place.birth_lon ?? profile?.birth_lon,
+            ) ?? profile?.zodiac_sign ?? null,
           birth_city: birthCity.trim() || null,
           quiz_data: Object.keys(updatedQuiz).length > 0 ? updatedQuiz : null,
           ...place,
@@ -197,7 +215,7 @@ export default function ProfileScreen() {
 
   // Separate from updateMutation on purpose: a notification preference should take
   // effect the moment it's tapped, not sit unsaved until the customer notices the big
-  // "Update my cosmic profile" button further down the form.
+  // "Save my profile" button further down the form.
   const notificationMutation = useMutation({
     mutationFn: async (next: { enabled: boolean; hour: number; minute: number }) => {
       if (!user?.email) throw new Error('Not authenticated');
@@ -344,11 +362,11 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">
           <Text style={styles.eyebrow}>YOUR ASTROLYFE</Text>
-          <Text style={styles.title}>Cosmic profile</Text>
+          <Text style={styles.title}>Your profile</Text>
 
           {/* Avatar Section */}
           <LinearGradient
-            colors={[Colors.deepViolet, 'rgba(59,33,113,0.72)', Colors.bgCardSolid]}
+            colors={[Colors.deepViolet, Colors.heroMid, Colors.bgCardSolid]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.avatarSection}
@@ -368,7 +386,7 @@ export default function ProfileScreen() {
             >
               <View style={styles.avatarOuter}>
                 <LinearGradient
-                  colors={zodiac ? [zodiac.color, Colors.purple] : [Colors.purple, Colors.indigoLight]}
+                  colors={[Colors.purple, Colors.indigoLight]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.avatarGradient}
@@ -377,7 +395,7 @@ export default function ProfileScreen() {
                     {avatarPreview ?? profile?.avatar_url ? (
                       <Image source={{ uri: (avatarPreview ?? profile?.avatar_url) as string }} style={styles.avatarPhoto} />
                     ) : (
-                      <Text style={styles.avatarText}>{zodiac?.symbol ?? (displayName[0] ?? '?')}</Text>
+                      <Text style={styles.avatarText}>{(displayName.trim()[0] ?? '?').toUpperCase()}</Text>
                     )}
                   </View>
                 </LinearGradient>
@@ -399,12 +417,6 @@ export default function ProfileScreen() {
                   <Text style={styles.adminText}>Admin</Text>
                 </View>
               )}
-              {zodiac && (
-                <View style={[styles.signBadge, { backgroundColor: `${zodiac.color}15` }]}>
-                  <Text style={styles.signBadgeSymbol}>{zodiac.symbol}</Text>
-                  <Text style={[styles.signBadgeText, { color: zodiac.color }]}>{zodiac.name}</Text>
-                </View>
-              )}
             </View>
             {/* Completeness indicator */}
             <View style={styles.completenessRow}>
@@ -413,7 +425,7 @@ export default function ProfileScreen() {
                   <LinearGradient colors={[Colors.purple, Colors.indigoLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
                 </View>
               </View>
-              <Text style={styles.completenessText}>reading accuracy</Text>
+              <Text style={styles.completenessText}>map accuracy</Text>
             </View>
           </LinearGradient>
 
@@ -424,7 +436,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.profileActionCopy}>
                 <Text style={styles.profileActionTitle}>Birth chart</Text>
-                <Text style={styles.profileActionText}>View your blueprint</Text>
+                <Text style={styles.profileActionText}>The sky at the moment you were born</Text>
               </View>
               <ChevronRight size={16} color={Colors.textMuted} />
             </Pressable>
@@ -554,33 +566,13 @@ export default function ProfileScreen() {
               </Text>
             ) : null}
 
-            <Text style={styles.fieldLabel}>Zodiac Sign</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.signScroll} contentContainerStyle={styles.signScrollContent}>
-              {ZODIAC_SIGNS.map((sign) => {
-                const isSelected = selectedSign === sign.name;
-                return (
-                  <Pressable
-                    key={sign.name}
-                    style={({ pressed }) => [styles.signChip, isSelected && { backgroundColor: `${sign.color}15`, borderColor: sign.color }, pressed && styles.signChipPressed]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      setSelectedSign(sign.name);
-                    }}
-                    accessibilityRole="radio"
-                    accessibilityLabel={`${sign.name} zodiac sign`}
-                    accessibilityState={{ selected: isSelected }}
-                  >
-                    <Text style={[styles.signChipSymbol, isSelected && { fontSize: 18 }]}>{sign.symbol}</Text>
-                    <Text style={[styles.signChipLabel, isSelected && { color: sign.color }]}>{sign.name}</Text>
-                    {isSelected && (
-                      <View style={[styles.checkDot, { backgroundColor: sign.color }]}>
-                        <Check size={8} color="#fff" />
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            {liveSign && (
+              <View style={styles.signRow} accessible accessibilityLabel={`Sun sign ${liveSign}, worked out from your birth date`}>
+                <Text style={styles.signRowLabel}>Sun sign</Text>
+                <Text style={styles.signRowValue}>{liveSign}</Text>
+                <Text style={styles.signRowNote}>from your birth date</Text>
+              </View>
+            )}
           </GlassCard>
 
           {/* Appearance */}
@@ -693,7 +685,7 @@ export default function ProfileScreen() {
             }}
             disabled={updateMutation.isPending}
             accessibilityRole="button"
-            accessibilityLabel="Update my cosmic profile"
+            accessibilityLabel="Save my profile"
             accessibilityState={{ disabled: updateMutation.isPending, busy: updateMutation.isPending }}
           >
             <LinearGradient colors={[Colors.purple, Colors.indigo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnInner}>
@@ -702,7 +694,7 @@ export default function ProfileScreen() {
               ) : (
                 <>
                   <Save size={17} color="#fff" />
-                  <Text style={styles.saveBtnText}>Update my cosmic profile</Text>
+                  <Text style={styles.saveBtnText}>Save my profile</Text>
                 </>
               )}
             </LinearGradient>
@@ -793,9 +785,6 @@ const createStyles = () => StyleSheet.create({
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   adminBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: Colors.goldDim, borderRadius: 12 },
   adminText: { fontSize: 11, fontWeight: '700', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  signBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 },
-  signBadgeSymbol: { fontSize: 14 },
-  signBadgeText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   profileActions: { gap: 10, marginBottom: 22 },
   profileAction: { minHeight: 70, borderRadius: 18, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: 'rgba(218,200,242,0.035)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -830,6 +819,10 @@ const createStyles = () => StyleSheet.create({
     height: 54,
     gap: 12,
   },
+  signRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 16, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.bgCardBorder },
+  signRowLabel: { color: Colors.textSecondary, fontSize: 13, fontWeight: '700' },
+  signRowValue: { color: Colors.textPrimary, fontSize: 15, fontWeight: '800' },
+  signRowNote: { color: Colors.textMuted, fontSize: 12 },
   cityOption: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.bgCardBorder },
   cityOptionPressed: { opacity: 0.7 },
   cityOptionName: { color: Colors.textPrimary, fontSize: 14, fontWeight: '700' },
@@ -854,7 +847,6 @@ const createStyles = () => StyleSheet.create({
     borderColor: Colors.bgInputBorder,
   },
   signChipPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-  signChipSymbol: { fontSize: 15 },
   signChipLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 2 },
 
