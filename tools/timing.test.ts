@@ -1,6 +1,6 @@
 // Checks for services/places-timing.ts — when a place is "switched on".
 // Run: bun tools/timing.test.ts
-import { activationWindows, placeTiming, formatWindow, describeWindow, sharedWindow } from '../expo/services/places-timing.ts';
+import { activationWindows, placeTiming, formatWindow, describeWindow, sharedWindow, sharedWindows, travelCalendar } from '../expo/services/places-timing.ts';
 import { longitudeOf, julianDayFromDate } from '../expo/services/ephemeris.ts';
 import { T } from '../expo/services/natal.ts';
 import { angularSeparation } from '../expo/services/transit-aspects.ts';
@@ -91,6 +91,44 @@ for (let i = 0; i < 60; i++) {
 }
 ok('shared windows sit inside both people\'s windows', sharedBad === 0, `60 couples: ${60 - sharedNone} with a shared window (${sharedLive} live now), ${sharedBad} bad`);
 ok('most couples get a shared window within a year', sharedNone < 30, `${sharedNone}/60 without`);
+
+// Travel calendar: in date order, nothing in the past, no two overlapping entries for one planet,
+// every entry a real window for that planet.
+const ALL: PlacePlanet[] = ['Venus', 'Sun', 'Moon', 'Jupiter', 'Mars'];
+let calBad = 0, calTotal = 0;
+rnd = 21;
+for (let i = 0; i < 40; i++) {
+  const b: BirthMoment = { year: 1955 + Math.floor(r() * 50), month: 1 + Math.floor(r() * 12), day: 1 + Math.floor(r() * 28), hour: Math.floor(r() * 24), minute: 0, utcOffsetMinutes: 0 };
+  const cal = travelCalendar(b, ALL, from, 365, 50);
+  calTotal += cal.length;
+  const ordered = cal.every((e, j) => j === 0 || cal[j - 1].window.start <= e.window.start);
+  const notPast = cal.every(e => e.window.end >= today && e.live === (e.window.start <= today));
+  const real = cal.every(e => activationWindows(b, e.natal, from).some(w => w.start.getTime() === e.window.start.getTime() && w.end.getTime() === e.window.end.getTime() && w.activator === e.window.activator));
+  const noOverlap = cal.every((e, j) => cal.every((f, k) => j >= k || e.natal !== f.natal || e.window.end < f.window.start || f.window.end < e.window.start));
+  if (!(ordered && notPast && real && noOverlap) || cal.length === 0) calBad++;
+}
+ok('travel calendar is ordered, current, real and non-overlapping per planet', calBad === 0, `${calTotal} entries over 40 charts, ${calBad} bad`);
+ok('calendar limit respected', travelCalendar(demo, ALL, from, 365, 4).length === 4);
+
+// Shared windows list: sorted, merged (no touching/overlapping stretches), inside both people's windows,
+// and the single best sharedWindow lies inside one of them.
+let swBad = 0, swTotal = 0;
+rnd = 5;
+for (let i = 0; i < 60; i++) {
+  const mk = (): BirthMoment => ({ year: 1960 + Math.floor(r() * 45), month: 1 + Math.floor(r() * 12), day: 1 + Math.floor(r() * 28), hour: Math.floor(r() * 24), minute: 0, utcOffsetMinutes: 0 });
+  const a = mk(), b = mk();
+  const list = sharedWindows(a, b, 'Venus', from);
+  swTotal += list.length;
+  const aw = activationWindows(a, 'Venus', from), bw = activationWindows(b, 'Venus', from);
+  const covered = (ws: typeof aw, d: Date) => ws.some(w => w.start <= d && w.end >= d);
+  const okList = list.every((w, j) => w.start <= w.end && w.end >= today && w.live === (w.start <= today)
+    && covered(aw, w.start) && covered(bw, w.start) && covered(aw, w.end) && covered(bw, w.end)
+    && (j === 0 || list[j - 1].end.getTime() + 86400e3 * 1.5 < w.start.getTime()));
+  const best = sharedWindow(a, b, 'Venus', from);
+  const bestIn = !best ? list.length === 0 : list.some(w => w.start <= best.start && w.end >= best.end);
+  if (!okList || !bestIn) swBad++;
+}
+ok('shared window list is sorted, merged and inside both charts', swBad === 0, `${swTotal} stretches over 60 couples, ${swBad} bad`);
 
 // Formatting
 const D = (m: number, d: number, y = 2027) => new Date(y, m - 1, d, 12);

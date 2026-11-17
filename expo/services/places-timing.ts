@@ -224,3 +224,74 @@ export function sharedWindow(
   const { score: _score, ...shared } = best;
   return shared;
 }
+
+/**
+ * Every stretch in the coming year when the same natal planet is active for both
+ * people, soonest first, with overlapping stretches merged into one (several aspect
+ * pairs often cover the same days).
+ */
+export function sharedWindows(
+  a: BirthMoment,
+  b: BirthMoment,
+  natal: PlacePlanet = 'Venus',
+  from: Date = new Date(),
+  days = 365,
+): { start: Date; end: Date; live: boolean }[] {
+  const mine = activationWindows(a, natal, from, days);
+  const theirs = activationWindows(b, natal, from, days);
+  const today = noon(from).getTime();
+
+  const spans: [number, number][] = [];
+  for (const m of mine) {
+    for (const t of theirs) {
+      const start = Math.max(m.start.getTime(), t.start.getTime());
+      const end = Math.min(m.end.getTime(), t.end.getTime());
+      if (start <= end && end >= today) spans.push([start, end]);
+    }
+  }
+  spans.sort((x, y) => x[0] - y[0]);
+
+  const DAY = 86400000;
+  const merged: [number, number][] = [];
+  for (const s of spans) {
+    const last = merged[merged.length - 1];
+    // Adjacent days count as one stretch.
+    if (last && s[0] <= last[1] + DAY * 1.5) last[1] = Math.max(last[1], s[1]);
+    else merged.push([s[0], s[1]]);
+  }
+  return merged.map(([start, end]) => ({ start: new Date(start), end: new Date(end), live: start <= today }));
+}
+
+export interface CalendarEntry {
+  natal: PlacePlanet;
+  window: TimingWindow;
+  /** True when the window includes today. */
+  live: boolean;
+}
+
+/**
+ * The person's travel calendar: for each given natal planet, its windows that are live
+ * or still to come, merged into one list in date order. One entry per planet per
+ * stretch — where two activators overlap on the same planet, the stronger is kept.
+ */
+export function travelCalendar(
+  birth: BirthMoment,
+  natals: PlacePlanet[],
+  from: Date = new Date(),
+  days = 365,
+  limit = 6,
+): CalendarEntry[] {
+  const today = noon(from).getTime();
+  const out: CalendarEntry[] = [];
+  for (const natal of natals) {
+    const kept: TimingWindow[] = [];
+    for (const w of activationWindows(birth, natal, from, days)) {
+      if (w.end.getTime() < today) continue;
+      const clash = kept.findIndex((k) => w.start.getTime() <= k.end.getTime() && w.end.getTime() >= k.start.getTime());
+      if (clash < 0) kept.push(w);
+      else if (w.score > kept[clash].score) kept[clash] = w;
+    }
+    for (const window of kept) out.push({ natal, window, live: window.start.getTime() <= today });
+  }
+  return out.sort((x, y) => x.window.start.getTime() - y.window.start.getTime()).slice(0, limit);
+}

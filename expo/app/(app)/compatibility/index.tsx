@@ -20,7 +20,7 @@ import { THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
 import { getBirthDateError, parseAndValidateBirthDate } from '@/lib/validation';
 import { coupleCities, type PlaceHit } from '@/services/places';
 import { birthMomentFromProfile, birthMomentFromParts, birthInputsKey } from '@/services/places-birth';
-import { sharedWindow, formatWindow, type TimingWindow } from '@/services/places-timing';
+import { sharedWindow, sharedWindows, formatWindow, type TimingWindow } from '@/services/places-timing';
 
 /**
  * Couple Map — the cities where two people's charts both light up.
@@ -121,6 +121,16 @@ export default function CoupleMapScreen() {
     // dayKey is deliberately a dependency: the window moves with today's date.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, them, dayKey]);
+
+  // Other stretches this year when both love lines are active, besides the one featured.
+  const moreDates = useMemo(() => {
+    if (!me || !them || !together) return [];
+    return sharedWindows(me, them, 'Venus')
+      .filter((w) => w.end.getTime() < together.start.getTime() || w.start.getTime() > together.end.getTime())
+      .slice(0, 3);
+    // dayKey is deliberately a dependency: the windows move with today's date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me, them, together, dayKey]);
 
   const cityMatches = useMemo(() => searchCities(cityQuery, 5), [cityQuery]);
 
@@ -354,6 +364,18 @@ export default function CoupleMapScreen() {
                       />
                     </View>
                   )}
+                  {moreDates.length > 0 && (
+                    <View style={styles.moreDates} accessible accessibilityLabel={`More dates together: ${moreDates.map((w) => formatWindow(w)).join(', ')}`}>
+                      <Text style={styles.moreDatesLabel}>MORE DATES TOGETHER</Text>
+                      <View style={styles.moreDatesRow}>
+                        {moreDates.map((w) => (
+                          <View key={w.start.getTime()} style={styles.datePill}>
+                            <Text style={styles.datePillText}>{formatWindow(w)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
                 </LinearGradient>
               )}
 
@@ -421,6 +443,11 @@ const createStyles = () => StyleSheet.create({
   cardTitle: { color: Colors.textPrimary, fontSize: 18, fontFamily: Fonts.display, fontWeight: '800' },
   bodyText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 21 },
   timingWrap: { marginTop: 12 },
+  moreDates: { marginTop: 14, gap: 8 },
+  moreDatesLabel: { color: Colors.textMuted, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
+  moreDatesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  datePill: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: Colors.bgCardBorder, backgroundColor: Colors.bgCard },
+  datePillText: { color: Colors.textPrimary, fontSize: 12, fontWeight: '700' },
   label: { color: Colors.textPrimary, fontSize: 13, fontWeight: '700', marginTop: 6 },
   input: { borderWidth: 1, borderColor: Colors.bgInputBorder, backgroundColor: Colors.bgInput, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: Colors.textPrimary, fontSize: 15 },
   inputError: { borderColor: Colors.accent },

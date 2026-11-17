@@ -55,7 +55,8 @@ POWER PLACES
 • Your top cities for love, career, home, luck and drive
 • A live map of your lines across the world
 • Check any city and see what it does for you, including the rising sign you would have if you lived there
-• When to go: the dates each place is switched on, worked out from the real movement of the planets
+• When to go: the dates each place is most active, worked out from the real movement of the planets
+• Your travel calendar: the year ahead, in date order, for love, career, home, luck and drive
 
 FROM HOME COMPASS
 • Stand where you live and see which direction each part of your life lies in
@@ -66,7 +67,7 @@ COUPLE MAP
 • Add your partner, crush or best friend
 • See both of your love lines on one map
 • Find your love city together, and the places where you both thrive
-• Best time to go together: the days both of your love lines are switched on at once
+• Best dates to go together: every stretch this year when both of your love lines are active at once
 • Their details stay on your phone
 
 SOULMATE

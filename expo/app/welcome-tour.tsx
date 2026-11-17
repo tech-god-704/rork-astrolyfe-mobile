@@ -50,8 +50,8 @@ const STEPS: Step[] = [
   {
     icons: [Sparkles],
     eyebrow: 'Your reveal',
-    title: 'Your reading arrives here',
-    copy: "If you just purchased, your portrait and five-part reading are being prepared and will appear on Insights the moment they're ready — you'll also get an email.",
+    title: 'Your reports arrive here',
+    copy: "If you just purchased, your portrait and five city reports are being prepared and will appear on Insights the moment they're ready — you'll also get an email.",
   },
   {
     icons: [Compass, Sun, Heart],
@@ -63,7 +63,7 @@ const STEPS: Step[] = [
     icons: [Sparkles],
     eyebrow: "Let's go",
     title: 'Everything is ready',
-    copy: 'Explore at your own pace. You can always find your reading again from the Insights tab.',
+    copy: 'Explore at your own pace. Start on Places: your map, your compass and your best dates. Your reports are on the Insights tab.',
   },
 ];
 

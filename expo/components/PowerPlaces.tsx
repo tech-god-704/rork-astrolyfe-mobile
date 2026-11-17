@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import LineMap from '@/components/LineMap';
 import TimingNote from '@/components/TimingNote';
 import HomeCompass from '@/components/HomeCompass';
 import PlacesIntro from '@/components/PlacesIntro';
+import TravelCalendar from '@/components/TravelCalendar';
 import { placesIntroSeenKey } from '@/constants/storageKeys';
 import AppBackground from '@/components/AppBackground';
 import { useThemedStyles } from '@/providers/ThemeProvider';
@@ -33,7 +34,7 @@ import {
 } from '@/services/places';
 import { birthMomentFromProfile, birthInputsKey } from '@/services/places-birth';
 import { THEME_STYLE, PLANET_THEME, THEME_LABEL_BY_PLANET } from '@/constants/placeThemes';
-import { placeTiming, describeWindow, type PlaceTiming } from '@/services/places-timing';
+import { placeTiming, describeWindow, formatWindow, type PlaceTiming } from '@/services/places-timing';
 
 export default function PowerPlaces() {
   const styles = useThemedStyles(createStyles);
@@ -121,9 +122,12 @@ export default function PowerPlaces() {
     if (!headline) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const areas = headline.hits.map((h) => THEME_LABEL_BY_PLANET[h.planet].toLowerCase()).join(', ');
+    const when = headlineTiming?.best ?? null;
     try {
       await Share.share({
-        message: `My power city is ${headline.city.name}, ${headline.city.country}. It's where my birth chart lines up for ${areas}. Found mine with AstroLyfe.`,
+        message: `My power city is ${headline.city.name}, ${headline.city.country}. It's where my birth chart lines up for ${areas}.${
+          when ? ` Best time to go: ${formatWindow(when)}.` : ''
+        } Found mine with AstroLyfe.`,
       });
     } catch {
       // The customer dismissed the sheet, or sharing isn't available — nothing to do.
@@ -139,6 +143,14 @@ export default function PowerPlaces() {
     setTheme(key);
   };
 
+  // From the travel calendar: switch the map to that life area and bring it into view.
+  const scrollRef = useRef<ScrollView>(null);
+  const chipsY = useRef(0);
+  const showThemeOnMap = (key: Theme) => {
+    selectTheme(key);
+    scrollRef.current?.scrollTo({ y: Math.max(0, chipsY.current - 12), animated: true });
+  };
+
   const pickCity = (city: City) => {
     Haptics.selectionAsync().catch(() => {});
     setPicked(city);
@@ -150,6 +162,7 @@ export default function PowerPlaces() {
       <AppBackground />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -291,6 +304,9 @@ export default function PowerPlaces() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.chipRow}
                 style={styles.chipScroll}
+                onLayout={(e) => {
+                  chipsY.current = e.nativeEvent.layout.y;
+                }}
               >
                 {THEMES.map((t) => {
                   const { color, Icon } = THEME_STYLE[t.key];
@@ -339,6 +355,8 @@ export default function PowerPlaces() {
                   ))}
                 </View>
               )}
+
+              <TravelCalendar birth={birth} onPick={showThemeOnMap} />
 
               <Text style={styles.sectionLabel}>Check a city</Text>
               <View style={styles.searchBox}>
